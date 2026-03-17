@@ -1,0 +1,877 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WA API Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #eceff3;
+        --panel: #ffffff;
+        --line: #d9dee6;
+        --text: #1f2937;
+        --muted: #6b7280;
+        --green: #2db67c;
+        --green-strong: #109e64;
+        --danger: #d64545;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Manrope", sans-serif;
+        background:
+          radial-gradient(circle at 10% 10%, #f8fbff 0%, transparent 35%),
+          linear-gradient(160deg, #ebeff5 0%, #dfe5ee 100%);
+        color: var(--text);
+      }
+
+      .layout {
+        min-height: 100vh;
+        display: grid;
+        grid-template-columns: 240px 1fr;
+      }
+
+      .sidebar {
+        background: #111827;
+        color: #fff;
+        padding: 24px 16px;
+      }
+
+      .brand {
+        margin: 0 0 18px;
+        font-size: 23px;
+        font-weight: 700;
+      }
+
+      .menu-item {
+        width: 100%;
+        border: 1px solid #313a49;
+        background: #1b2433;
+        color: #fff;
+        border-radius: 10px;
+        text-align: left;
+        padding: 10px 12px;
+        font-size: 14px;
+      }
+
+      .content {
+        padding: 24px;
+      }
+
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        box-shadow: 0 14px 34px rgba(17, 24, 39, 0.08);
+        overflow: hidden;
+      }
+
+      .card-header {
+        padding: 16px 18px;
+        border-bottom: 1px solid var(--line);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .card-title {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 700;
+      }
+
+      .btn {
+        border: 1px solid transparent;
+        border-radius: 8px;
+        padding: 9px 12px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      .btn-primary {
+        background: var(--green);
+        color: #fff;
+      }
+
+      .btn-primary:hover {
+        background: var(--green-strong);
+      }
+
+      .btn-light {
+        background: #f8fafc;
+        border-color: var(--line);
+        color: var(--text);
+      }
+
+      .btn-danger {
+        background: #fff5f5;
+        border-color: #ffd5d5;
+        color: var(--danger);
+      }
+
+      .status-line {
+        margin: 0;
+        font-size: 13px;
+        color: var(--muted);
+        padding: 12px 18px 0;
+      }
+
+      .status-line.error {
+        color: var(--danger);
+      }
+
+      .status-line.success {
+        color: #0d8f58;
+      }
+
+      .table-wrap {
+        padding: 14px 18px 18px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        font-size: 13px;
+        text-align: left;
+        padding: 11px 10px;
+        border-bottom: 1px solid var(--line);
+        vertical-align: middle;
+      }
+
+      th {
+        background: #f7f9fc;
+        color: #4b5563;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      .action-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      .badge {
+        display: inline-block;
+        border-radius: 999px;
+        padding: 3px 8px;
+        font-size: 11px;
+        font-weight: 700;
+      }
+
+      .badge-connected {
+        background: #e8fff2;
+        color: #0f9f63;
+      }
+
+      .badge-scan {
+        background: #f2fff8;
+        color: #0d8f58;
+      }
+
+      .badge-offline {
+        background: #f2f4f7;
+        color: #6b7280;
+      }
+
+      .muted {
+        color: var(--muted);
+      }
+
+      .modal {
+        position: fixed;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background: rgba(17, 24, 39, 0.45);
+        padding: 16px;
+        z-index: 100;
+        animation: fade 0.2s ease;
+      }
+
+      .modal.show {
+        display: flex;
+      }
+
+      .modal-card {
+        width: 100%;
+        max-width: 520px;
+        background: #efefef;
+        border: 1px solid #d6d6d6;
+        border-radius: 2px;
+        overflow: hidden;
+      }
+
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 14px 18px;
+        border-bottom: 1px solid #d1d1d1;
+        background: #ececec;
+      }
+
+      .modal-title {
+        margin: 0;
+        font-size: 33px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+      }
+
+      .modal-close {
+        border: none;
+        background: transparent;
+        font-size: 30px;
+        line-height: 1;
+        color: #7a7a7a;
+        cursor: pointer;
+      }
+
+      .modal-body {
+        background: #f4f4f4;
+        padding: 18px;
+      }
+
+      .field {
+        margin-bottom: 16px;
+      }
+
+      .field label {
+        display: block;
+        margin-bottom: 6px;
+        font-weight: 600;
+        color: #374151;
+      }
+
+      .input-wrap {
+        display: grid;
+        grid-template-columns: 44px 1fr 34px;
+        align-items: center;
+        border: 1px solid #9bd6bb;
+        background: #fff;
+        min-height: 38px;
+      }
+
+      .input-wrap input {
+        border: none;
+        padding: 8px 10px;
+        font-size: 13px;
+        width: 100%;
+      }
+
+      .input-wrap input:focus {
+        outline: none;
+      }
+
+      .icon-cell {
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #6b7280;
+        border-right: 1px solid #e5e7eb;
+      }
+
+      .ok-cell {
+        color: var(--green);
+        font-size: 22px;
+        text-align: center;
+      }
+
+      .modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+      }
+
+      .detail-row {
+        margin-bottom: 12px;
+      }
+
+      .detail-label {
+        display: block;
+        font-size: 12px;
+        color: #6b7280;
+        margin-bottom: 4px;
+      }
+
+      .detail-value {
+        margin: 0;
+        font-weight: 600;
+        word-break: break-all;
+      }
+
+      .token-row {
+        display: grid;
+        grid-template-columns: 1fr 42px;
+        gap: 8px;
+      }
+
+      .copy-btn {
+        border: 1px solid #cfd5de;
+        background: #fff;
+        border-radius: 8px;
+        cursor: pointer;
+      }
+
+      #qrContainer {
+        min-height: 260px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px dashed #ccd2db;
+        border-radius: 12px;
+        background: #fff;
+        padding: 16px;
+      }
+
+      #qrContainer canvas {
+        max-width: 100%;
+      }
+
+      @keyframes fade {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+
+      @media (max-width: 900px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+
+        .sidebar {
+          padding-bottom: 12px;
+        }
+
+        .content {
+          padding: 14px;
+        }
+
+        .table-wrap {
+          overflow-x: auto;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="layout">
+      <aside class="sidebar">
+        <h1 class="brand">Noorbyte</h1>
+        <button class="menu-item" aria-current="page">Device</button>
+      </aside>
+
+      <main class="content">
+        <section class="card">
+          <div class="card-header">
+            <h2 class="card-title">Device List</h2>
+            <button id="openAddModalBtn" class="btn btn-primary">
+              Add Device
+            </button>
+          </div>
+          <p id="statusLine" class="status-line">Memuat data device...</p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Device Name</th>
+                  <th>Device Number</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="deviceTableBody">
+                <tr>
+                  <td colspan="5" class="muted">Memuat data...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div id="addEditModal" class="modal" role="dialog" aria-modal="true">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3 id="addEditTitle" class="modal-title">Add Device</h3>
+          <button class="modal-close" data-close-modal="addEditModal">x</button>
+        </div>
+        <div class="modal-body">
+          <form id="addEditForm">
+            <input type="hidden" id="deviceId" name="deviceId" />
+            <div class="field">
+              <label for="deviceName">Device Name</label>
+              <div class="input-wrap">
+                <span class="icon-cell">
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path d="M20 21a8 8 0 0 0-16 0"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                  </svg>
+                </span>
+                <input
+                  id="deviceName"
+                  name="deviceName"
+                  type="text"
+                  placeholder="Kantor"
+                  required
+                />
+                <span class="ok-cell">✓</span>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="deviceNumber">Device Number</label>
+              <div class="input-wrap">
+                <span class="icon-cell">
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path
+                      d="M22 16.9v3a2 2 0 0 1-2.2 2 19.9 19.9 0 0 1-8.6-3.1 19.4 19.4 0 0 1-6-6A19.9 19.9 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7l.5 3a2 2 0 0 1-.6 1.8l-1.3 1.3a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 1.8-.6l3 .5A2 2 0 0 1 22 16.9z"
+                    ></path>
+                  </svg>
+                </span>
+                <input
+                  id="deviceNumber"
+                  name="deviceNumber"
+                  type="text"
+                  placeholder="081127009434"
+                  required
+                />
+                <span class="ok-cell">✓</span>
+              </div>
+            </div>
+
+            <div class="modal-actions">
+              <button
+                type="button"
+                class="btn btn-light"
+                data-close-modal="addEditModal"
+              >
+                Batal
+              </button>
+              <button id="saveDeviceBtn" type="submit" class="btn btn-primary">
+                Simpan
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div id="detailModal" class="modal" role="dialog" aria-modal="true">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3 class="modal-title">Detail Device</h3>
+          <button class="modal-close" data-close-modal="detailModal">x</button>
+        </div>
+        <div class="modal-body">
+          <div class="detail-row">
+            <span class="detail-label">Device Name</span>
+            <p id="detailName" class="detail-value">-</p>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Device Number</span>
+            <p id="detailPhone" class="detail-value">-</p>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Status</span>
+            <p id="detailStatus" class="detail-value">-</p>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Token</span>
+            <div class="token-row">
+              <p id="detailToken" class="detail-value">-</p>
+              <button
+                id="copyTokenBtn"
+                class="copy-btn"
+                type="button"
+                title="Salin token"
+              >
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path
+                    d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+                  ></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="connectModal" class="modal" role="dialog" aria-modal="true">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3 class="modal-title">Connect Device</h3>
+          <button class="modal-close" data-close-modal="connectModal">x</button>
+        </div>
+        <div class="modal-body">
+          <p id="connectText" class="muted">Memproses koneksi...</p>
+          <div id="qrContainer">Menunggu QR code...</div>
+          <div class="modal-actions" style="margin-top: 12px">
+            <button id="refreshQrBtn" class="btn btn-light" type="button">
+              Refresh QR
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const deviceTableBody = document.getElementById("deviceTableBody");
+      const statusLine = document.getElementById("statusLine");
+      const addEditModal = document.getElementById("addEditModal");
+      const detailModal = document.getElementById("detailModal");
+      const connectModal = document.getElementById("connectModal");
+      const addEditForm = document.getElementById("addEditForm");
+      const addEditTitle = document.getElementById("addEditTitle");
+      const saveDeviceBtn = document.getElementById("saveDeviceBtn");
+      const openAddModalBtn = document.getElementById("openAddModalBtn");
+      const refreshQrBtn = document.getElementById("refreshQrBtn");
+      const detailName = document.getElementById("detailName");
+      const detailPhone = document.getElementById("detailPhone");
+      const detailStatus = document.getElementById("detailStatus");
+      const detailToken = document.getElementById("detailToken");
+      const copyTokenBtn = document.getElementById("copyTokenBtn");
+      const connectText = document.getElementById("connectText");
+      const qrContainer = document.getElementById("qrContainer");
+
+      let devicesCache = [];
+      let activeConnectId = null;
+
+      function setStatusLine(message, type) {
+        statusLine.textContent = message;
+        statusLine.className = "status-line" + (type ? ` ${type}` : "");
+      }
+
+      function showModal(modal) {
+        modal.classList.add("show");
+      }
+
+      function hideModal(modal) {
+        modal.classList.remove("show");
+      }
+
+      function normalizeStatus(statusText) {
+        const status = String(statusText || "Disconnected").toLowerCase();
+        if (status.includes("connected")) {
+          return { className: "badge-connected", label: "Connected" };
+        }
+        if (
+          status.includes("scan") ||
+          status.includes("qr") ||
+          status.includes("connect")
+        ) {
+          return { className: "badge-scan", label: "Scan QR" };
+        }
+        return { className: "badge-offline", label: "Disconnected" };
+      }
+
+      function renderDevices(devices) {
+        if (!Array.isArray(devices) || devices.length === 0) {
+          deviceTableBody.innerHTML =
+            '<tr><td colspan="5" class="muted">Belum ada device.</td></tr>';
+          return;
+        }
+
+        deviceTableBody.innerHTML = devices
+          .map((device) => {
+            const status = normalizeStatus(
+              device.status || device.session_status,
+            );
+            return `
+              <tr>
+                <td>${device.id}</td>
+                <td>${device.username || "-"}</td>
+                <td>${device.phone || "-"}</td>
+                <td><span class="badge ${status.className}">${status.label}</span></td>
+                <td>
+                  <div class="action-row">
+                    <button class="btn btn-light" data-action="connect" data-id="${device.id}">Connect</button>
+                    <button class="btn btn-light" data-action="detail" data-id="${device.id}">Detail</button>
+                    <button class="btn btn-light" data-action="edit" data-id="${device.id}">Edit</button>
+                    <button class="btn btn-danger" data-action="delete" data-id="${device.id}">Delete</button>
+                  </div>
+                </td>
+              </tr>
+            `;
+          })
+          .join("");
+      }
+
+      async function apiRequest(url, options = {}) {
+        const response = await fetch(url, options);
+        const result = await response.json();
+        if (!response.ok || !result.status) {
+          throw new Error(result.message || "Request gagal.");
+        }
+        return result;
+      }
+
+      async function loadDevices() {
+        setStatusLine("Memuat data device...", "");
+
+        try {
+          const result = await apiRequest("/devices");
+          devicesCache = result.data || [];
+          renderDevices(devicesCache);
+          setStatusLine("Data device berhasil dimuat.", "success");
+        } catch (error) {
+          devicesCache = [];
+          renderDevices([]);
+          setStatusLine(error.message, "error");
+        }
+      }
+
+      function resetAddEditForm() {
+        addEditForm.reset();
+        document.getElementById("deviceId").value = "";
+      }
+
+      function openAddModal() {
+        resetAddEditForm();
+        addEditTitle.textContent = "Add Device";
+        saveDeviceBtn.textContent = "Simpan";
+        showModal(addEditModal);
+      }
+
+      function openEditModal(device) {
+        document.getElementById("deviceId").value = device.id;
+        document.getElementById("deviceName").value = device.username || "";
+        document.getElementById("deviceNumber").value = device.phone || "";
+        addEditTitle.textContent = "Edit Device";
+        saveDeviceBtn.textContent = "Update";
+        showModal(addEditModal);
+      }
+
+      async function openDetailModal(id) {
+        try {
+          const result = await apiRequest(`/devices/${id}`);
+          const device = result.data;
+          detailName.textContent = device.username || "-";
+          detailPhone.textContent = device.phone || "-";
+          detailStatus.textContent = device.status || "Disconnected";
+          detailToken.textContent = device.token || "-";
+          copyTokenBtn.dataset.token = device.token || "";
+          showModal(detailModal);
+        } catch (error) {
+          setStatusLine(error.message, "error");
+        }
+      }
+
+      async function connectDevice(id) {
+        activeConnectId = id;
+        qrContainer.innerHTML = "Menunggu QR code...";
+        connectText.textContent = "Menghubungkan device, mohon tunggu...";
+        showModal(connectModal);
+
+        try {
+          const result = await apiRequest(`/devices/${id}/connect`, {
+            method: "POST",
+          });
+          const qrImage = result.data?.qr_image;
+
+          if (!qrImage) {
+            connectText.textContent =
+              result.message || "QR belum tersedia, klik Refresh QR.";
+            qrContainer.innerHTML = "QR code belum tersedia.";
+          } else {
+            qrContainer.innerHTML = "";
+            const qrImageElement = document.createElement("img");
+            qrImageElement.src = qrImage;
+            qrImageElement.alt = "QR Code WhatsApp";
+            qrImageElement.style.width = "240px";
+            qrImageElement.style.height = "240px";
+            qrImageElement.style.objectFit = "contain";
+            qrContainer.appendChild(qrImageElement);
+            connectText.textContent =
+              "Scan QR dengan WhatsApp untuk connect device.";
+          }
+
+          await loadDevices();
+        } catch (error) {
+          connectText.textContent = error.message;
+          qrContainer.innerHTML = "Gagal menampilkan QR code.";
+        }
+      }
+
+      async function deleteDevice(id) {
+        if (!confirm("Hapus device ini?")) {
+          return;
+        }
+
+        try {
+          await apiRequest(`/devices/${id}`, { method: "DELETE" });
+          setStatusLine("Device berhasil dihapus.", "success");
+          await loadDevices();
+        } catch (error) {
+          setStatusLine(error.message, "error");
+        }
+      }
+
+      openAddModalBtn.addEventListener("click", openAddModal);
+
+      addEditForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+
+        const id = Number(document.getElementById("deviceId").value || 0);
+        const username = document.getElementById("deviceName").value.trim();
+        const phone = document.getElementById("deviceNumber").value.trim();
+
+        if (!username || !phone) {
+          setStatusLine("Nama dan nomor device wajib diisi.", "error");
+          return;
+        }
+
+        saveDeviceBtn.disabled = true;
+
+        try {
+          if (id) {
+            await apiRequest(`/devices/${id}`, {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ username, phone }),
+            });
+            setStatusLine("Device berhasil diperbarui.", "success");
+          } else {
+            await apiRequest("/devices", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ username, phone }),
+            });
+            setStatusLine("Device berhasil ditambahkan.", "success");
+          }
+
+          hideModal(addEditModal);
+          await loadDevices();
+        } catch (error) {
+          setStatusLine(error.message, "error");
+        } finally {
+          saveDeviceBtn.disabled = false;
+        }
+      });
+
+      deviceTableBody.addEventListener("click", (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLElement)) {
+          return;
+        }
+
+        const action = target.dataset.action;
+        const id = Number(target.dataset.id || 0);
+        if (!action || !id) {
+          return;
+        }
+
+        const device = devicesCache.find((row) => row.id === id);
+
+        if (action === "connect") {
+          connectDevice(id);
+          return;
+        }
+
+        if (action === "detail") {
+          openDetailModal(id);
+          return;
+        }
+
+        if (action === "edit") {
+          if (device) {
+            openEditModal(device);
+          }
+          return;
+        }
+
+        if (action === "delete") {
+          deleteDevice(id);
+        }
+      });
+
+      refreshQrBtn.addEventListener("click", async () => {
+        if (!activeConnectId) {
+          return;
+        }
+        await connectDevice(activeConnectId);
+      });
+
+      copyTokenBtn.addEventListener("click", async () => {
+        const token = copyTokenBtn.dataset.token || "";
+        if (!token) {
+          setStatusLine("Token tidak tersedia.", "error");
+          return;
+        }
+
+        try {
+          await navigator.clipboard.writeText(token);
+          setStatusLine("Token berhasil disalin.", "success");
+        } catch (error) {
+          setStatusLine("Gagal menyalin token.", "error");
+        }
+      });
+
+      document.querySelectorAll("[data-close-modal]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const id = button.getAttribute("data-close-modal");
+          const modal = document.getElementById(id);
+          if (modal) {
+            hideModal(modal);
+          }
+        });
+      });
+
+      [addEditModal, detailModal, connectModal].forEach((modal) => {
+        modal.addEventListener("click", (event) => {
+          if (event.target === modal) {
+            hideModal(modal);
+          }
+        });
+      });
+
+      loadDevices();
+    </script>
+  </body>
+</html>
