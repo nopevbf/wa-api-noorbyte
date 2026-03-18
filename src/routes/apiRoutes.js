@@ -1,249 +1,103 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const crypto = require("crypto");
-const QRCode = require("qrcode");
-const db = require("../config/database");
-const checkApiKey = require("../middlewares/auth");
-const {
-  sendMessageViaWa,
-  startSessionForApiKey,
-  waitForLatestQr,
-  removeSessionForApiKey,
-  getSessionStatus,
-} = require("../services/waEngine");
+const db = require('../config/database');
+const checkApiKey = require('../middlewares/auth');
+const { sendMessageViaWa, disconnectWa, connectToWhatsApp} = require('../services/waEngine'); // Import disconnectWa
+const crypto = require('crypto');
 
-function generateToken() {
-  return crypto.randomBytes(16).toString("hex");
-}
-
-function mapDevice(device) {
-  return {
-    id: device.id,
-    username: device.username,
-    phone: device.phone,
-    status: device.status || "Disconnected",
-  };
-}
-
-router.get("/devices", (req, res) => {
-  try {
-    const devices = db
-      .prepare(
-        "SELECT id, username, phone, api_key, status FROM users ORDER BY id DESC",
-      )
-      .all();
-
-    const data = devices.map((device) => ({
-      ...mapDevice(device),
-      session_status: getSessionStatus(device.api_key),
-    }));
-
-    res.status(200).json({ status: true, data });
-  } catch (error) {
-    res
-      .status(500)
-      .json({ status: false, message: "Gagal mengambil data device." });
-  }
-});
-
-router.post("/devices", (req, res) => {
-  const username = String(req.body?.username || "").trim();
-  const phone = String(req.body?.phone || "").trim();
-
-  if (!username || !phone)
-    return res
-      .status(400)
-      .json({ status: false, message: "Nama dan Nomor WA wajib diisi." });
-
-  const token = generateToken();
-
-  try {
-    db.prepare(
-      "INSERT INTO users (username, phone, api_key, status) VALUES (?, ?, ?, 'Disconnected')",
-    ).run(username, phone, token);
-
-    res.status(201).json({
-      status: true,
-      message: "Device berhasil ditambahkan!",
-      data: { username, phone, token },
-    });
-  } catch (error) {
-    res.status(500).json({
-      status: false,
-      message: "Gagal menambah device.",
-      error: error.message,
-    });
-  }
-});
-
-router.get("/devices/:id", (req, res) => {
-  const id = Number(req.params.id);
-  if (!Number.isInteger(id)) {
-    return res
-      .status(400)
-      .json({ status: false, message: "ID device tidak valid." });
-  }
-
-  const device = db
-    .prepare(
-      "SELECT id, username, phone, api_key, status FROM users WHERE id = ?",
-    )
-    .get(id);
-
-  if (!device) {
-    return res
-      .status(404)
-      .json({ status: false, message: "Device tidak ditemukan." });
-  }
-
-  return res.status(200).json({
-    status: true,
-    data: {
-      ...mapDevice(device),
-      token: device.api_key,
-      session_status: getSessionStatus(device.api_key),
-    },
-  });
-});
-
-router.put("/devices/:id", (req, res) => {
-  const id = Number(req.params.id);
-  const username = String(req.body?.username || "").trim();
-  const phone = String(req.body?.phone || "").trim();
-
-  if (!Number.isInteger(id)) {
-    return res
-      .status(400)
-      .json({ status: false, message: "ID device tidak valid." });
-  }
-
-  if (!username || !phone) {
-    return res
-      .status(400)
-      .json({ status: false, message: "Nama dan Nomor WA wajib diisi." });
-  }
-
-  const result = db
-    .prepare("UPDATE users SET username = ?, phone = ? WHERE id = ?")
-    .run(username, phone, id);
-
-  if (result.changes === 0) {
-    return res
-      .status(404)
-      .json({ status: false, message: "Device tidak ditemukan." });
-  }
-
-  return res.status(200).json({
-    status: true,
-    message: "Device berhasil diperbarui.",
-  });
-});
-
-router.delete("/devices/:id", (req, res) => {
-  const id = Number(req.params.id);
-  if (!Number.isInteger(id)) {
-    return res
-      .status(400)
-      .json({ status: false, message: "ID device tidak valid." });
-  }
-
-  const device = db.prepare("SELECT api_key FROM users WHERE id = ?").get(id);
-  if (!device) {
-    return res
-      .status(404)
-      .json({ status: false, message: "Device tidak ditemukan." });
-  }
-
-  db.prepare("DELETE FROM users WHERE id = ?").run(id);
-  removeSessionForApiKey(device.api_key);
-
-  return res.status(200).json({
-    status: true,
-    message: "Device berhasil dihapus.",
-  });
-});
-
-router.post("/devices/:id/connect", async (req, res) => {
-  const id = Number(req.params.id);
-  if (!Number.isInteger(id)) {
-    return res
-      .status(400)
-      .json({ status: false, message: "ID device tidak valid." });
-  }
-
-  const device = db
-    .prepare("SELECT id, api_key FROM users WHERE id = ?")
-    .get(id);
-  if (!device) {
-    return res
-      .status(404)
-      .json({ status: false, message: "Device tidak ditemukan." });
-  }
-
-  try {
-    await startSessionForApiKey(device.api_key);
-    const qrCode = await waitForLatestQr(device.api_key, 15000);
-
-    if (!qrCode) {
-      return res.status(200).json({
-        status: true,
-        message: "Sesi diproses. QR belum tersedia, coba lagi.",
-        data: {
-          qr_code: null,
-          session_status: getSessionStatus(device.api_key),
-        },
-      });
+router.get('/get-devices', (req, res) => {
+    try {
+        const devices = db.prepare('SELECT username, phone, api_key, status FROM users').all();
+        res.status(200).json({ status: true, data: devices });
+    } catch (error) {
+        res.status(500).json({ status: false, message: 'Gagal mengambil data device.' });
     }
-
-    const qrImage = await QRCode.toDataURL(qrCode, {
-      width: 320,
-      margin: 1,
-    });
-
-    return res.status(200).json({
-      status: true,
-      message: "QR code tersedia.",
-      data: {
-        qr_code: qrCode,
-        qr_image: qrImage,
-        session_status: getSessionStatus(device.api_key),
-      },
-    });
-  } catch (error) {
-    return res.status(500).json({
-      status: false,
-      message: "Gagal memulai koneksi device.",
-      error: error.message,
-    });
-  }
 });
 
-router.post("/send-message", checkApiKey, async (req, res) => {
-  const { number, message } = req.body;
-  const apiKey = req.user.api_key;
+router.post('/add-device', (req, res) => {
+    const { name, phone } = req.body;
+    if (!name || !phone) return res.status(400).json({ status: false, message: 'Nama dan Nomor WA wajib diisi.' });
 
-  if (!number || !message)
-    return res
-      .status(400)
-      .json({ status: false, message: "Parameter tidak lengkap." });
+    const token = 'DEV-' + crypto.randomBytes(4).toString('hex').toUpperCase();
 
-  try {
-    await sendMessageViaWa(apiKey, number, message);
-    db.prepare(
-      "INSERT INTO message_logs (api_key, target_number, message, status) VALUES (?, ?, ?, ?)",
-    ).run(apiKey, number, message, "SUCCESS");
-    res
-      .status(200)
-      .json({ status: true, message: `Pesan terkirim via ${apiKey}!` });
-  } catch (error) {
-    db.prepare(
-      "INSERT INTO message_logs (api_key, target_number, message, status) VALUES (?, ?, ?, ?)",
-    ).run(apiKey, number, message, "FAILED");
-    res.status(500).json({
-      status: false,
-      message: error.message || "Gagal mengirim pesan.",
-    });
-  }
+    try {
+        db.prepare('INSERT INTO users (username, phone, api_key, status) VALUES (?, ?, ?, ?)').run(name, phone, token, 'Disconnected');
+        res.status(200).json({ status: true, message: 'Device berhasil ditambahkan!', token: token });
+    } catch (error) {
+        res.status(500).json({ status: false, message: 'Gagal menambah device.', error: error.message });
+    }
+});
+
+// ENDPOINT BARU: Putus Koneksi Device
+router.post('/disconnect-device', async (req, res) => {
+    const { api_key } = req.body;
+    if (!api_key) return res.status(400).json({ status: false, message: 'API Key wajib dikirim.' });
+
+    try {
+        // Matikan mesin WA untuk sesi ini
+        await disconnectWa(api_key);
+        
+        // Update status di database
+        db.prepare('UPDATE users SET status = ? WHERE api_key = ?').run('Disconnected', api_key);
+        
+        res.status(200).json({ status: true, message: 'Device berhasil diputus (Logged Out).' });
+    } catch (error) {
+        res.status(500).json({ status: false, message: 'Gagal memutus device.', error: error.message });
+    }
+});
+
+// Jangan lupa tambahin connectToWhatsApp di baris import paling atas (sekitar baris 5)
+// const { sendMessageViaWa, disconnectWa, connectToWhatsApp } = require('../services/waEngine');
+
+// ENDPOINT BARU: Menyalakan mesin WA dan generate QR
+router.post('/connect-device', async (req, res) => {
+    const { api_key } = req.body;
+    if (!api_key) return res.status(400).json({ status: false, message: 'API Key wajib dikirim.' });
+
+    try {
+        // Panggil fungsi connect WA, dan oper global.io agar QR bisa dikirim realtime
+        connectToWhatsApp(api_key, global.io); 
+        res.status(200).json({ status: true, message: 'Mesin WA dinyalakan. Menunggu QR...' });
+    } catch (error) {
+        res.status(500).json({ status: false, message: 'Gagal memulai koneksi.', error: error.message });
+    }
+});
+
+// ENDPOINT BARU: Hapus Device Permanen
+router.post('/delete-device', async (req, res) => {
+    const { api_key } = req.body;
+    if (!api_key) return res.status(400).json({ status: false, message: 'API Key wajib dikirim.' });
+
+    try {
+        // 1. Matikan mesin WA dan hapus folder sesi secara permanen
+        await disconnectWa(api_key);
+        
+        // 2. Hapus data device dari tabel users
+        db.prepare('DELETE FROM users WHERE api_key = ?').run(api_key);
+        
+        // Opsional: Hapus riwayat pesan terkait biar database nggak bengkak
+        db.prepare('DELETE FROM message_logs WHERE api_key = ?').run(api_key);
+        
+        res.status(200).json({ status: true, message: 'Device berhasil dihapus permanen.' });
+    } catch (error) {
+        res.status(500).json({ status: false, message: 'Gagal menghapus device.', error: error.message });
+    }
+});
+
+router.post('/send-message', checkApiKey, async (req, res) => {
+    const { number, message } = req.body;
+    const apiKey = req.user.api_key;
+    
+    if (!number || !message) return res.status(400).json({ status: false, message: 'Parameter tidak lengkap.' });
+
+    try {
+        await sendMessageViaWa(apiKey, number, message);
+        db.prepare('INSERT INTO message_logs (api_key, target_number, message, status) VALUES (?, ?, ?, ?)').run(apiKey, number, message, 'SUCCESS');
+        res.status(200).json({ status: true, message: `Pesan terkirim via ${apiKey}!` });
+    } catch (error) {
+        db.prepare('INSERT INTO message_logs (api_key, target_number, message, status) VALUES (?, ?, ?, ?)').run(apiKey, number, message, 'FAILED');
+        res.status(500).json({ status: false, message: error.message || 'Gagal mengirim pesan.' });
+    }
 });
 
 module.exports = router;

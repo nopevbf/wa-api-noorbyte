@@ -1,877 +1,391 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="id">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>WA API Dashboard</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp API Dashboard (Socket.io)</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
     <style>
-      :root {
-        --bg: #eceff3;
-        --panel: #ffffff;
-        --line: #d9dee6;
-        --text: #1f2937;
-        --muted: #6b7280;
-        --green: #2db67c;
-        --green-strong: #109e64;
-        --danger: #d64545;
-      }
-
-      * {
-        box-sizing: border-box;
-      }
-
-      body {
-        margin: 0;
-        min-height: 100vh;
-        font-family: "Manrope", sans-serif;
-        background:
-          radial-gradient(circle at 10% 10%, #f8fbff 0%, transparent 35%),
-          linear-gradient(160deg, #ebeff5 0%, #dfe5ee 100%);
-        color: var(--text);
-      }
-
-      .layout {
-        min-height: 100vh;
-        display: grid;
-        grid-template-columns: 240px 1fr;
-      }
-
-      .sidebar {
-        background: #111827;
-        color: #fff;
-        padding: 24px 16px;
-      }
-
-      .brand {
-        margin: 0 0 18px;
-        font-size: 23px;
-        font-weight: 700;
-      }
-
-      .menu-item {
-        width: 100%;
-        border: 1px solid #313a49;
-        background: #1b2433;
-        color: #fff;
-        border-radius: 10px;
-        text-align: left;
-        padding: 10px 12px;
-        font-size: 14px;
-      }
-
-      .content {
-        padding: 24px;
-      }
-
-      .card {
-        background: var(--panel);
-        border: 1px solid var(--line);
-        border-radius: 14px;
-        box-shadow: 0 14px 34px rgba(17, 24, 39, 0.08);
-        overflow: hidden;
-      }
-
-      .card-header {
-        padding: 16px 18px;
-        border-bottom: 1px solid var(--line);
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-      }
-
-      .card-title {
-        margin: 0;
-        font-size: 20px;
-        font-weight: 700;
-      }
-
-      .btn {
-        border: 1px solid transparent;
-        border-radius: 8px;
-        padding: 9px 12px;
-        font-size: 13px;
-        font-weight: 600;
-        cursor: pointer;
-      }
-
-      .btn-primary {
-        background: var(--green);
-        color: #fff;
-      }
-
-      .btn-primary:hover {
-        background: var(--green-strong);
-      }
-
-      .btn-light {
-        background: #f8fafc;
-        border-color: var(--line);
-        color: var(--text);
-      }
-
-      .btn-danger {
-        background: #fff5f5;
-        border-color: #ffd5d5;
-        color: var(--danger);
-      }
-
-      .status-line {
-        margin: 0;
-        font-size: 13px;
-        color: var(--muted);
-        padding: 12px 18px 0;
-      }
-
-      .status-line.error {
-        color: var(--danger);
-      }
-
-      .status-line.success {
-        color: #0d8f58;
-      }
-
-      .table-wrap {
-        padding: 14px 18px 18px;
-      }
-
-      table {
-        width: 100%;
-        border-collapse: collapse;
-      }
-
-      th,
-      td {
-        font-size: 13px;
-        text-align: left;
-        padding: 11px 10px;
-        border-bottom: 1px solid var(--line);
-        vertical-align: middle;
-      }
-
-      th {
-        background: #f7f9fc;
-        color: #4b5563;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-      }
-
-      .action-row {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-      }
-
-      .badge {
-        display: inline-block;
-        border-radius: 999px;
-        padding: 3px 8px;
-        font-size: 11px;
-        font-weight: 700;
-      }
-
-      .badge-connected {
-        background: #e8fff2;
-        color: #0f9f63;
-      }
-
-      .badge-scan {
-        background: #f2fff8;
-        color: #0d8f58;
-      }
-
-      .badge-offline {
-        background: #f2f4f7;
-        color: #6b7280;
-      }
-
-      .muted {
-        color: var(--muted);
-      }
-
-      .modal {
-        position: fixed;
-        inset: 0;
-        display: none;
-        align-items: center;
-        justify-content: center;
-        background: rgba(17, 24, 39, 0.45);
-        padding: 16px;
-        z-index: 100;
-        animation: fade 0.2s ease;
-      }
-
-      .modal.show {
-        display: flex;
-      }
-
-      .modal-card {
-        width: 100%;
-        max-width: 520px;
-        background: #efefef;
-        border: 1px solid #d6d6d6;
-        border-radius: 2px;
-        overflow: hidden;
-      }
-
-      .modal-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 14px 18px;
-        border-bottom: 1px solid #d1d1d1;
-        background: #ececec;
-      }
-
-      .modal-title {
-        margin: 0;
-        font-size: 33px;
-        font-weight: 700;
-        letter-spacing: -0.02em;
-      }
-
-      .modal-close {
-        border: none;
-        background: transparent;
-        font-size: 30px;
-        line-height: 1;
-        color: #7a7a7a;
-        cursor: pointer;
-      }
-
-      .modal-body {
-        background: #f4f4f4;
-        padding: 18px;
-      }
-
-      .field {
-        margin-bottom: 16px;
-      }
-
-      .field label {
-        display: block;
-        margin-bottom: 6px;
-        font-weight: 600;
-        color: #374151;
-      }
-
-      .input-wrap {
-        display: grid;
-        grid-template-columns: 44px 1fr 34px;
-        align-items: center;
-        border: 1px solid #9bd6bb;
-        background: #fff;
-        min-height: 38px;
-      }
-
-      .input-wrap input {
-        border: none;
-        padding: 8px 10px;
-        font-size: 13px;
-        width: 100%;
-      }
-
-      .input-wrap input:focus {
-        outline: none;
-      }
-
-      .icon-cell {
-        height: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #6b7280;
-        border-right: 1px solid #e5e7eb;
-      }
-
-      .ok-cell {
-        color: var(--green);
-        font-size: 22px;
-        text-align: center;
-      }
-
-      .modal-actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: 8px;
-      }
-
-      .detail-row {
-        margin-bottom: 12px;
-      }
-
-      .detail-label {
-        display: block;
-        font-size: 12px;
-        color: #6b7280;
-        margin-bottom: 4px;
-      }
-
-      .detail-value {
-        margin: 0;
-        font-weight: 600;
-        word-break: break-all;
-      }
-
-      .token-row {
-        display: grid;
-        grid-template-columns: 1fr 42px;
-        gap: 8px;
-      }
-
-      .copy-btn {
-        border: 1px solid #cfd5de;
-        background: #fff;
-        border-radius: 8px;
-        cursor: pointer;
-      }
-
-      #qrContainer {
-        min-height: 260px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border: 1px dashed #ccd2db;
-        border-radius: 12px;
-        background: #fff;
-        padding: 16px;
-      }
-
-      #qrContainer canvas {
-        max-width: 100%;
-      }
-
-      @keyframes fade {
-        from {
-          opacity: 0;
+        /* Gaya Dasar & Layout */
+        body { margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f1f5f9; display: flex; height: 100vh; color: #333; }
+        .sidebar { width: 250px; background-color: #1e293b; color: white; display: flex; flex-direction: column; }
+        .sidebar-header { padding: 20px; font-size: 24px; font-weight: bold; border-bottom: 1px solid #334155; }
+        .menu-item { padding: 15px 20px; cursor: pointer; background-color: #334155; border-left: 4px solid #3b82f6; font-weight: bold; }
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; }
+        .topbar { background-color: white; padding: 15px 30px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }
+        .content { padding: 30px; }
+        .card { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: 600; color: #475569; font-size: 14px;}
+        input { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 5px; box-sizing: border-box; }
+        button { background-color: #3b82f6; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; transition: 0.2s;}
+        button:hover { opacity: 0.9; }
+        button:disabled { background-color: #ccc; cursor: not-allowed; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
+        th, td { text-align: left; padding: 12px; border-bottom: 1px solid #e2e8f0; }
+        th { background-color: #f8fafc; color: #64748b; }
+        .badge { padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; }
+        .badge-disconnect { background-color: #fef2f2; color: #ef4444; }
+        .badge-connect { background-color: #f0fdf4; color: #22c55e; }
+        .btn-action { font-size: 12px; padding: 6px 10px; color: white; border: none; border-radius: 4px; cursor: pointer;}
+        
+        /* CSS MODAL (Global) */
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(2px);
+            justify-content: center; align-items: center; z-index: 1000;
         }
-        to {
-          opacity: 1;
+        .modal-box {
+            background: white; padding: 25px 30px; border-radius: 10px; 
+            width: 100%; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            text-align: center; animation: slideDown 0.3s ease-out;
         }
-      }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+        .modal-box h3 { margin-top: 0; color: #1e293b; font-size: 20px; }
+        .modal-box p { color: #475569; font-size: 15px; margin-bottom: 25px; line-height: 1.5; }
+        
+        /* Modal Info & Confirm */
+        .modal-info { max-width: 400px; }
+        .modal-actions { display: flex; justify-content: center; gap: 12px; }
+        .btn-cancel { background-color: #e2e8f0; color: #475569; }
+        .btn-danger { background-color: #ef4444; color: white; }
+        .btn-ok { background-color: #3b82f6; color: white; width: 100px;}
+        
+        /* CSS KHUSUS MODAL QR CODE */
+        .modal-qr { max-width: 350px; }
+        .qr-container { 
+            width: 250px; height: 250px; 
+            margin: 20px auto; border: 2px dashed #cbd5e1; 
+            display: flex; justify-content: center; align-items: center; 
+            position: relative; background-color: #f8fafc;
+        }
+        #qrImage { max-width: 100%; max-height: 100%; display: none; } /* Tersembunyi default */
+        #qrLoading { text-align: center; color: #64748b; font-size: 14px; display: block;} /* Loading muncul default */
+        .fa-spinner { color: #3b82f6; font-size: 30px; margin-bottom: 10px; }
 
-      @media (max-width: 900px) {
-        .layout {
-          grid-template-columns: 1fr;
-        }
-
-        .sidebar {
-          padding-bottom: 12px;
-        }
-
-        .content {
-          padding: 14px;
-        }
-
-        .table-wrap {
-          overflow-x: auto;
-        }
-      }
+        /* Tambahan CSS untuk Ikon Copy & Tombol Hapus */
+        .copy-icon { cursor: pointer; color: #64748b; margin-left: 8px; font-size: 14px; transition: 0.2s; }
+        .copy-icon:hover { color: #3b82f6; }
+        .btn-delete { background-color: #64748b; margin-left: 5px; }
+        .btn-delete:hover { background-color: #475569; }
+        .action-container { display: flex; gap: 5px; }
     </style>
-  </head>
-  <body>
-    <div class="layout">
-      <aside class="sidebar">
-        <h1 class="brand">Noorbyte</h1>
-        <button class="menu-item" aria-current="page">Device</button>
-      </aside>
+</head>
+<body>
 
-      <main class="content">
-        <section class="card">
-          <div class="card-header">
-            <h2 class="card-title">Device List</h2>
-            <button id="openAddModalBtn" class="btn btn-primary">
-              Add Device
-            </button>
-          </div>
-          <p id="statusLine" class="status-line">Memuat data device...</p>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Device Name</th>
-                  <th>Device Number</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody id="deviceTableBody">
-                <tr>
-                  <td colspan="5" class="muted">Memuat data...</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </section>
-      </main>
+    <div class="sidebar">
+        <div class="sidebar-header">WA Provider API</div>
+        <div class="menu-item">📱 Devices</div>
     </div>
 
-    <div id="addEditModal" class="modal" role="dialog" aria-modal="true">
-      <div class="modal-card">
-        <div class="modal-header">
-          <h3 id="addEditTitle" class="modal-title">Add Device</h3>
-          <button class="modal-close" data-close-modal="addEditModal">x</button>
+    <div class="main-content">
+        <div class="topbar">
+            <h2 style="margin: 0; font-size: 18px;">Device Management (Realtime)</h2>
+            <div style="font-weight: bold; color: #64748b;">Halo, Admin!</div>
         </div>
-        <div class="modal-body">
-          <form id="addEditForm">
-            <input type="hidden" id="deviceId" name="deviceId" />
-            <div class="field">
-              <label for="deviceName">Device Name</label>
-              <div class="input-wrap">
-                <span class="icon-cell">
-                  <svg
-                    width="18"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  >
-                    <path d="M20 21a8 8 0 0 0-16 0"></path>
-                    <circle cx="12" cy="7" r="4"></circle>
-                  </svg>
-                </span>
-                <input
-                  id="deviceName"
-                  name="deviceName"
-                  type="text"
-                  placeholder="Kantor"
-                  required
-                />
-                <span class="ok-cell">✓</span>
-              </div>
+
+        <div class="content">
+            <div class="card" style="max-width: 500px;">
+                <h3 style="margin-top: 0; border-bottom: 1px solid #eee; padding-bottom: 10px;">+ Add New Device</h3>
+                <form id="addDeviceForm">
+                    <div class="form-group">
+                        <label>Device Name</label>
+                        <input type="text" id="deviceName" required placeholder="Contoh: CS Pusat">
+                    </div>
+                    <div class="form-group">
+                        <label>WhatsApp Number</label>
+                        <input type="text" id="devicePhone" required placeholder="Contoh: 08123...">
+                    </div>
+                    <button type="submit" id="btnSubmit">Register Device</button>
+                </form>
             </div>
 
-            <div class="field">
-              <label for="deviceNumber">Device Number</label>
-              <div class="input-wrap">
-                <span class="icon-cell">
-                  <svg
-                    width="18"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  >
-                    <path
-                      d="M22 16.9v3a2 2 0 0 1-2.2 2 19.9 19.9 0 0 1-8.6-3.1 19.4 19.4 0 0 1-6-6A19.9 19.9 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7l.5 3a2 2 0 0 1-.6 1.8l-1.3 1.3a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 1.8-.6l3 .5A2 2 0 0 1 22 16.9z"
-                    ></path>
-                  </svg>
-                </span>
-                <input
-                  id="deviceNumber"
-                  name="deviceNumber"
-                  type="text"
-                  placeholder="081127009434"
-                  required
-                />
-                <span class="ok-cell">✓</span>
-              </div>
+            <div class="card">
+                <h3 style="margin-top: 0;">Daftar Device / Token</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Phone</th>
+                            <th>Name</th>
+                            <th>Token (API Key)</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="deviceTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="customModal" class="modal-overlay">
+        <div class="modal-box modal-info">
+            <h3 id="modalTitle">Judul</h3>
+            <p id="modalMessage">Pesan.</p>
+            <div class="modal-actions" id="modalActions"></div>
+        </div>
+    </div>
+
+    <div id="qrModal" class="modal-overlay">
+        <div class="modal-box modal-qr">
+            <h3 id="qrModalTitle">Scan QR Code</h3>
+            <p style="font-size: 13px; margin-bottom: 0;">Silakan scan pakai WhatsApp di HP Anda.</p>
+            
+            <div class="qr-container">
+                <div id="qrLoading">
+                    <i class="fas fa-spinner fa-spin"></i><br>
+                    Menunggu QR Code dari Server...
+                </div>
+                <img src="" id="qrImage" alt="WA QR Code">
             </div>
 
             <div class="modal-actions">
-              <button
-                type="button"
-                class="btn btn-light"
-                data-close-modal="addEditModal"
-              >
-                Batal
-              </button>
-              <button id="saveDeviceBtn" type="submit" class="btn btn-primary">
-                Simpan
-              </button>
+                <button class="btn-cancel" onclick="closeQrModal()">Batal</button>
             </div>
-          </form>
         </div>
-      </div>
     </div>
 
-    <div id="detailModal" class="modal" role="dialog" aria-modal="true">
-      <div class="modal-card">
-        <div class="modal-header">
-          <h3 class="modal-title">Detail Device</h3>
-          <button class="modal-close" data-close-modal="detailModal">x</button>
-        </div>
-        <div class="modal-body">
-          <div class="detail-row">
-            <span class="detail-label">Device Name</span>
-            <p id="detailName" class="detail-value">-</p>
-          </div>
-          <div class="detail-row">
-            <span class="detail-label">Device Number</span>
-            <p id="detailPhone" class="detail-value">-</p>
-          </div>
-          <div class="detail-row">
-            <span class="detail-label">Status</span>
-            <p id="detailStatus" class="detail-value">-</p>
-          </div>
-          <div class="detail-row">
-            <span class="detail-label">Token</span>
-            <div class="token-row">
-              <p id="detailToken" class="detail-value">-</p>
-              <button
-                id="copyTokenBtn"
-                class="copy-btn"
-                type="button"
-                title="Salin token"
-              >
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                  <path
-                    d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
-                  ></path>
-                </svg>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
 
-    <div id="connectModal" class="modal" role="dialog" aria-modal="true">
-      <div class="modal-card">
-        <div class="modal-header">
-          <h3 class="modal-title">Connect Device</h3>
-          <button class="modal-close" data-close-modal="connectModal">x</button>
-        </div>
-        <div class="modal-body">
-          <p id="connectText" class="muted">Memproses koneksi...</p>
-          <div id="qrContainer">Menunggu QR code...</div>
-          <div class="modal-actions" style="margin-top: 12px">
-            <button id="refreshQrBtn" class="btn btn-light" type="button">
-              Refresh QR
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
+    <script src="/socket.io/socket.io.js"></script>
+    
     <script>
-      const deviceTableBody = document.getElementById("deviceTableBody");
-      const statusLine = document.getElementById("statusLine");
-      const addEditModal = document.getElementById("addEditModal");
-      const detailModal = document.getElementById("detailModal");
-      const connectModal = document.getElementById("connectModal");
-      const addEditForm = document.getElementById("addEditForm");
-      const addEditTitle = document.getElementById("addEditTitle");
-      const saveDeviceBtn = document.getElementById("saveDeviceBtn");
-      const openAddModalBtn = document.getElementById("openAddModalBtn");
-      const refreshQrBtn = document.getElementById("refreshQrBtn");
-      const detailName = document.getElementById("detailName");
-      const detailPhone = document.getElementById("detailPhone");
-      const detailStatus = document.getElementById("detailStatus");
-      const detailToken = document.getElementById("detailToken");
-      const copyTokenBtn = document.getElementById("copyTokenBtn");
-      const connectText = document.getElementById("connectText");
-      const qrContainer = document.getElementById("qrContainer");
+        // Inisialisasi koneksi Socket.io ke Backend (otomatis nyambung ke http://localhost:3000)
+        const socket = io();
+        
+        // Cek koneksi socket berhasil
+        socket.on('connect', () => { console.log('✅ Terhubung ke Server WebSocket.'); });
 
-      let devicesCache = [];
-      let activeConnectId = null;
+        // =========================================
+        // MESIN PENGGERAK MODAL (Info/Confirm)
+        // =========================================
+        const modalOverlay = document.getElementById('customModal');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalMessage = document.getElementById('modalMessage');
+        const modalActions = document.getElementById('modalActions');
 
-      function setStatusLine(message, type) {
-        statusLine.textContent = message;
-        statusLine.className = "status-line" + (type ? ` ${type}` : "");
-      }
-
-      function showModal(modal) {
-        modal.classList.add("show");
-      }
-
-      function hideModal(modal) {
-        modal.classList.remove("show");
-      }
-
-      function normalizeStatus(statusText) {
-        const status = String(statusText || "Disconnected").toLowerCase();
-        if (status.includes("connected")) {
-          return { className: "badge-connected", label: "Connected" };
+        function showModal(title, message, type = 'info', onConfirm = null) {
+            modalTitle.innerText = title; modalMessage.innerHTML = message; modalActions.innerHTML = '';
+            if (type === 'confirm') {
+                const btnCancel = document.createElement('button'); btnCancel.className = 'btn-cancel'; btnCancel.innerText = 'Batal'; btnCancel.onclick = closeModal;
+                const btnYes = document.createElement('button'); btnYes.className = 'btn-danger'; btnYes.innerText = 'Ya, Putuskan';
+                btnYes.onclick = () => { closeModal(); if (onConfirm) onConfirm(); };
+                modalActions.appendChild(btnCancel); modalActions.appendChild(btnYes);
+            } else {
+                const btnOk = document.createElement('button'); btnOk.className = 'btn-ok'; btnOk.innerText = 'Tutup'; btnOk.onclick = closeModal; modalActions.appendChild(btnOk);
+            }
+            modalOverlay.style.display = 'flex';
         }
-        if (
-          status.includes("scan") ||
-          status.includes("qr") ||
-          status.includes("connect")
-        ) {
-          return { className: "badge-scan", label: "Scan QR" };
-        }
-        return { className: "badge-offline", label: "Disconnected" };
-      }
+        function closeModal() { modalOverlay.style.display = 'none'; }
 
-      function renderDevices(devices) {
-        if (!Array.isArray(devices) || devices.length === 0) {
-          deviceTableBody.innerHTML =
-            '<tr><td colspan="5" class="muted">Belum ada device.</td></tr>';
-          return;
+
+        // =========================================
+        // MESIN PENGGERAK MODAL KHUSUS QR CODE
+        // =========================================
+        const qrModalOverlay = document.getElementById('qrModal');
+        const qrModalTitle = document.getElementById('qrModalTitle');
+        const qrLoadingView = document.getElementById('qrLoading');
+        const qrImageView = document.getElementById('qrImage');
+
+        async function showQrModal(apiKey, username) {
+            qrModalTitle.innerText = `Connect: ${username}`;
+            
+            // Reset tampilan ke Loading dulu
+            qrImageView.style.display = 'none';
+            qrImageView.src = '';
+            qrLoadingView.style.display = 'block';
+            
+            qrModalOverlay.style.display = 'flex';
+
+            // Dengerin QR baru secara realtime
+            socket.off(`qr-${apiKey}`); 
+            socket.on(`qr-${apiKey}`, (data) => {
+                console.log(`[${apiKey}] Gambar QR diterima.`);
+                qrLoadingView.style.display = 'none';
+                qrImageView.src = data.qrImageUrl;
+                qrImageView.style.display = 'block';
+            });
+
+            // --- TAMBAHAN BARU: Pencet saklar Backend buat nyalain Baileys ---
+            try {
+                await fetch('/connect-device', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ api_key: apiKey })
+                });
+                console.log('Permintaan connect terkirim ke server.');
+            } catch (error) {
+                console.error('Gagal menghubungi server untuk connect.');
+            }
         }
 
-        deviceTableBody.innerHTML = devices
-          .map((device) => {
-            const status = normalizeStatus(
-              device.status || device.session_status,
-            );
-            return `
-              <tr>
-                <td>${device.id}</td>
-                <td>${device.username || "-"}</td>
-                <td>${device.phone || "-"}</td>
-                <td><span class="badge ${status.className}">${status.label}</span></td>
+        function closeQrModal() {
+            qrModalOverlay.style.display = 'none';
+            // Nggak perlu socket.off di sini, karena waEngine terus ngirim QR kalau belum terscan
+        }
+
+
+        // =========================================
+        // LOGIC APLIKASI UTAMA
+        // =========================================
+        async function loadDevices() {
+            const tableBody = document.getElementById('deviceTableBody');
+            tableBody.innerHTML = '<tr><td colspan="5">Loading data...</td></tr>';
+            try {
+                const response = await fetch('/get-devices');
+                const result = await response.json();
+                if (result.status && result.data.length > 0) {
+                    tableBody.innerHTML = ''; 
+                    result.data.forEach(device => renderDeviceRow(device));
+                } else {
+                    tableBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Belum ada device terdaftar.</td></tr>';
+                }
+            } catch (error) {
+                console.error('Gagal load device:', error);
+                tableBody.innerHTML = '<tr><td colspan="5" style="color:red;">Gagal memuat data dari server.</td></tr>';
+            }
+        }
+
+        // Fungsi pembantu buat bikin baris tabel biar kodenya rapi
+        function renderDeviceRow(device) {
+            const tableBody = document.getElementById('deviceTableBody');
+            const apiKey = device.api_key;
+            
+            const statusText = device.status;
+            const statusClass = statusText === 'Connected' ? 'badge-connect' : 'badge-disconnect';
+            
+            const tr = document.createElement('tr');
+            tr.id = `row-${apiKey}`; 
+            
+            tr.innerHTML = `
+                <td>${device.phone || '-'}</td>
+                <td>${device.username}</td>
                 <td>
-                  <div class="action-row">
-                    <button class="btn btn-light" data-action="connect" data-id="${device.id}">Connect</button>
-                    <button class="btn btn-light" data-action="detail" data-id="${device.id}">Detail</button>
-                    <button class="btn btn-light" data-action="edit" data-id="${device.id}">Edit</button>
-                    <button class="btn btn-danger" data-action="delete" data-id="${device.id}">Delete</button>
-                  </div>
+                    <code>${apiKey}</code>
+                    <i class="fas fa-copy copy-icon" onclick="copyToken('${apiKey}')" title="Salin Token"></i>
                 </td>
-              </tr>
+                <td><span id="badge-${apiKey}" class="badge ${statusClass}">${statusText}</span></td>
+                <td>
+                    <div class="action-container">
+                        <div id="action-${apiKey}"></div>
+                        <button class="btn-action btn-delete" onclick="deleteDevice('${apiKey}')">
+                            <i class="fas fa-trash"></i> Hapus
+                        </button>
+                    </div>
+                </td>
             `;
-          })
-          .join("");
-      }
+            tableBody.appendChild(tr);
+            
+            updateActionButtons(apiKey, statusText, device.username);
 
-      async function apiRequest(url, options = {}) {
-        const response = await fetch(url, options);
-        const result = await response.json();
-        if (!response.ok || !result.status) {
-          throw new Error(result.message || "Request gagal.");
-        }
-        return result;
-      }
-
-      async function loadDevices() {
-        setStatusLine("Memuat data device...", "");
-
-        try {
-          const result = await apiRequest("/devices");
-          devicesCache = result.data || [];
-          renderDevices(devicesCache);
-          setStatusLine("Data device berhasil dimuat.", "success");
-        } catch (error) {
-          devicesCache = [];
-          renderDevices([]);
-          setStatusLine(error.message, "error");
-        }
-      }
-
-      function resetAddEditForm() {
-        addEditForm.reset();
-        document.getElementById("deviceId").value = "";
-      }
-
-      function openAddModal() {
-        resetAddEditForm();
-        addEditTitle.textContent = "Add Device";
-        saveDeviceBtn.textContent = "Simpan";
-        showModal(addEditModal);
-      }
-
-      function openEditModal(device) {
-        document.getElementById("deviceId").value = device.id;
-        document.getElementById("deviceName").value = device.username || "";
-        document.getElementById("deviceNumber").value = device.phone || "";
-        addEditTitle.textContent = "Edit Device";
-        saveDeviceBtn.textContent = "Update";
-        showModal(addEditModal);
-      }
-
-      async function openDetailModal(id) {
-        try {
-          const result = await apiRequest(`/devices/${id}`);
-          const device = result.data;
-          detailName.textContent = device.username || "-";
-          detailPhone.textContent = device.phone || "-";
-          detailStatus.textContent = device.status || "Disconnected";
-          detailToken.textContent = device.token || "-";
-          copyTokenBtn.dataset.token = device.token || "";
-          showModal(detailModal);
-        } catch (error) {
-          setStatusLine(error.message, "error");
-        }
-      }
-
-      async function connectDevice(id) {
-        activeConnectId = id;
-        qrContainer.innerHTML = "Menunggu QR code...";
-        connectText.textContent = "Menghubungkan device, mohon tunggu...";
-        showModal(connectModal);
-
-        try {
-          const result = await apiRequest(`/devices/${id}/connect`, {
-            method: "POST",
-          });
-          const qrImage = result.data?.qr_image;
-
-          if (!qrImage) {
-            connectText.textContent =
-              result.message || "QR belum tersedia, klik Refresh QR.";
-            qrContainer.innerHTML = "QR code belum tersedia.";
-          } else {
-            qrContainer.innerHTML = "";
-            const qrImageElement = document.createElement("img");
-            qrImageElement.src = qrImage;
-            qrImageElement.alt = "QR Code WhatsApp";
-            qrImageElement.style.width = "240px";
-            qrImageElement.style.height = "240px";
-            qrImageElement.style.objectFit = "contain";
-            qrContainer.appendChild(qrImageElement);
-            connectText.textContent =
-              "Scan QR dengan WhatsApp untuk connect device.";
-          }
-
-          await loadDevices();
-        } catch (error) {
-          connectText.textContent = error.message;
-          qrContainer.innerHTML = "Gagal menampilkan QR code.";
-        }
-      }
-
-      async function deleteDevice(id) {
-        if (!confirm("Hapus device ini?")) {
-          return;
-        }
-
-        try {
-          await apiRequest(`/devices/${id}`, { method: "DELETE" });
-          setStatusLine("Device berhasil dihapus.", "success");
-          await loadDevices();
-        } catch (error) {
-          setStatusLine(error.message, "error");
-        }
-      }
-
-      openAddModalBtn.addEventListener("click", openAddModal);
-
-      addEditForm.addEventListener("submit", async (event) => {
-        event.preventDefault();
-
-        const id = Number(document.getElementById("deviceId").value || 0);
-        const username = document.getElementById("deviceName").value.trim();
-        const phone = document.getElementById("deviceNumber").value.trim();
-
-        if (!username || !phone) {
-          setStatusLine("Nama dan nomor device wajib diisi.", "error");
-          return;
-        }
-
-        saveDeviceBtn.disabled = true;
-
-        try {
-          if (id) {
-            await apiRequest(`/devices/${id}`, {
-              method: "PUT",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ username, phone }),
+            socket.off(`status-${apiKey}`); 
+            socket.on(`status-${apiKey}`, (data) => {
+                const badge = document.getElementById(`badge-${apiKey}`);
+                if (badge) {
+                    badge.innerText = data.status;
+                    badge.className = data.status === 'Connected' ? 'badge badge-connect' : 'badge badge-disconnect';
+                }
+                updateActionButtons(apiKey, data.status, device.username);
+                if (data.status === 'Connected') {
+                    closeQrModal();
+                    showModal('Mantap!', `Device <b>${device.username}</b> berhasil terhubung!`, 'info');
+                }
             });
-            setStatusLine("Device berhasil diperbarui.", "success");
-          } else {
-            await apiRequest("/devices", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ username, phone }),
+        }
+
+        // Fungsi pembantu buat ganti tombol Connect -> Disconnect (dan sebaliknya) tanpa reload
+        function updateActionButtons(apiKey, status, username) {
+            const actionArea = document.getElementById(`action-${apiKey}`);
+            if (!actionArea) return;
+
+            actionArea.innerHTML = ''; // Kosongkan dulu
+            
+            if (status === 'Connected') {
+                const btnDisc = document.createElement('button');
+                btnDisc.className = 'btn-action'; btnDisc.style.backgroundColor = '#ef4444';
+                btnDisc.innerText = 'Disconnect';
+                btnDisc.onclick = () => disconnectDevice(apiKey);
+                actionArea.appendChild(btnDisc);
+            } else {
+                const btnConn = document.createElement('button');
+                btnConn.className = 'btn-action'; btnConn.style.backgroundColor = '#22c55e';
+                btnConn.innerText = 'Connect';
+                // Panggil fungsi modal QR baru
+                btnConn.onclick = () => showQrModal(apiKey, username);
+                actionArea.appendChild(btnConn);
+            }
+        }
+
+        // Fungsi Disconnect
+        function disconnectDevice(apiKey) {
+            showModal('Putus Koneksi', `Yakin mau log out device <b>${apiKey}</b>?`, 'confirm', async () => {
+                try {
+                    const response = await fetch('/disconnect-device', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ api_key: apiKey })
+                    });
+                    const result = await response.json();
+                    if (result.status) {
+                        showModal('Berhasil!', result.message, 'info');
+                        // Tidak perlu loadDevices(), Socket.io yang akan nge-update UI tabel
+                    } else { showModal('Gagal', result.message, 'info'); }
+                } catch (error) { showModal('Error Server', 'Kesalahan server.', 'info'); }
             });
-            setStatusLine("Device berhasil ditambahkan.", "success");
-          }
-
-          hideModal(addEditModal);
-          await loadDevices();
-        } catch (error) {
-          setStatusLine(error.message, "error");
-        } finally {
-          saveDeviceBtn.disabled = false;
-        }
-      });
-
-      deviceTableBody.addEventListener("click", (event) => {
-        const target = event.target;
-        if (!(target instanceof HTMLElement)) {
-          return;
         }
 
-        const action = target.dataset.action;
-        const id = Number(target.dataset.id || 0);
-        if (!action || !id) {
-          return;
-        }
-
-        const device = devicesCache.find((row) => row.id === id);
-
-        if (action === "connect") {
-          connectDevice(id);
-          return;
-        }
-
-        if (action === "detail") {
-          openDetailModal(id);
-          return;
-        }
-
-        if (action === "edit") {
-          if (device) {
-            openEditModal(device);
-          }
-          return;
-        }
-
-        if (action === "delete") {
-          deleteDevice(id);
-        }
-      });
-
-      refreshQrBtn.addEventListener("click", async () => {
-        if (!activeConnectId) {
-          return;
-        }
-        await connectDevice(activeConnectId);
-      });
-
-      copyTokenBtn.addEventListener("click", async () => {
-        const token = copyTokenBtn.dataset.token || "";
-        if (!token) {
-          setStatusLine("Token tidak tersedia.", "error");
-          return;
-        }
-
-        try {
-          await navigator.clipboard.writeText(token);
-          setStatusLine("Token berhasil disalin.", "success");
-        } catch (error) {
-          setStatusLine("Gagal menyalin token.", "error");
-        }
-      });
-
-      document.querySelectorAll("[data-close-modal]").forEach((button) => {
-        button.addEventListener("click", () => {
-          const id = button.getAttribute("data-close-modal");
-          const modal = document.getElementById(id);
-          if (modal) {
-            hideModal(modal);
-          }
+        // Fungsi Add Device
+        document.getElementById('addDeviceForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btnSubmit'); btn.innerText = 'Menyimpan...'; btn.disabled = true;
+            try {
+                const response = await fetch('/add-device', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: document.getElementById('deviceName').value, phone: document.getElementById('devicePhone').value })
+                });
+                const result = await response.json();
+                if (result.status) {
+                    showModal('Device Terdaftar!', `Sukses.<br>Token Anda:<br><b>${result.token}</b>`, 'info');
+                    document.getElementById('addDeviceForm').reset();
+                    loadDevices(); // Refresh penuh untuk nambahin baris baru di tabel
+                } else { showModal('Gagal Mendaftar', result.message, 'info'); }
+            } catch (error) { showModal('Error Server', 'Terjadi kesalahan server.', 'info');
+            } finally { btn.innerText = 'Register Device'; btn.disabled = false; }
         });
-      });
 
-      [addEditModal, detailModal, connectModal].forEach((modal) => {
-        modal.addEventListener("click", (event) => {
-          if (event.target === modal) {
-            hideModal(modal);
-          }
-        });
-      });
+        window.onload = loadDevices;
 
-      loadDevices();
+        // Fungsi Salin Token ke Clipboard
+        function copyToken(token) {
+            navigator.clipboard.writeText(token).then(() => {
+                showModal('Tersalin!', `Token <br><b style="color:#3b82f6;">${token}</b><br> berhasil disalin ke clipboard!`, 'info');
+            }).catch(err => {
+                alert('Gagal menyalin token.');
+            });
+        }
+
+        // Fungsi Hapus Permanen
+        function deleteDevice(apiKey) {
+            showModal('Hapus Permanen', `Yakin mau menghapus device <b>${apiKey}</b>?<br><br>Ini akan melakukan Log Out secara paksa dan menghapus seluruh datanya dari sistem.`, 'confirm', async () => {
+                try {
+                    const response = await fetch('/delete-device', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ api_key: apiKey })
+                    });
+                    
+                    const result = await response.json();
+                    if (result.status) {
+                        showModal('Berhasil Dihapus', result.message, 'info');
+                        loadDevices(); // Refresh tabel agar barisnya hilang
+                    } else {
+                        showModal('Gagal', result.message, 'info');
+                    }
+                } catch (error) {
+                    showModal('Error Server', 'Terjadi kesalahan saat menghubungi server.', 'info');
+                }
+            });
+        }
     </script>
-  </body>
+</body>
 </html>
