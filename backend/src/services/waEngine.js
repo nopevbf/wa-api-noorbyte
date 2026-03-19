@@ -99,11 +99,37 @@ function initAllSessions(io) {
     users.forEach(user => connectToWhatsApp(user.api_key, io));
 }
 
-async function sendMessageViaWa(apiKey, number, message) {
+async function sendMessageViaWa(apiKey, number, message, msgType = 'text', mediaBase64 = null, fileName = null) {
     const waSocket = activeSessions.get(apiKey);
     if (!waSocket) throw new Error('Sistem WhatsApp belum siap/terkoneksi.');
+
     const waNumber = formatNumber(number);
-    await waSocket.sendMessage(waNumber, { text: message });
+
+    // Jika tipenya Gambar
+    if (msgType === 'image' && mediaBase64) {
+        // Ekstrak data base64 (membuang awalan "data:image/png;base64,")
+        const buffer = Buffer.from(mediaBase64.split(',')[1], 'base64');
+        await waSocket.sendMessage(waNumber, { 
+            image: buffer, 
+            caption: message // Message jadi caption di bawah gambar
+        });
+    } 
+    // Jika tipenya Dokumen (PDF, Excel, dll)
+    else if (msgType === 'document' && mediaBase64) {
+        const buffer = Buffer.from(mediaBase64.split(',')[1], 'base64');
+        const mimeType = mediaBase64.split(';')[0].split(':')[1]; // Ambil mimetype otomatis
+        
+        await waSocket.sendMessage(waNumber, { 
+            document: buffer, 
+            mimetype: mimeType, 
+            fileName: fileName || 'document.file', 
+            caption: message 
+        });
+    } 
+    // Jika tipe Text atau Template (Baileys modern fallback text untuk template non-resmi)
+    else {
+        await waSocket.sendMessage(waNumber, { text: message });
+    }
 }
 
 async function disconnectWa(apiKey) {
@@ -117,6 +143,24 @@ async function disconnectWa(apiKey) {
         fs.rmSync(sessionDir, { recursive: true, force: true });
     }
 }
+// FUNGSI BARU: Mengambil daftar grup WA
+async function fetchGroups(apiKey) {
+    const waSocket = activeSessions.get(apiKey);
+    if (!waSocket) {
+        throw new Error('Device belum terhubung atau mesin WA belum siap.');
+    }
+    
+    // Baileys punya fungsi bawaan untuk narik semua grup yang diikuti user
+    const groups = await waSocket.groupFetchAllParticipating();
+    
+    // Baileys mengembalikan format Object, kita ubah jadi Array biar gampang dilooping di Frontend
+    return Object.values(groups); 
+}
 
-// Tambahin connectToWhatsApp di dalam kurung kurawal ini
-module.exports = { initAllSessions, sendMessageViaWa, disconnectWa, connectToWhatsApp };
+module.exports = { 
+    initAllSessions, 
+    sendMessageViaWa, 
+    disconnectWa, 
+    connectToWhatsApp, // <-- Ini nama yang bener (pengganti startSessionForApiKey)
+    fetchGroups        // <-- Fungsi baru buat narik grup
+};

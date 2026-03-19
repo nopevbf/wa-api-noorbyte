@@ -1,0 +1,37 @@
+<aside id="app-sidebar" class="w-64 h-full border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col fixed inset-y-0 left-0 z-50 transform -translate-x-full lg:translate-x-0 lg:static transition-transform duration-300 ease-in-out">
+    <div class="p-6 flex flex-col gap-6 flex-1">
+        <div class="flex items-center gap-3">
+            <div class="bg-primary size-10 rounded-lg flex items-center justify-center text-white">
+                <span class="material-symbols-outlined">api</span>
+            </div>
+            <div class="flex flex-col">
+                <h1 class="text-base font-bold leading-none">ConnectAPI</h1>
+                <span class="text-[10px] font-bold tracking-wider text-primary bg-primary/10 px-1.5 py-0.5 rounded mt-1 w-fit">ADMIN PANEL</span>
+            </div>
+            <!-- Tombol close untuk mobile -->
+            <button id="closeSidebarBtn" class="lg:hidden ml-auto p-1 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <nav id="sidebar-nav" class="flex flex-col gap-1">
+            <a data-path="/dashboard" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" href="#">
+                <span class="material-symbols-outlined text-xl icon">dashboard</span>
+                <span class="text-sm font-medium">Dashboard</span>
+            </a>
+            <a data-path="/devices" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" href="/devices">
+                <span class="material-symbols-outlined text-xl icon">important_devices</span>
+                <span class="text-sm font-semibold">Devices</span>
+            </a>
+            <a data-path="/groups" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" href="/groups">
+                <span class="material-symbols-outlined icon text-xl">group</span>
+                <span class="text-sm font-semibold">WhatsApp Groups</span>
+            </a>
+            <a href="/tester" data-path="/tester" class="nav-link flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors">
+                <span class="material-symbols-outlined icon">send</span> <span class="text-sm font-medium">Web Tester</span>
+            </a>
+        </nav>
+    </div>
+</aside>
+
+<!-- Backdrop transparan untuk mode mobile -->
+<div id="sidebar-backdrop" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 hidden lg:hidden transition-opacity"></div>

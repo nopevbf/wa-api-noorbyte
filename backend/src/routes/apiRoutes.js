@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../config/database');
 const checkApiKey = require('../middlewares/auth');
-const { sendMessageViaWa, disconnectWa, connectToWhatsApp} = require('../services/waEngine'); // Import disconnectWa
+const { sendMessageViaWa, disconnectWa, connectToWhatsApp, fetchGroups } = require('../services/waEngine');
 const crypto = require('crypto');
 
 router.get('/get-devices', (req, res) => {
@@ -84,19 +84,99 @@ router.post('/delete-device', async (req, res) => {
     }
 });
 
+// ENDPOINT: Kirim Pesan (Text, Image, Document)
 router.post('/send-message', checkApiKey, async (req, res) => {
-    const { number, message } = req.body;
+    // 1. Timer WAJIB ditaruh di paling atas biar bisa dibaca di try maupun catch
+    const startTimer = Date.now();
+
+    // Tangkap semua payload dari Frontend
+    const { number, message, msg_type, media, file_name } = req.body;
     const apiKey = req.user.api_key;
-    
-    if (!number || !message) return res.status(400).json({ status: false, message: 'Parameter tidak lengkap.' });
+    const deviceName = req.user.username || 'unknown_device';
+
+    // Validasi basic
+    if (!number || (!message && !media)) {
+        return res.status(400).json({ 
+            status: "error", 
+            message: "Parameter tidak lengkap. Nomor dan Pesan/Media wajib diisi." 
+        });
+    }
 
     try {
-        await sendMessageViaWa(apiKey, number, message);
-        db.prepare('INSERT INTO message_logs (api_key, target_number, message, status) VALUES (?, ?, ?, ?)').run(apiKey, number, message, 'SUCCESS');
-        res.status(200).json({ status: true, message: `Pesan terkirim via ${apiKey}!` });
+        // 2. Eksekusi kirim pesan via Baileys dengan tambahan attachment
+        await sendMessageViaWa(apiKey, number, message, msg_type, media, file_name);
+        
+        // 3. Catat ke log database
+        const msgTextToSave = msg_type === 'text' ? message : `[${msg_type.toUpperCase()}] ${message || ''}`;
+        db.prepare('INSERT INTO message_logs (api_key, target_number, message, status) VALUES (?, ?, ?, ?)').run(apiKey, number, msgTextToSave, 'SUCCESS');
+
+        // 4. Hitung waktu selesai
+        const executionTime = Date.now() - startTimer;
+        const currentTimestamp = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
+        
+        // Buat Message ID acak (Pastikan require('crypto') udah ada di paling atas file apiRoutes.js)
+        const crypto = require('crypto');
+        const messageId = 'WAPI_' + crypto.randomBytes(5).toString('hex').toUpperCase();
+
+        // 5. Kembalikan Response Sukses
+        res.status(200).json({
+            status: "success",
+            data: {
+                message_id: messageId,
+                recipient: number,
+                timestamp: currentTimestamp,
+                device_id: deviceName,
+                provider_reference: "whatsapp_meta_8829"
+            },
+            meta: {
+                api_version: "v1.0",
+                execution_time_ms: executionTime
+            }
+        });
+
     } catch (error) {
-        db.prepare('INSERT INTO message_logs (api_key, target_number, message, status) VALUES (?, ?, ?, ?)').run(apiKey, number, message, 'FAILED');
-        res.status(500).json({ status: false, message: error.message || 'Gagal mengirim pesan.' });
+        // Kalau gagal, hitung juga waktu error-nya
+        const executionTime = Date.now() - startTimer;
+        
+        // Catat error ke log
+        const msgTextToSave = msg_type === 'text' ? message : `[${msg_type.toUpperCase()}] ${message || ''}`;
+        db.prepare('INSERT INTO message_logs (api_key, target_number, message, status) VALUES (?, ?, ?, ?)').run(apiKey, number, msgTextToSave, 'FAILED');
+        
+        res.status(500).json({ 
+            status: "error", 
+            message: error.message || 'Gagal mengirim pesan.',
+            meta: {
+                api_version: "v1.0",
+                execution_time_ms: executionTime
+            }
+        });
+    }
+});
+
+// ENDPOINT BARU: Ambil Daftar Grup
+router.get("/groups/:apiKey", async (req, res) => {
+    const { apiKey } = req.params;
+    
+    try {
+        // Cek dulu apakah device ada di database dan statusnya Connected
+        const device = db.prepare("SELECT status FROM users WHERE api_key = ?").get(apiKey);
+        if (!device) return res.status(404).json({ status: false, message: "Device tidak ditemukan." });
+        if (device.status !== 'Connected') return res.status(400).json({ status: false, message: "Device belum terhubung (Offline)." });
+
+        // Tarik grup dari memori WA
+        const groups = await fetchGroups(apiKey);
+        
+        res.status(200).json({ 
+            status: true, 
+            message: "Berhasil mengambil grup.",
+            data: groups 
+        });
+    } catch (error) {
+        res.status(500).json({ 
+            status: false, 
+            message: "Gagal mengambil daftar grup.", 
+            error: error.message 
+        });
     }
 });
 
