@@ -124,6 +124,10 @@ router.post('/send-message', checkApiKey, async (req, res) => {
             data: {
                 message_id: messageId,
                 recipient: number,
+                message_type: msg_type,
+                message_text: message || '',
+                media_preview: media ? `${media.substring(0, 50)}... [TRUNCATED_BASE64]` : null,
+                file_name: file_name || null,
                 timestamp: currentTimestamp,
                 device_id: deviceName,
                 provider_reference: "whatsapp_meta_8829"

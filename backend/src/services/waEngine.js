@@ -106,7 +106,7 @@ async function sendMessageViaWa(apiKey, number, message, msgType = 'text', media
     const waNumber = formatNumber(number);
 
     // Jika tipenya Gambar
-    if (msgType === 'image' && mediaBase64) {
+    if ((msgType === 'image' || (msgType === 'text' && mediaBase64 && mediaBase64.startsWith('data:image/'))) && mediaBase64) {
         // Ekstrak data base64 (membuang awalan "data:image/png;base64,")
         const buffer = Buffer.from(mediaBase64.split(',')[1], 'base64');
         await waSocket.sendMessage(waNumber, { 
@@ -115,7 +115,7 @@ async function sendMessageViaWa(apiKey, number, message, msgType = 'text', media
         });
     } 
     // Jika tipenya Dokumen (PDF, Excel, dll)
-    else if (msgType === 'document' && mediaBase64) {
+    else if ((msgType === 'document' || (msgType === 'text' && mediaBase64)) && mediaBase64) {
         const buffer = Buffer.from(mediaBase64.split(',')[1], 'base64');
         const mimeType = mediaBase64.split(';')[0].split(':')[1]; // Ambil mimetype otomatis
         

@@ -62,12 +62,15 @@ msgTypeRadios.forEach(radio => {
         document.getElementById('fileNameDisplay').classList.remove('text-primary');
 
         if (type === 'text') {
-            // MODE TEKS
+            // MODE TEKS            
             messageContentWrapper.classList.remove('hidden');
             messageContent.required = true;
             
             attachmentWrapper.classList.remove('hidden');
             fileInput.required = false;
+            fileInput.accept = '';
+            attachmentLabel.innerHTML = 'Attachment (Optional)';
+            fileHelpText.innerText = 'Batas maksimal ukuran 50MB';
             
         } else if (type === 'image') {
             // MODE GAMBAR
