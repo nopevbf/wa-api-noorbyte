@@ -18,6 +18,11 @@ app.get('/tester', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'tester.html'));
 });
 
+// ROUTE BARU UNTUK DAILY REPORTS
+app.get('/automation', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'automation.html'));
+});
+
 // Redirect default ke devices
 app.get('*', (req, res) => {
     res.redirect('/devices');
