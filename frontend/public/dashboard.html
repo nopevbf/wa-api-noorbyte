@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>WhatsApp API Dashboard</title>
+
+    <link rel="stylesheet" href="/css/style.css" />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+      rel="stylesheet"
+    />
+
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#136dec",
+              "background-light": "#f6f7f8",
+              "background-dark": "#101822",
+            },
+            fontFamily: { display: ["Inter"] },
+          },
+        },
+      };
+    </script>
+    <style>
+      body {
+        font-family: "Inter", sans-serif;
+      }
+      .material-symbols-outlined {
+        font-variation-settings:
+          "FILL" 0,
+          "wght" 400,
+          "GRAD" 0,
+          "opsz" 24;
+      }
+    </style>
+  </head>
+  <body
+    class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100"
+  >
+    <div class="flex h-screen overflow-hidden">
+      <div id="sidebar-container" class="z-50 shrink-0"></div>
+
+      <main
+        class="flex-1 flex flex-col overflow-y-auto custom-scrollbar relative"
+      >
+        <header
+          class="h-16 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm flex items-center justify-between px-4 sm:px-8 sticky top-0 z-10"
+        >
+          <div class="flex items-center gap-4">
+            <button
+              id="toggleSidebarBtn"
+              class="lg:hidden p-2 -ml-2 text-slate-500 hover:bg-slate-100 rounded-lg"
+            >
+              <span class="material-symbols-outlined">menu</span>
+            </button>
+            <h2 class="text-lg font-semibold hidden sm:block">Overview</h2>
+          </div>
+          <div class="flex items-center gap-4">
+            <div
+              class="h-8 w-[1px] bg-slate-200 dark:border-slate-800 mx-2"
+            ></div>
+            <div class="flex items-center gap-3">
+              <div class="text-right hidden sm:block">
+                <p class="text-xs font-bold">Admin User</p>
+                <p class="text-[10px] text-slate-500">Master Access</p>
+              </div>
+              <div
+                class="size-9 rounded-full bg-primary/20 border-2 border-primary/10 flex items-center justify-center overflow-hidden font-bold text-primary text-xs"
+              >
+                JD
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <div class="p-4 sm:p-8 space-y-8 max-w-7xl mx-auto w-full">
+          <div class="flex flex-col gap-1">
+            <h3 class="text-2xl font-bold tracking-tight">Welcome back!</h3>
+            <p class="text-slate-500 text-sm">
+              Monitor your WhatsApp API connections and message flow.
+            </p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div
+              class="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm"
+            >
+              <div class="flex justify-between items-start mb-4">
+                <span
+                  class="p-2 bg-blue-50 text-blue-600 rounded-lg material-symbols-outlined"
+                  >sensors</span
+                >
+                <span
+                  class="text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded"
+                  >Live</span
+                >
+              </div>
+              <p class="text-slate-500 text-sm font-medium">Active Devices</p>
+              <p class="text-3xl font-bold mt-1">
+                <span id="statActiveDevices">0</span
+                ><span class="text-slate-300 text-xl font-normal">
+                  / <span id="statTotalDevices">0</span></span
+                >
+              </p>
+            </div>
+            <div
+              class="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm"
+            >
+              <div class="flex justify-between items-start mb-4">
+                <span
+                  class="p-2 bg-purple-50 text-purple-600 rounded-lg material-symbols-outlined"
+                  >forward_to_inbox</span
+                >
+              </div>
+              <p class="text-slate-500 text-sm font-medium">Messages Sent</p>
+              <p id="statTotalMessages" class="text-3xl font-bold mt-1">0</p>
+            </div>
+            <div
+              class="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm"
+            >
+              <div class="flex justify-between items-start mb-4">
+                <span
+                  class="p-2 bg-emerald-50 text-emerald-600 rounded-lg material-symbols-outlined"
+                  >verified</span
+                >
+              </div>
+              <p class="text-slate-500 text-sm font-medium">Success Rate</p>
+              <p id="statSuccessRate" class="text-3xl font-bold mt-1">0%</p>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-2 space-y-4">
+              <div class="flex items-center justify-between">
+                <h4 class="font-bold text-lg">My Devices</h4>
+                <a
+                  href="/devices"
+                  class="text-primary hover:bg-primary/10 px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-1 transition-colors"
+                >
+                  Manage
+                  <span class="material-symbols-outlined text-sm"
+                    >arrow_forward</span
+                  >
+                </a>
+              </div>
+              <div
+                class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm overflow-x-auto"
+              >
+                <table class="w-full text-left">
+                  <thead
+                    class="bg-slate-50 text-slate-500 text-xs uppercase font-bold tracking-wider"
+                  >
+                    <tr>
+                      <th class="px-6 py-4">Device Name</th>
+                      <th class="px-6 py-4">Status</th>
+                      <th class="px-6 py-4">Phone Number</th>
+                    </tr>
+                  </thead>
+                  <tbody
+                    id="dashboardDeviceList"
+                    class="divide-y divide-slate-100 dark:divide-slate-800"
+                  ></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="space-y-4">
+              <h4 class="font-bold text-lg">Recent Logs</h4>
+              <div
+                class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm flex flex-col h-[320px]"
+              >
+                <div
+                  id="dashboardActivityFeed"
+                  class="flex flex-col gap-6 overflow-y-auto pr-2 flex-1"
+                >
+                  <p class="text-sm text-slate-500 text-center mt-10">
+                    Memuat data...
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script src="/js/sidebar.js"></script>
+    <script src="/js/dashboard.js"></script>
+  </body>
+</html>
