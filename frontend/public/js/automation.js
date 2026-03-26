@@ -451,9 +451,76 @@ Occupancy Rate: 0%
   }
 
   // ==========================================
-  // 7. SIMPAN SETTINGAN KE LOCALSTORAGE
+  // 7. SIMPAN SETTINGAN KE LOCALSTORAGE & VALIDASI JADWAL
   // ==========================================
   const btnSaveSettings = document.getElementById("btnSaveSettings");
+  const fetchTimeInput = document.getElementById("fetchTime");
+  const sendWaTimeInput = document.getElementById("sendWaTime");
+  const toggleScheduleInput = document.getElementById("scheduleToggle");
+  const scheduleWarningMsg = document.getElementById("scheduleWarningMsg");
+
+  // Fungsi Validasi Waktu
+  function validateScheduleTimes() {
+    if (
+      !fetchTimeInput ||
+      !sendWaTimeInput ||
+      !toggleScheduleInput ||
+      !scheduleWarningMsg
+    )
+      return true;
+
+    const isEnabled = toggleScheduleInput.checked;
+    const fetchT = fetchTimeInput.value;
+    const sendT = sendWaTimeInput.value;
+
+    // Kalau jadwal nyala DAN waktunya sama
+    if (isEnabled && fetchT === sendT) {
+      scheduleWarningMsg.classList.remove("hidden");
+      fetchTimeInput.classList.add(
+        "border-red-500",
+        "bg-red-50/50",
+        "text-red-600",
+        "focus:border-red-500",
+        "focus:ring-red-500/20",
+      );
+      sendWaTimeInput.classList.add(
+        "border-red-500",
+        "bg-red-50/50",
+        "text-red-600",
+        "focus:border-red-500",
+        "focus:ring-red-500/20",
+      );
+      return false;
+    } else {
+      // Kalau aman, hilangkan efek merah
+      scheduleWarningMsg.classList.add("hidden");
+      fetchTimeInput.classList.remove(
+        "border-red-500",
+        "bg-red-50/50",
+        "text-red-600",
+        "focus:border-red-500",
+        "focus:ring-red-500/20",
+      );
+      sendWaTimeInput.classList.remove(
+        "border-red-500",
+        "bg-red-50/50",
+        "text-red-600",
+        "focus:border-red-500",
+        "focus:ring-red-500/20",
+      );
+      return true;
+    }
+  }
+
+  // Pasang Pendengar (Event Listener) biar langsung divalidasi tiap kali user ngetik/ngeklik
+  if (fetchTimeInput)
+    fetchTimeInput.addEventListener("input", validateScheduleTimes);
+  if (sendWaTimeInput)
+    sendWaTimeInput.addEventListener("input", validateScheduleTimes);
+  if (toggleScheduleInput)
+    toggleScheduleInput.addEventListener("change", validateScheduleTimes);
+
+  // Load Data awal
   function loadSavedSettings() {
     const savedSettings = JSON.parse(
       localStorage.getItem("connectApiSettings"),
@@ -488,9 +555,54 @@ Occupancy Rate: 0%
 
       if (savedSettings.scheduleEnabled) startScheduler();
     }
+
+    // Panggil validasi sekali saat data pertama kali dimuat
+    validateScheduleTimes();
   }
 
   loadSavedSettings();
+
+  // Aksi Klik Simpan
+  if (btnSaveSettings) {
+    btnSaveSettings.addEventListener("click", () => {
+      // CEGAT DISINI: Kalau validasi gagal, tolak save-nya!
+      if (!validateScheduleTimes()) {
+        return showModal(
+          "Peringatan Jadwal",
+          "Waktu Tarik Data dan Kirim WA bentrok! Silakan beri jeda minimal 1 menit sebelum menyimpan pengaturan.",
+        );
+      }
+
+      const settings = {
+        dpApiUrl: document.getElementById("dpApiUrl").value,
+        dpEmail: document.getElementById("dpEmail").value,
+        dpPassword: document.getElementById("accountPassword").value,
+        scheduleEnabled: document.getElementById("scheduleToggle").checked,
+        fetchTime: document.getElementById("fetchTime").value,
+        sendWaTime: document.getElementById("sendWaTime").value,
+        frequency: document.querySelector('input[name="frequency"]:checked')
+          .value,
+        targetNumber: document.getElementById("targetNumber").value,
+      };
+      localStorage.setItem("connectApiSettings", JSON.stringify(settings));
+
+      const originalText = btnSaveSettings.innerHTML;
+      btnSaveSettings.innerHTML = `<span class="material-symbols-outlined animate-spin text-sm">autorenew</span> Saving...`;
+      btnSaveSettings.disabled = true;
+
+      setTimeout(() => {
+        btnSaveSettings.innerHTML = originalText;
+        btnSaveSettings.disabled = false;
+        showModal(
+          "Pengaturan Disimpan",
+          "Konfigurasi jadwal dan API berhasil disimpan.",
+        );
+
+        if (settings.scheduleEnabled) startScheduler();
+        else stopScheduler();
+      }, 800);
+    });
+  }
 
   if (btnSaveSettings) {
     btnSaveSettings.addEventListener("click", () => {
