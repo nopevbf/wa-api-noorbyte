@@ -304,4 +304,134 @@ router.get("/groups/:apiKey", async (req, res) => {
   }
 });
 
+// ==========================================
+// ENDPOINT 1: REQUEST MAGIC LINK
+// ==========================================
+router.post("/auth/magic-link", async (req, res) => {
+  const { phone } = req.body;
+  if (!phone)
+    return res
+      .status(400)
+      .json({ status: false, message: "Nomor WhatsApp wajib diisi." });
+
+  try {
+    // 1. Cari device "Master/Admin" yang lagi Online untuk bertugas ngirim pesan OTP
+    const senderDevice = db
+      .prepare("SELECT api_key FROM users WHERE status = 'Connected' LIMIT 1")
+      .get();
+    if (!senderDevice) {
+      return res
+        .status(500)
+        .json({
+          status: false,
+          message:
+            "Sistem sedang offline. Tidak ada Gateway pengirim yang aktif.",
+        });
+    }
+
+    // 2. Bikin tabel magic_links (Jaga-jaga kalau belum ada di DB lo)
+    db.prepare(
+      `CREATE TABLE IF NOT EXISTS magic_links (phone TEXT, token TEXT, expires_at INTEGER, used INTEGER DEFAULT 0)`,
+    ).run();
+
+    // 3. Generate Token Unik (Berlaku 10 Menit)
+    const token = crypto.randomBytes(16).toString("hex");
+    const expiresAt = Date.now() + 10 * 60 * 1000;
+
+    // 4. Simpan ke Database
+    db.prepare(
+      "INSERT INTO magic_links (phone, token, expires_at) VALUES (?, ?, ?)",
+    ).run(phone, token, expiresAt);
+
+    // 5. Susun Pesan & Kirim via Baileys Engine
+    const magicLink = `http://localhost:4000/verify?token=${token}`;
+    const messageText = `👋 *NoorByteAPI Login*\n\nPermintaan akses masuk terdeteksi. Klik link aman di bawah ini untuk masuk ke Dashboard Anda:\n\n🔗 ${magicLink}\n\n_Link ini hanya berlaku selama 10 menit dan hanya bisa digunakan satu kali. Jangan bagikan link ini ke siapapun._`;
+
+    // Gunakan fungsi sendMessageViaWa yang sudah ada
+    await sendMessageViaWa(senderDevice.api_key, phone, messageText, "text");
+
+    res
+      .status(200)
+      .json({
+        status: true,
+        message: "Magic link berhasil dikirim ke WhatsApp Anda.",
+      });
+  } catch (error) {
+    res.status(500).json({ status: false, message: error.message });
+  }
+});
+
+// ==========================================
+// ENDPOINT 2: VERIFY MAGIC LINK
+// ==========================================
+router.post("/auth/verify", (req, res) => {
+  const { token } = req.body;
+  if (!token)
+    return res
+      .status(400)
+      .json({ status: false, message: "Token tidak ditemukan." });
+
+  try {
+    // 1. Cek Token di Database
+    const linkData = db
+      .prepare("SELECT * FROM magic_links WHERE token = ? AND used = 0")
+      .get(token);
+
+    if (!linkData)
+      return res
+        .status(401)
+        .json({
+          status: false,
+          message: "Link tidak valid atau sudah digunakan.",
+        });
+    if (Date.now() > linkData.expires_at)
+      return res
+        .status(401)
+        .json({
+          status: false,
+          message: "Link sudah kadaluarsa. Silakan request ulang.",
+        });
+
+    // 2. Tandai token sudah terpakai
+    db.prepare("UPDATE magic_links SET used = 1 WHERE token = ?").run(token);
+
+    // 3. Cek apakah user (nomor WA ini) sudah punya akun. Kalau belum, AUTO-REGISTER!
+    let user = db
+      .prepare("SELECT * FROM users WHERE phone = ?")
+      .get(linkData.phone);
+
+    if (!user) {
+      const newApiKey = "nb_" + crypto.randomBytes(10).toString("hex");
+      const newUsername = "User_" + linkData.phone.slice(-4);
+
+      db.prepare(
+        "INSERT INTO users (username, phone, api_key, status) VALUES (?, ?, ?, 'Offline')",
+      ).run(newUsername, linkData.phone, newApiKey);
+      user = {
+        username: newUsername,
+        phone: linkData.phone,
+        api_key: newApiKey,
+      };
+    }
+
+    // 4. Login Sukses! Kembalikan API Key sebagai "Sesi/Session"
+    res.status(200).json({
+      status: true,
+      message: "Otentikasi berhasil.",
+      data: {
+        username: user.username,
+        phone: user.phone,
+        api_key: user.api_key,
+      },
+    });
+  } catch (error) {
+    res
+      .status(500)
+      .json({
+        status: false,
+        message: "Terjadi kesalahan server saat verifikasi.",
+      });
+  }
+});
+
 module.exports = router;

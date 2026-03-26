@@ -33,6 +33,11 @@ app.get("/automation", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "automation.html"));
 });
 
+// ROUTE UNTUK PROSES VERIFIKASI MAGIC LINK
+app.get("/verify", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "verify.html"));
+});
+
 // Redirect default ke devices
 app.get("*", (req, res) => {
   res.redirect("/login");

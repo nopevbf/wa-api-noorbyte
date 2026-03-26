@@ -421,6 +421,45 @@
       </div>
     </footer>
 
+    <div
+      id="loginModal"
+      class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] hidden flex justify-center items-center transition-all duration-300 opacity-0"
+    >
+      <div
+        class="bg-white rounded-2xl shadow-2xl p-8 text-center max-w-sm w-full mx-4 border border-slate-200 transform scale-95 transition-all duration-300"
+        id="loginModalContent"
+      >
+        <div
+          id="loginModalIconBox"
+          class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-blue-50 mb-6"
+        >
+          <span
+            id="loginModalIcon"
+            class="material-symbols-outlined text-3xl text-blue-500"
+            >info</span
+          >
+        </div>
+        <h3
+          id="loginModalTitle"
+          class="font-extrabold text-xl mb-2 text-slate-900"
+        >
+          Judul
+        </h3>
+        <p
+          id="loginModalMessage"
+          class="text-sm text-slate-500 mb-8 leading-relaxed"
+        >
+          Pesan error atau sukses ada di sini.
+        </p>
+        <button
+          onclick="closeLoginModal()"
+          class="w-full bg-slate-900 text-white font-bold py-3.5 px-4 rounded-xl hover:bg-slate-800 active:scale-[0.98] transition-all"
+        >
+          Mengerti
+        </button>
+      </div>
+    </div>
+
     <script src="/js/login.js"></script>
   </body>
 </html>
