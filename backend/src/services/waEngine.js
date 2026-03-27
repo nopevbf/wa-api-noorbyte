@@ -17,9 +17,10 @@ function formatNumber(number) {
 
 // Tambahan parameter 'io' (Socket.io)
 async function connectToWhatsApp(apiKey, io) {
-    const sessionDir = path.join(__dirname, '../../sessions', apiKey);
-    const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
-    const { version } = await fetchLatestBaileysVersion();
+    try {
+        const sessionDir = path.join(__dirname, '../../sessions', apiKey);
+        const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
+        const { version } = await fetchLatestBaileysVersion();
 
     console.log(`[${apiKey}] Memulai koneksi WA...`);
 
@@ -79,18 +80,24 @@ async function connectToWhatsApp(apiKey, io) {
     sock.ev.on('creds.update', saveCreds);
 
     // messages.upsert / Webhook tetap sama...
-    sock.ev.on('messages.upsert', async (m) => {
-        const msg = m.messages[0];
-        if (!msg.message || msg.key.fromMe) return;
-        const sender = msg.key.remoteJid.replace('@s.whatsapp.net', '');
-        const text = msg.message.conversation || msg.message.extendedTextMessage?.text || '';
-        const user = db.prepare('SELECT webhook_url FROM users WHERE api_key = ?').get(apiKey);
-        if (user && user.webhook_url) {
-            try {
-                await axios.post(user.webhook_url, { api_key: apiKey, sender, message: text });
-            } catch (error) { console.error(`[${apiKey}] Webhook error`); }
-        }
-    });
+        sock.ev.on('messages.upsert', async (m) => {
+            const msg = m.messages[0];
+            if (!msg.message || msg.key.fromMe) return;
+            const sender = msg.key.remoteJid.replace('@s.whatsapp.net', '');
+            const text = msg.message.conversation || msg.message.extendedTextMessage?.text || '';
+            const user = db.prepare('SELECT webhook_url FROM users WHERE api_key = ?').get(apiKey);
+            if (user && user.webhook_url) {
+                try {
+                    await axios.post(user.webhook_url, { api_key: apiKey, sender, message: text });
+                } catch (error) { console.error(`[${apiKey}] Webhook error`); }
+            }
+        });
+    } catch (err) {
+        console.error(`[${apiKey}] Fatal error saat connectToWhatsApp:`, err);
+        // Set offline status if connection init failed
+        db.prepare('UPDATE users SET status = ? WHERE api_key = ?').run('Disconnected', apiKey);
+        if (io) io.emit(`status-${apiKey}`, { apiKey, status: 'Disconnected' });
+    }
 }
 
 function initAllSessions(io) {

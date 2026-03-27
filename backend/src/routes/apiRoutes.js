@@ -58,9 +58,15 @@ router.get("/dashboard-stats", (req, res) => {
 
 router.get("/get-devices", (req, res) => {
   try {
-    const devices = db
-      .prepare("SELECT username, phone, api_key, status FROM users")
-      .all();
+    const { role, api_key } = req.query;
+    let devices = [];
+    if (role === 'admin') {
+      devices = db.prepare("SELECT username, phone, api_key, status FROM users").all();
+    } else if (api_key) {
+      devices = db.prepare("SELECT username, phone, api_key, status FROM users WHERE api_key = ?").all(api_key);
+    } else {
+      return res.status(401).json({ status: false, message: "Unauthorized: Silakan login terlebih dahulu." });
+    }
     res.status(200).json({ status: true, data: devices });
   } catch (error) {
     res

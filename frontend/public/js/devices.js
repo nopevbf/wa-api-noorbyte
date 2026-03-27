@@ -73,7 +73,10 @@ async function loadDevices() {
     tableBody.innerHTML = '<tr><td colspan="4" class="px-6 py-8 text-center text-slate-500">Loading data...</td></tr>';
     
     try {
-        const response = await fetch('http://localhost:3000/api/get-devices'); // Mengambil data langsung dari API
+        const isAdmin = localStorage.getItem('connectApi_loggedIn') === 'true';
+        const guestApiKey = localStorage.getItem('noorbyte_session');
+        const query = isAdmin ? '?role=admin' : (guestApiKey ? `?api_key=${guestApiKey}` : '');
+        const response = await fetch(`http://localhost:3000/api/get-devices${query}`); // Mengambil data langsung dari API
         const result = await response.json();
         
         if (result.status && result.data.length > 0) {

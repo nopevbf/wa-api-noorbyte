@@ -6,7 +6,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     selector.innerHTML = '<option value="">Memuat device...</option>';
     
     try {
-        const response = await fetch(`${API_URL}/get-devices`);
+        const isAdmin = localStorage.getItem('connectApi_loggedIn') === 'true';
+        const guestApiKey = localStorage.getItem('noorbyte_session');
+        const query = isAdmin ? '?role=admin' : (guestApiKey ? `?api_key=${guestApiKey}` : '');
+        const response = await fetch(`${API_URL}/get-devices${query}`);
         const result = await response.json();
         
         if (result.status && result.data.length > 0) {

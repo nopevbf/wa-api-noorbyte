@@ -3,7 +3,10 @@ const API_URL = "http://localhost:3000/api";
 document.addEventListener("DOMContentLoaded", async () => {
   // 1. Fetch Data Devices
   try {
-    const devRes = await fetch(`${API_URL}/get-devices`);
+    const isAdmin = localStorage.getItem('connectApi_loggedIn') === 'true';
+    const guestApiKey = localStorage.getItem('noorbyte_session');
+    const query = isAdmin ? '?role=admin' : (guestApiKey ? `?api_key=${guestApiKey}` : '');
+    const devRes = await fetch(`${API_URL}/get-devices${query}`);
     const devResult = await devRes.json();
 
     const tbody = document.getElementById("dashboardDeviceList");
