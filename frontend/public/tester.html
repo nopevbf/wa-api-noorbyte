@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Web Tester - WhatsApp API</title>
+    
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    
+    <script id="tailwind-config">
+        tailwind.config = { darkMode: "class", theme: { extend: { colors: { "primary": "#136dec", "background-light": "#f6f7f8", "background-dark": "#101822" }, fontFamily: { "display": ["Inter"] } } } }
+    </script>
+    <style> body { font-family: 'Inter', sans-serif; } .material-symbols-outlined { font-size: 24px; font-variation-settings: 'FILL' 0; } </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100">
+<div class="flex h-screen overflow-hidden">
+    
+    <div id="sidebar-container"></div>
+
+    <main class="flex-1 overflow-y-auto relative custom-scrollbar">
+        <header class="h-16 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md sticky top-0 z-10 flex items-center justify-between px-4 sm:px-8">
+            <div class="flex items-center gap-3">
+                <button id="toggleSidebarBtn" class="lg:hidden p-2 -ml-2 text-slate-500 hover:bg-slate-100 rounded-lg">
+                    <span class="material-symbols-outlined">menu</span>
+                </button>
+                <h2 class="text-lg font-semibold hidden sm:block">Web Tester</h2>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2 text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full border border-emerald-100">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> API Online
+                </div>
+                <div class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-bold text-xs">JD</div>
+            </div>
+        </header>
+
+        <div class="p-8 max-w-7xl mx-auto space-y-8">
+            <div>
+                <h3 class="text-2xl font-bold text-slate-900 dark:text-slate-100">Send Test Message</h3>
+                <p class="text-slate-500 text-sm mt-1">Simulate API requests and verify your delivery setup in real-time.</p>
+            </div>
+
+            <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
+                <div class="xl:col-span-2 space-y-6">
+                    <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm">
+                        <form id="testMessageForm" class="space-y-6">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="space-y-2">
+                                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-300">Connected Device (Sender)</label>
+                                    <div class="relative">
+                                        <select id="deviceSelector" required class="w-full h-11 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-primary focus:border-primary appearance-none px-4">
+                                            <option value="">Loading devices...</option>
+                                        </select>
+                                        <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">expand_more</span>
+                                    </div>
+                                </div>
+                                <div class="space-y-2">
+                                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-300">Recipient Phone / Group ID</label>
+                                    <div class="relative">
+                                        <input id="targetNumber" required class="w-full h-11 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-primary focus:border-primary px-4" placeholder="e.g. 62812345678 or 123@g.us" type="text"/>
+                                        <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">contact_page</span>
+                                    </div>
+                                    <p class="text-[10px] text-slate-400">Gunakan kode negara (62) tanpa tanda +. Atau paste Group ID (@g.us).</p>
+                                </div>
+                            </div>
+
+                            <div class="space-y-2">
+                                <label class="text-sm font-semibold text-slate-700 dark:text-slate-300">Message Type</label>
+                                <div class="flex flex-wrap gap-3">
+                                    <label class="flex-1 min-w-[120px]">
+                                        <input checked class="hidden peer" name="msg_type" value="text" type="radio"/>
+                                        <div class="flex flex-col items-center justify-center p-3 border border-slate-200 dark:border-slate-700 rounded-lg cursor-pointer peer-checked:border-primary peer-checked:bg-primary/5 hover:bg-slate-50 transition-all">
+                                            <span class="material-symbols-outlined text-slate-400 peer-checked:text-primary mb-1">description</span>
+                                            <span class="text-xs font-medium">Text</span>
+                                        </div>
+                                    </label>
+                                    <label class="flex-1 min-w-[120px]">
+                                        <input class="hidden peer" name="msg_type" value="image" type="radio"/>
+                                        <div class="flex flex-col items-center justify-center p-3 border border-slate-200 dark:border-slate-700 rounded-lg cursor-pointer peer-checked:border-primary peer-checked:bg-primary/5 hover:bg-slate-50 transition-all">
+                                            <span class="material-symbols-outlined text-slate-400 peer-checked:text-primary mb-1">image</span>
+                                            <span class="text-xs font-medium">Image</span>
+                                        </div>
+                                    </label>
+                                    <label class="flex-1 min-w-[120px]">
+                                        <input class="hidden peer" name="msg_type" value="document" type="radio"/>
+                                        <div class="flex flex-col items-center justify-center p-3 border border-slate-200 dark:border-slate-700 rounded-lg cursor-pointer peer-checked:border-primary peer-checked:bg-primary/5 hover:bg-slate-50 transition-all">
+                                            <span class="material-symbols-outlined text-slate-400 peer-checked:text-primary mb-1">attach_file</span>
+                                            <span class="text-xs font-medium">Document</span>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div id="messageContentWrapper" class="space-y-2">
+                                <label class="text-sm font-semibold text-slate-700 dark:text-slate-300">Message Content</label>
+                                <textarea id="messageContent" required class="w-full bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-primary focus:border-primary px-4 py-3" placeholder="Ketik pesan percobaan di sini..." rows="4"></textarea>
+                            </div>
+
+                            <div id="attachmentWrapper" class="space-y-2 relative hidden">
+                                <label id="attachmentLabel" class="text-sm font-semibold text-slate-700 dark:text-slate-300">Attachment (Optional)</label>
+                                <div class="relative border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl p-8 flex flex-col items-center justify-center bg-slate-50/50 hover:bg-slate-100 transition-colors">
+                                    <input type="file" id="fileInput" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                                    <span class="material-symbols-outlined text-slate-400 text-4xl mb-2">cloud_upload</span>
+                                    <p id="fileNameDisplay" class="text-sm text-slate-600 dark:text-slate-400 font-bold">Klik atau drag file ke sini</p>
+                                    <p id="fileHelpText" class="text-xs text-slate-400 mt-1">Batas maksimal ukuran 50MB</p>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+                                <button type="reset" class="px-6 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-sm font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">Clear Form</button>
+                                <button type="submit" id="btnSend" class="px-8 py-2.5 rounded-lg bg-primary text-white text-sm font-bold shadow-lg shadow-primary/20 hover:opacity-90 transition-all flex items-center gap-2">
+                                    <span id="btnIcon" class="material-symbols-outlined text-[20px]">send</span>
+                                    <span id="btnText">Send Message</span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="xl:col-span-1 space-y-6">
+                    <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 flex flex-col h-full shadow-sm overflow-hidden">
+                        <div class="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
+                            <h4 class="text-sm font-bold flex items-center gap-2">
+                                <span class="material-symbols-outlined text-primary text-[18px]">terminal</span> Response JSON
+                            </h4>
+                            <span id="httpStatus" class="text-[10px] font-mono text-slate-400 uppercase tracking-widest">Waiting...</span>
+                        </div>
+                        <div class="flex-1 p-4 bg-slate-950 text-emerald-400 font-mono text-xs leading-relaxed overflow-auto min-h-[300px]">
+<pre id="responseJson" class="whitespace-pre-wrap word-break">
+// Hasil response dari API 
+// akan muncul di sini...
+</pre>
+                        </div>
+                        <div class="p-3 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-2 bg-white dark:bg-slate-900">
+                            <button onclick="copyJson()" class="text-[10px] font-bold text-slate-500 hover:text-primary flex items-center gap-1 uppercase tracking-tighter">
+                                <span class="material-symbols-outlined text-[14px]">content_copy</span> Copy JSON
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden opacity-50 pointer-events-none">
+                <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+                    <h4 class="text-base font-bold">Recent Test Logs (Coming Soon)</h4>
+                </div>
+                <div class="p-6 text-center text-sm text-slate-500">
+                    Tabel riwayat pesan akan kita hidupkan di tahap selanjutnya!
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<div id="globalModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] hidden flex justify-center items-center transition-opacity">
+    <div class="bg-white rounded-xl shadow-2xl p-6 text-center max-w-sm border border-slate-200">
+        <h3 id="modalTitle" class="font-bold text-lg mb-2"></h3>
+        <p id="modalMessage" class="text-sm text-slate-500 mb-4"></p>
+        <button onclick="document.getElementById('globalModal').classList.add('hidden')" class="bg-primary text-white px-4 py-2 rounded-lg w-full font-bold">Tutup</button>
+    </div>
+</div>
+
+<script src="/js/sidebar.js"></script>
+<script src="/js/tester.js"></script>
+</body>
+</html>

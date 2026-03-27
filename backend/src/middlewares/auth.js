@@ -1,0 +1,38 @@
+const db = require('../config/database');
+
+const checkApiKey = (req, res, next) => {
+    // 1. Cek dari Header Authorization (Format: Bearer <token>)
+    const authHeader = req.headers.authorization;
+    let apiKey = '';
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+        // Potong tulisan 'Bearer ' dan ambil token-nya aja
+        apiKey = authHeader.split(' ')[1]; 
+    } 
+    // 2. Fallback (Cadangan): Cek dari header x-api-key atau body (biar API lama nggak error)
+    else {
+        apiKey = req.headers['x-api-key'] || req.body.api_key || req.query.api_key;
+    }
+
+    // Kalau bener-bener kosong
+    if (!apiKey) {
+        return res.status(401).json({ status: false, message: 'API Key tidak ditemukan di header (Format: Bearer <token>).' });
+    }
+
+    // Cek ke database apakah API Key valid
+    try {
+        const user = db.prepare('SELECT * FROM users WHERE api_key = ?').get(apiKey);
+        
+        if (!user) {
+            return res.status(401).json({ status: false, message: 'API Key tidak valid atau tidak terdaftar.' });
+        }
+
+        // Kalau lolos, simpan data user ke request buat dipakai ngirim pesan
+        req.user = user;
+        next(); // Silakan masuk!
+    } catch (error) {
+        return res.status(500).json({ status: false, message: 'Terjadi kesalahan pada server database.' });
+    }
+};
+
+module.exports = checkApiKey;
