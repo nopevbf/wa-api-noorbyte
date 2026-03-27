@@ -74,10 +74,20 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   let cachedMessage = null;
 
+  function formatPreviewText(text) {
+    if (!text) return "";
+    const lines = text.split('\n');
+    if (lines.length <= 15) return text;
+    
+    const topLines = lines.slice(0, 8).join('\n');
+    const bottomLines = lines.slice(-5).join('\n');
+    return `${topLines}\n\n....\n...\n\n${bottomLines}`;
+  }
+
   // ==========================================
   // 3. FUNGSI TARIK DATA REAL (STEP 1 - 5)
   // ==========================================
-  async function tarikDataDparagon() {
+  async function executeStep1And2() {
     const dpApiUrl = document
       .getElementById("dpApiUrl")
       .value.replace(/\/$/, "");
@@ -145,6 +155,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       300,
     );
 
+    return { dpToken, tasksList, dpApiUrl };
+  }
+
+  async function executeStep3To5(dpToken, tasksList, dpApiUrl) {
     // [STEP 3] POST NEW TASK
     await addLog(
       "text-blue-400",
@@ -240,8 +254,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     );
 
     cachedMessage = rawMessage;
-    document.getElementById("messagePreview").innerText = rawMessage;
+    document.getElementById("messagePreview").innerText = formatPreviewText(rawMessage);
     return rawMessage;
+  }
+
+  async function tarikDataDparagon() {
+    const { dpToken, tasksList, dpApiUrl } = await executeStep1And2();
+    return await executeStep3To5(dpToken, tasksList, dpApiUrl);
   }
 
   // ==========================================
@@ -293,25 +312,83 @@ document.addEventListener("DOMContentLoaded", async () => {
   // ==========================================
   // 5. TOMBOL RUN MANUAL (Menjalankan semua)
   // ==========================================
+  let manualRunInterval = null;
   const btnRun = document.getElementById("btnRunAutomation");
-  if (btnRun) {
-    btnRun.addEventListener("click", async () => {
-      btnRun.disabled = true;
-      btnRun.innerHTML = `<span class="material-symbols-outlined animate-spin">autorenew</span> Executing...`;
-      if (terminal) terminal.innerHTML = "";
+  const runModal = document.getElementById("runAutomationModal");
+  const cancelRunBtn = document.getElementById("cancelRunAutomationBtn");
+  const confirmRunBtn = document.getElementById("confirmRunAutomationBtn");
+  const runTimeInput = document.getElementById("runAutomationTime");
 
-      try {
-        const hasilPesan = await tarikDataDparagon();
-        await kirimKeWhatsApp(hasilPesan);
-        showModal("Berhasil 🎉", "Proses penarikan dan pengiriman selesai!");
-      } catch (error) {
-        await addLog("text-red-500", "ERROR", `Terhenti: ${error.message}`);
-        showModal("Gagal Eksekusi", error.message);
-      } finally {
-        btnRun.disabled = false;
-        btnRun.innerHTML = `<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">bolt</span> Run Automation Now`;
+  if (btnRun && runModal) {
+    btnRun.addEventListener("click", () => {
+      const now = new Date();
+      if (runTimeInput) {
+        runTimeInput.value = now.toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit" });
       }
+      runModal.classList.remove("hidden");
     });
+
+    if (cancelRunBtn) {
+      cancelRunBtn.addEventListener("click", () => {
+        runModal.classList.add("hidden");
+      });
+    }
+
+    if (confirmRunBtn) {
+      confirmRunBtn.addEventListener("click", () => {
+        const selectedTime = runTimeInput.value;
+        if (!selectedTime) {
+          showModal("Peringatan", "Silakan pilih jam eksekusi terlebih dahulu.");
+          return;
+        }
+
+        runModal.classList.add("hidden");
+        
+        btnRun.disabled = true;
+        btnRun.innerHTML = `<span class="material-symbols-outlined animate-spin">autorenew</span> Menunggu ${selectedTime}`;
+        if (terminal) terminal.innerHTML = "";
+        addLog("text-purple-400", "MANUAL RUN", `Jadwal eksekusi disetel pada jam ${selectedTime}. Menunggu...`);
+
+        if (manualRunInterval) clearInterval(manualRunInterval);
+
+        manualRunInterval = setInterval(async () => {
+          const now = new Date();
+          const currentHourMin = now.toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit" });
+
+          if (currentHourMin === selectedTime) {
+            clearInterval(manualRunInterval);
+            manualRunInterval = null;
+
+            btnRun.innerHTML = `<span class="material-symbols-outlined animate-spin">autorenew</span> Executing Step 1-2...`;
+            
+            try {
+              const { dpToken, tasksList, dpApiUrl } = await executeStep1And2();
+              
+              await addLog("text-amber-400", "WAITING", "Step 1 & 2 berhasil. Menyambungkan ke Step 3-6...");
+              btnRun.innerHTML = `<span class="material-symbols-outlined animate-spin">autorenew</span> Executing Step 3-6...`;
+
+              try {
+                const hasilPesan = await executeStep3To5(dpToken, tasksList, dpApiUrl);
+                await kirimKeWhatsApp(hasilPesan);
+                showModal("Berhasil 🎉", "Proses penarikan dan pengiriman selesai!");
+              } catch (err) {
+                await addLog("text-red-500", "ERROR", `Terhenti pada Step 3-6: ${err.message}`);
+                showModal("Gagal Eksekusi", err.message);
+              } finally {
+                btnRun.disabled = false;
+                btnRun.innerHTML = `<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">bolt</span> Run Automation Now`;
+              }
+
+            } catch (error) {
+              await addLog("text-red-500", "ERROR", `Terhenti pada Step 1-2: ${error.message}`);
+              showModal("Gagal Eksekusi", error.message);
+              btnRun.disabled = false;
+              btnRun.innerHTML = `<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">bolt</span> Run Automation Now`;
+            }
+          }
+        }, 1000);
+      });
+    }
   }
 
   // ==========================================
@@ -347,9 +424,7 @@ Mendeteksi waktu berjalan...`;
       msgPreview.classList.remove("text-slate-700");
     } else {
       // Kalau dimatikan, kembalikan ke teks default/hasil tarikan terakhir
-      msgPreview.innerText =
-        cachedMessage ||
-        `🔔 DAILY REPORT - DPARAGON
+      let fallbackText = `🔔 DAILY REPORT - DPARAGON
 Period: ${new Date().toLocaleDateString("id-ID", { month: "long", day: "numeric", year: "numeric" })}
 
 ✅ Total Tasks: 0
@@ -360,6 +435,8 @@ Revenue Today: Rp 0
 Occupancy Rate: 0%
 
 (Sistem otomatisasi MATI. Klik Run Automation Now untuk manual)`;
+
+      msgPreview.innerText = cachedMessage ? formatPreviewText(cachedMessage) : fallbackText;
 
       // Kembalikan warna teks normal
       msgPreview.classList.remove("text-primary", "font-bold");
