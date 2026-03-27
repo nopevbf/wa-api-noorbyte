@@ -13,26 +13,31 @@ const crypto = require("crypto");
 // ENDPOINT: Ambil Statistik Dashboard
 router.get("/dashboard-stats", (req, res) => {
   try {
-    // Hitung total pesan
-    const totalResult = db
-      .prepare("SELECT COUNT(*) as count FROM message_logs")
-      .get();
-    const totalMsg = totalResult ? totalResult.count : 0;
+    const { role, api_key } = req.query;
+    let totalMsg = 0, successMsg = 0, recentLogs = [];
 
-    // Hitung pesan sukses
-    const successResult = db
-      .prepare(
-        "SELECT COUNT(*) as count FROM message_logs WHERE status = 'SUCCESS'",
-      )
-      .get();
-    const successMsg = successResult ? successResult.count : 0;
+    if (role === 'admin') {
+      // Hitung total pesan
+      const totalResult = db.prepare("SELECT COUNT(*) as count FROM message_logs").get();
+      totalMsg = totalResult ? totalResult.count : 0;
 
-    // Ambil 5 riwayat terbaru
-    const recentLogs = db
-      .prepare(
-        "SELECT target_number, status, message FROM message_logs ORDER BY rowid DESC LIMIT 5",
-      )
-      .all();
+      // Hitung pesan sukses
+      const successResult = db.prepare("SELECT COUNT(*) as count FROM message_logs WHERE status = 'SUCCESS'").get();
+      successMsg = successResult ? successResult.count : 0;
+
+      // Ambil 5 riwayat terbaru
+      recentLogs = db.prepare("SELECT target_number, status, message FROM message_logs ORDER BY rowid DESC LIMIT 5").all();
+    } else if (api_key) {
+      const totalResult = db.prepare("SELECT COUNT(*) as count FROM message_logs WHERE api_key = ?").get(api_key);
+      totalMsg = totalResult ? totalResult.count : 0;
+
+      const successResult = db.prepare("SELECT COUNT(*) as count FROM message_logs WHERE status = 'SUCCESS' AND api_key = ?").get(api_key);
+      successMsg = successResult ? successResult.count : 0;
+
+      recentLogs = db.prepare("SELECT target_number, status, message FROM message_logs WHERE api_key = ? ORDER BY rowid DESC LIMIT 5").all(api_key);
+    } else {
+      return res.status(401).json({ status: false, message: "Unauthorized: Silakan login terlebih dahulu." });
+    }
 
     // Hitung persentase
     const successRate =
@@ -350,7 +355,8 @@ router.post("/auth/magic-link", async (req, res) => {
     ).run(phone, token, expiresAt);
 
     // 5. Susun Pesan & Kirim via Baileys Engine
-    const magicLink = `http://localhost:4000/verify?token=${token}`;
+    const frontendUrl = req.headers.origin || (req.headers.referer ? req.headers.referer.split('/login')[0] : 'http://localhost:4000');
+    const magicLink = `${frontendUrl}/verify?token=${token}`;
     const messageText = `👋 *NoorByteAPI Login*\n\nPermintaan akses masuk terdeteksi. Klik link aman di bawah ini untuk masuk ke Dashboard Anda:\n\n🔗 ${magicLink}\n\n_Link ini hanya berlaku selama 10 menit dan hanya bisa digunakan satu kali. Jangan bagikan link ini ke siapapun._`;
 
     // Gunakan fungsi sendMessageViaWa yang sudah ada

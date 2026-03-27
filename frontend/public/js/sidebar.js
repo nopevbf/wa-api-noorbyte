@@ -1,3 +1,13 @@
+// ==========================================
+// AUTH GUARD: Cek session sebelum memuat halaman
+// ==========================================
+const isAdmin = localStorage.getItem("connectApi_loggedIn") === "true";
+const isGuest = localStorage.getItem("noorbyte_session") !== null;
+
+if (!isAdmin && !isGuest) {
+  window.location.replace("/login");
+}
+
 async function loadSidebar() {
   const sidebarContainer = document.getElementById("sidebar-container");
   if (!sidebarContainer) return;

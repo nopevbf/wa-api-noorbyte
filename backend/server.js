@@ -9,9 +9,9 @@ const { initAllSessions } = require("./src/services/waEngine");
 const app = express();
 const server = http.createServer(app);
 
-// 1. Atur CORS agar hanya menerima dari Frontend Service (Port 4000)
+// 1. Atur CORS agar menerima dari manapun selama kita pakai proxy/cloudflared
 const corsOptions = {
-  origin: "http://localhost:4000",
+  origin: "*",
   methods: ["GET", "POST", "DELETE", "PUT"]
 };
 app.use(cors(corsOptions));

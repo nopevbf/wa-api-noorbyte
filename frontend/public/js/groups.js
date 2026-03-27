@@ -1,5 +1,5 @@
 // URL Backend lo (Port 3000)
-const API_URL = 'http://localhost:3000/api';
+const API_URL = "/api";
 
 // Fungsi memuat dropdown device
 async function loadDevicesForDropdown() {

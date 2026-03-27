@@ -2,7 +2,8 @@
 // INISIALISASI WEBSOCKET
 // =========================================
 // Awalnya: const socket = io();
-const socket = io('http://localhost:3000'); // Tembak langsung ke API Port 3000
+// const socket = io('https://infrastructure-laptop-academic-merger.trycloudflare.com'); // Tembak langsung ke API Port 3000
+const socket = io(); // Menggunakan default current domain karena sudah di-proxy di server-ui.js
 socket.on('connect', () => console.log('✅ WebSocket Connected ke Backend'));
 
 // =========================================
@@ -76,7 +77,7 @@ async function loadDevices() {
         const isAdmin = localStorage.getItem('connectApi_loggedIn') === 'true';
         const guestApiKey = localStorage.getItem('noorbyte_session');
         const query = isAdmin ? '?role=admin' : (guestApiKey ? `?api_key=${guestApiKey}` : '');
-        const response = await fetch(`http://localhost:3000/api/get-devices${query}`); // Mengambil data langsung dari API
+        const response = await fetch(`/api/get-devices${query}`); // Mengambil data melalui proxy
         const result = await response.json();
         
         if (result.status && result.data.length > 0) {
@@ -195,7 +196,7 @@ async function triggerQr(apiKey, username) {
     });
 
     try {
-        await fetch('http://localhost:3000/api/connect-device', {
+        await fetch('/api/connect-device', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ api_key: apiKey })
         });
@@ -222,7 +223,7 @@ document.getElementById('addDeviceForm').addEventListener('submit', async (e) =>
     e.preventDefault();
     const btn = document.getElementById('btnSubmit'); btn.innerText = 'Wait...'; btn.disabled = true;
     try {
-        const res = await fetch('http://localhost:3000/api/add-device', {
+        const res = await fetch('/api/add-device', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name: document.getElementById('deviceName').value, phone: document.getElementById('devicePhone').value })
         });
@@ -253,7 +254,7 @@ function copyToken(token) {
 function disconnectDevice(apiKey) {
     showCustomModal('confirm', 'Logout Device', `Apakah Anda yakin ingin melakukan <b>Log Out</b> pada device ini?`, async () => {
         try {
-            await fetch('http://localhost:3000/api/disconnect-device', { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({api_key: apiKey}) });
+            await fetch('/api/disconnect-device', { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({api_key: apiKey}) });
         } catch(e) {
             showCustomModal('error', 'Gagal Logout', 'Gagal terhubung ke server.');
         }
@@ -263,7 +264,7 @@ function disconnectDevice(apiKey) {
 function deleteDevice(apiKey) {
     showCustomModal('confirm', 'Hapus Permanen', `Data device ini dan semua sesinya akan <b>dihapus secara permanen</b>. Lanjutkan?`, async () => {
         try {
-            const res = await fetch('http://localhost:3000/api/delete-device', { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({api_key: apiKey}) });
+            const res = await fetch('/api/delete-device', { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({api_key: apiKey}) });
             const data = await res.json();
             if(data.status) {
                 showCustomModal('success', 'Terhapus', 'Device berhasil dihapus permanen.');

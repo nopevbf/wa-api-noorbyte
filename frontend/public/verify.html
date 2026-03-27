@@ -62,7 +62,7 @@
         try {
           // 2. Kirim token ke Backend untuk diverifikasi
           const response = await fetch(
-            "http://localhost:3000/api/auth/verify",
+            "/api/auth/verify",
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },

@@ -1,4 +1,14 @@
 // ==========================================
+// AUTH CHECK: Jika sudah login, langsung ke dashboard
+// ==========================================
+const isAdmin = localStorage.getItem("connectApi_loggedIn") === "true";
+const isGuest = localStorage.getItem("noorbyte_session") !== null;
+
+if (isAdmin || isGuest) {
+  window.location.replace("/dashboard");
+}
+
+// ==========================================
 // FUNGSI MODAL MAGIC LINK
 // ==========================================
 function showLoginModal(title, message, isError = false) {
@@ -107,7 +117,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       try {
         const response = await fetch(
-          "http://localhost:3000/api/auth/magic-link",
+          "/api/auth/magic-link",
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },

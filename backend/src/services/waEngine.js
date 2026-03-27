@@ -9,6 +9,9 @@ const db = require('../config/database');
 const activeSessions = new Map();
 
 function formatNumber(number) {
+    if (number.endsWith('@g.us')) {
+        return number;
+    }
     let formatted = number.replace(/\D/g, '');
     if (formatted.startsWith('0')) formatted = '62' + formatted.substring(1);
     if (!formatted.endsWith('@s.whatsapp.net')) formatted += '@s.whatsapp.net';

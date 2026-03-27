@@ -1,4 +1,5 @@
-const API_URL = 'http://localhost:3000/api';
+const API_URL = "/api";
+
 
 // 1. Muat Device ke Dropdown saat halaman dibuka
 document.addEventListener("DOMContentLoaded", async () => {

@@ -1,4 +1,5 @@
-const API_URL = "http://localhost:3000/api";
+const API_URL = "/api";
+
 
 document.addEventListener("DOMContentLoaded", async () => {
   // 1. Fetch Data Devices
@@ -57,7 +58,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // 2. Fetch Data Statistik Pesan (Dari message_logs)
   try {
-    const statRes = await fetch(`${API_URL}/dashboard-stats`);
+    const isAdminStats = localStorage.getItem('connectApi_loggedIn') === 'true';
+    const guestApiKeyStats = localStorage.getItem('noorbyte_session');
+    const statsQuery = isAdminStats ? '?role=admin' : (guestApiKeyStats ? `?api_key=${guestApiKeyStats}` : '');
+    
+    const statRes = await fetch(`${API_URL}/dashboard-stats${statsQuery}`);
     const statResult = await statRes.json();
 
     if (statResult.status) {

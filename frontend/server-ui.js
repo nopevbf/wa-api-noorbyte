@@ -5,6 +5,25 @@ const app = express();
 
 app.use(express.static(path.join(__dirname, "public")));
 
+// =========================================
+// API & SOCKET PROXY (FORWARD KE BACKEND PORT 3000)
+// =========================================
+const { createProxyMiddleware } = require('http-proxy-middleware');
+
+const backendProxy = createProxyMiddleware({ 
+  target: 'http://localhost:3000', 
+  changeOrigin: true,
+  ws: true
+});
+
+app.use((req, res, next) => {
+  if (req.url.startsWith('/api') || req.url.startsWith('/socket.io')) {
+    return backendProxy(req, res, next);
+  }
+  next();
+});
+
+
 // ROUTE UNTUK HALAMAN LOGIN
 app.get("/login", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "login.html"));
