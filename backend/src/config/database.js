@@ -1,7 +1,9 @@
 const Database = require("better-sqlite3");
 const path = require("path");
 
-const db = new Database(path.join(__dirname, "../../database.db"));
+// Deteksi jika berjalan di Fly.io (menggunakan ENV), jika tidak, gunakan db lokal.
+const dbPath = process.env.DB_PATH || path.join(__dirname, "../../database.db");
+const db = new Database(dbPath);
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (
