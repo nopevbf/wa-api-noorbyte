@@ -446,4 +446,148 @@ router.post("/auth/verify", (req, res) => {
   }
 });
 
+// ==========================================
+// AUTOMATION ENDPOINTS (BACKEND EXECUTION)
+// ==========================================
+const { getScheduleLogs, clearScheduleLogs } = require("../services/automationEngine");
+
+// SAVE SETTINGS: Menyimpan/memperbarui jadwal otomasi di backend
+router.post("/automation/save-settings", (req, res) => {
+  const {
+    api_key,
+    dp_api_url,
+    dp_email,
+    dp_password,
+    target_number,
+    fetch_time,
+    send_wa_time,
+    frequency,
+    is_active,
+  } = req.body;
+
+  if (!api_key) {
+    return res.status(400).json({ status: false, message: "API Key wajib diisi." });
+  }
+
+  try {
+    // Cek apakah sudah ada schedule untuk api_key ini
+    const existing = db
+      .prepare("SELECT id FROM automation_schedules WHERE api_key = ?")
+      .get(api_key);
+
+    if (existing) {
+      // Update
+      db.prepare(
+        `UPDATE automation_schedules SET
+          dp_api_url = ?, dp_email = ?, dp_password = ?, target_number = ?,
+          fetch_time = ?, send_wa_time = ?, frequency = ?, is_active = ?
+        WHERE api_key = ?`
+      ).run(
+        dp_api_url, dp_email, dp_password, target_number,
+        fetch_time, send_wa_time, frequency || "daily", is_active ? 1 : 0,
+        api_key
+      );
+    } else {
+      // Insert baru
+      db.prepare(
+        `INSERT INTO automation_schedules
+          (api_key, dp_api_url, dp_email, dp_password, target_number,
+           fetch_time, send_wa_time, frequency, is_active)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      ).run(
+        api_key, dp_api_url, dp_email, dp_password, target_number,
+        fetch_time, send_wa_time, frequency || "daily", is_active ? 1 : 0
+      );
+    }
+
+    res.status(200).json({ status: true, message: "Pengaturan otomasi berhasil disimpan di server." });
+  } catch (error) {
+    res.status(500).json({ status: false, message: "Gagal menyimpan pengaturan.", error: error.message });
+  }
+});
+
+// RUN MANUAL: Mendaftarkan satu eksekusi Otomatis di waktu tertentu
+router.post("/automation/run-manual", (req, res) => {
+  const { api_key, run_time, dp_api_url, dp_email, dp_password, target_number } = req.body;
+
+  if (!api_key || !run_time) {
+    return res.status(400).json({ status: false, message: "API Key dan waktu eksekusi wajib diisi." });
+  }
+
+  try {
+    const existing = db
+      .prepare("SELECT id FROM automation_schedules WHERE api_key = ?")
+      .get(api_key);
+
+    if (existing) {
+      db.prepare(
+        `UPDATE automation_schedules SET
+          dp_api_url = ?, dp_email = ?, dp_password = ?, target_number = ?,
+          manual_run_time = ?, manual_run_status = 'waiting'
+        WHERE api_key = ?`
+      ).run(dp_api_url, dp_email, dp_password, target_number, run_time, api_key);
+
+      // Clear old logs
+      clearScheduleLogs(existing.id);
+    } else {
+      db.prepare(
+        `INSERT INTO automation_schedules
+          (api_key, dp_api_url, dp_email, dp_password, target_number,
+           manual_run_time, manual_run_status)
+        VALUES (?, ?, ?, ?, ?, ?, 'waiting')`
+      ).run(api_key, dp_api_url, dp_email, dp_password, target_number, run_time);
+    }
+
+    res.status(200).json({
+      status: true,
+      message: `Otomatis run terjadwal di server pada ${run_time}. Anda bisa menutup browser.`,
+    });
+  } catch (error) {
+    res.status(500).json({ status: false, message: "Gagal menjadwalkan Otomatis run.", error: error.message });
+  }
+});
+
+// STATUS: Ambil status & log eksekusi dari backend
+router.get("/automation/status", (req, res) => {
+  const { api_key } = req.query;
+  if (!api_key) {
+    return res.status(400).json({ status: false, message: "API Key wajib diisi." });
+  }
+
+  try {
+    const schedule = db
+      .prepare("SELECT * FROM automation_schedules WHERE api_key = ?")
+      .get(api_key);
+
+    if (!schedule) {
+      return res.status(200).json({
+        status: true,
+        data: null,
+        message: "Belum ada jadwal otomasi untuk device ini.",
+      });
+    }
+
+    const logs = getScheduleLogs(schedule.id);
+
+    res.status(200).json({
+      status: true,
+      data: {
+        id: schedule.id,
+        is_active: !!schedule.is_active,
+        fetch_time: schedule.fetch_time,
+        send_wa_time: schedule.send_wa_time,
+        frequency: schedule.frequency,
+        cached_message: schedule.cached_message,
+        last_fetched_date: schedule.last_fetched_date,
+        last_sent_date: schedule.last_sent_date,
+        manual_run_status: schedule.manual_run_status,
+        manual_run_time: schedule.manual_run_time,
+        logs: logs,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ status: false, message: "Gagal mengambil status.", error: error.message });
+  }
+});
+
 module.exports = router;

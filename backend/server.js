@@ -51,5 +51,10 @@ app.get("*", (req, res, next) => {
 const PORT = 3000;
 server.listen(PORT, () => {
   console.log(`⚙️  [BACKEND] Service API & WA Engine berjalan di http://localhost:${PORT}`);
-  initAllSessions(global.io); 
+  initAllSessions(global.io);
+
+  // 5. Start Automation Engine (background scheduler)
+  const { startAutomationEngine } = require("./src/services/automationEngine");
+  startAutomationEngine();
 });
+
