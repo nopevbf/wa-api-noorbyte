@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Jailbreak Mode - Attendance</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+        rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet" />
+
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "error": "#ef4444",
+                    },
+                    fontFamily: {
+                        "body": ["Inter", "sans-serif"],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #ef4444;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-950 font-body text-slate-200 overflow-hidden">
+
+    <div class="flex h-screen w-full">
+
+        <div id="sidebar-container" class="h-full flex-shrink-0 z-50 relative [&>aside]:h-full"></div>
+
+        <main class="flex-1 relative flex flex-col items-center p-8 overflow-y-auto">
+
+            <div
+                class="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-error/5 rounded-full blur-[120px] pointer-events-none">
+            </div>
+            <div
+                class="absolute bottom-0 right-0 w-[400px] h-[400px] bg-error/10 rounded-full blur-[100px] pointer-events-none">
+            </div>
+
+            <div class="relative z-10 flex flex-col items-center mt-4 mb-12">
+                <div class="relative w-32 h-32 flex items-center justify-center mb-4">
+                    <div class="absolute inset-0 bg-error/20 rounded-full animate-pulse blur-2xl"></div>
+                    <div
+                        class="relative z-20 w-24 h-24 flex items-center justify-center bg-slate-900 border-2 border-error rounded-full shadow-[0_0_40px_rgba(239,68,68,0.3)]">
+                        <span class="material-symbols-outlined text-error text-6xl"
+                            style="font-variation-settings: 'FILL' 1;">skull</span>
+                    </div>
+                    <div class="absolute inset-0 border-2 border-error/20 rounded-full scale-110"></div>
+                    <div class="absolute inset-0 border border-error/10 rounded-full scale-125"></div>
+                </div>
+                <div class="text-center">
+                    <h2 class="text-3xl font-black text-white tracking-tight uppercase">Jailbreak Attendance</h2>
+                    <p class="text-slate-500 font-medium uppercase tracking-[0.2em] text-xs mt-1">Authorized Guest
+                        Access Only</p>
+                </div>
+            </div>
+
+            <div class="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl mx-auto mb-16">
+
+                <div
+                    class="group relative overflow-hidden bg-slate-900/50 backdrop-blur-md border border-slate-800 p-8 rounded-xl shadow-sm hover:border-error/50 transition-all duration-300">
+                    <div
+                        class="absolute top-0 right-0 w-32 h-32 -mr-12 -mt-12 bg-error/10 rounded-full group-hover:scale-125 transition-transform duration-500 blur-2xl pointer-events-none">
+                    </div>
+
+                    <div class="relative z-10 flex flex-col h-full">
+                        <div
+                            class="bg-error/10 border border-error/20 text-error w-14 h-14 rounded-lg flex items-center justify-center mb-6 shadow-lg">
+                            <span class="material-symbols-outlined text-3xl">fingerprint</span>
+                        </div>
+                        <h3 class="text-2xl font-bold text-white mb-2">Absen</h3>
+                        <p class="text-slate-400 text-sm mb-8 leading-relaxed">Registry check-in and check-out
+                            protocols. Secure facial biometrics verification required.</p>
+
+                        <div class="mt-auto flex gap-3">
+                            <button
+                                class="flex-1 bg-error text-white font-bold py-3.5 rounded-lg hover:bg-red-500 transition-colors shadow-[0_0_15px_rgba(239,68,68,0.2)] text-sm tracking-wide">CHECK
+                                IN</button>
+                            <button
+                                class="flex-1 border border-slate-700 bg-slate-800 text-slate-300 font-bold py-3.5 rounded-lg hover:bg-slate-700 hover:text-white transition-colors text-sm tracking-wide">CHECK
+                                OUT</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div
+                    class="group relative overflow-hidden bg-slate-900/30 backdrop-blur-md border border-slate-800/80 p-8 rounded-xl shadow-sm hover:border-error/40 transition-all duration-300">
+                    <div
+                        class="absolute bottom-0 right-0 w-40 h-40 -mb-16 -mr-16 bg-error/5 rounded-full blur-3xl group-hover:bg-error/10 transition-colors duration-500 pointer-events-none">
+                    </div>
+
+                    <div class="relative z-10 flex flex-col h-full">
+                        <div
+                            class="bg-slate-800 border border-slate-700 text-error w-14 h-14 rounded-lg flex items-center justify-center mb-6 shadow-lg">
+                            <span class="material-symbols-outlined text-3xl">timer</span>
+                        </div>
+                        <h3 class="text-2xl font-bold text-white mb-2">Pengajuan Lembur</h3>
+                        <p class="text-slate-400 text-sm mb-8 leading-relaxed">Request high-velocity overtime clearance.
+                            Requires administrative validation and approval.</p>
+
+                        <div class="mt-auto">
+                            <button
+                                class="w-full bg-slate-800/80 border border-error/30 text-error font-bold py-3.5 rounded-lg hover:bg-error/10 hover:border-error/50 transition-all shadow-lg text-sm tracking-widest uppercase">Request
+                                Clearance</button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="relative z-10 w-full max-w-4xl mx-auto">
+                <div class="flex items-center justify-between mb-4 px-2">
+                    <h4 class="text-[11px] font-black uppercase tracking-widest text-slate-500">Live Security Logs</h4>
+                    <span class="flex items-center gap-2">
+                        <span class="h-2 w-2 rounded-full bg-error animate-pulse"></span>
+                        <span class="text-[10px] font-bold text-error uppercase tracking-wider">Live Stream</span>
+                    </span>
+                </div>
+                <div class="bg-slate-900/50 backdrop-blur-md rounded-xl border border-slate-800 p-6 overflow-hidden">
+                    <div class="space-y-4 font-mono text-[11px] md:text-xs">
+                        <div class="flex items-start gap-4 border-b border-slate-800/50 pb-3">
+                            <span class="text-error shrink-0">[14:02:22]</span>
+                            <span class="text-slate-300">USER_AUTH_SUCCESS: Check-in confirmed via bio-terminal
+                                04.</span>
+                        </div>
+                        <div class="flex items-start gap-4 border-b border-slate-800/50 pb-3">
+                            <span class="text-error shrink-0">[13:58:45]</span>
+                            <span class="text-slate-300">OT_REQUEST_PNDG: GUEST_441 requested 4.0h Overtime. Status:
+                                Awaiting Admin.</span>
+                        </div>
+                        <div class="flex items-start gap-4 border-b border-slate-800/50 pb-3">
+                            <span class="text-error shrink-0">[13:45:10]</span>
+                            <span class="text-slate-300">SYS_HB_PULSE: All peripheral nodes reporting optimal sync
+                                status.</span>
+                        </div>
+                        <div class="flex items-start gap-4 text-slate-600 italic mt-2">
+                            <span class="text-error/50 shrink-0">[13:30:01]</span>
+                            <span>... older entries archived to secure vault ...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script src="/js/sidebar.js"></script>
+</body>
+
+</html>

@@ -1,106 +1,72 @@
-<aside
-  id="app-sidebar"
-  class="w-64 h-full border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col fixed inset-y-0 left-0 z-50 transform -translate-x-full lg:translate-x-0 lg:static transition-transform duration-300 ease-in-out"
->
+<aside id="app-sidebar"
+  class="w-64 h-full border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col fixed inset-y-0 left-0 z-50 transform -translate-x-full lg:translate-x-0 lg:static transition-transform duration-300 ease-in-out">
   <div class="p-6 flex flex-col gap-6 flex-1">
     <div class="flex items-center gap-3">
-      <div
-        class="bg-primary size-10 rounded-lg flex items-center justify-center text-white"
-      >
+      <div class="bg-primary size-10 rounded-lg flex items-center justify-center text-white">
         <span class="material-symbols-outlined">api</span>
       </div>
       <div class="flex flex-col">
         <h1 class="text-base font-bold leading-none">ConnectAPI</h1>
         <span
-          class="text-[10px] font-bold tracking-wider text-primary bg-primary/10 px-1.5 py-0.5 rounded mt-1 w-fit"
-          >ADMIN PANEL</span
-        >
+          class="text-[10px] font-bold tracking-wider text-primary bg-primary/10 px-1.5 py-0.5 rounded mt-1 w-fit">ADMIN
+          PANEL</span>
       </div>
       <!-- Tombol close untuk mobile -->
-      <button
-        id="closeSidebarBtn"
-        class="lg:hidden ml-auto p-1 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg"
-      >
+      <button id="closeSidebarBtn"
+        class="lg:hidden ml-auto p-1 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">
         <span class="material-symbols-outlined">close</span>
       </button>
     </div>
     <nav id="sidebar-nav" class="flex flex-col gap-1">
-      <a
-        href="/dashboard"
-        data-path="/dashboard"
-        class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-      >
+      <a href="/dashboard" data-path="/dashboard"
+        class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
         <span class="material-symbols-outlined text-xl icon">dashboard</span>
         <span class="text-sm font-medium">Dashboard</span>
       </a>
-      <a
-        href="/devices"
-        data-path="/devices"
-        class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-      >
-        <span class="material-symbols-outlined text-xl icon"
-          >important_devices</span
-        >
+      <a href="/devices" data-path="/devices"
+        class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+        <span class="material-symbols-outlined text-xl icon">important_devices</span>
         <span class="text-sm font-semibold">Devices</span>
       </a>
-      <a
-        href="/groups"
-        data-path="/groups"
-        class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-      >
+      <a href="/groups" data-path="/groups"
+        class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
         <span class="material-symbols-outlined icon text-xl">group</span>
         <span class="text-sm font-semibold">WhatsApp Groups</span>
       </a>
-      <a
-        href="/tester"
-        data-path="/tester"
-        class="nav-link flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
-      >
+      <a href="/tester" data-path="/tester"
+        class="nav-link flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors">
         <span class="material-symbols-outlined icon">send</span>
         <span class="text-sm font-medium">Web Tester</span>
       </a>
-      <a
-        href="/automation"
-        data-path="/automation"
-        class="nav-link flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
-      >
-        <span
-          class="material-symbols-outlined icon"
-          style="font-variation-settings: &quot;FILL&quot; 1"
-          >assessment</span
-        >
+      <a href="/automation" data-path="/automation"
+        class="nav-link flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors">
+        <span class="material-symbols-outlined icon"
+          style="font-variation-settings: &quot;FILL&quot; 1">assessment</span>
         <span class="text-sm font-semibold">Daily Reports</span>
+      </a>
+      <a href="#" id="navJailbreak"
+        class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors group">
+        <span class="material-symbols-outlined text-xl group-hover:text-primary transition-colors">lock_open</span>
+        <span class="text-sm font-medium group-hover:text-primary transition-colors">Jailbreak</span>
       </a>
     </nav>
     <div class="mt-auto p-4 border-t border-slate-100 dark:border-slate-800">
-      <button
-        id="btnLogout"
-        class="flex items-center gap-3 px-3 py-2.5 w-full rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors group"
-      >
-        <span
-          class="material-symbols-outlined text-xl transition-transform group-hover:translate-x-1"
-          >logout</span
-        >
+      <button id="btnLogout"
+        class="flex items-center gap-3 px-3 py-2.5 w-full rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors group">
+        <span class="material-symbols-outlined text-xl transition-transform group-hover:translate-x-1">logout</span>
         <span class="text-sm font-semibold">Logout</span>
       </button>
     </div>
   </div>
 </aside>
 
-<div
-  id="logoutConfirmModal"
-  class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] hidden flex justify-center items-center transition-all duration-300 opacity-0"
->
+<div id="logoutConfirmModal"
+  class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] hidden flex justify-center items-center transition-all duration-300 opacity-0">
   <div
     class="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl p-8 text-center max-w-sm w-full mx-4 border border-slate-200 dark:border-slate-800 transform scale-95 transition-all duration-300"
-    id="logoutModalContent"
-  >
-    <div
-      class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-50 dark:bg-red-900/20 mb-6"
-    >
-      <span class="material-symbols-outlined text-3xl text-red-500"
-        >logout</span
-      >
+    id="logoutModalContent">
+    <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-50 dark:bg-red-900/20 mb-6">
+      <span class="material-symbols-outlined text-3xl text-red-500">logout</span>
     </div>
     <h3 class="font-extrabold text-xl mb-2 text-slate-900 dark:text-white">
       Keluar dari Sistem?
@@ -111,24 +77,157 @@
     </p>
 
     <div class="flex gap-3">
-      <button
-        id="btnCancelLogout"
-        class="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold py-3.5 px-4 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-[0.98] transition-all"
-      >
+      <button id="btnCancelLogout"
+        class="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold py-3.5 px-4 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-[0.98] transition-all">
         Batal
       </button>
-      <button
-        id="btnConfirmLogout"
-        class="flex-1 bg-red-500 text-white font-bold py-3.5 px-4 rounded-xl hover:bg-red-600 shadow-lg shadow-red-500/20 active:scale-[0.98] transition-all"
-      >
+      <button id="btnConfirmLogout"
+        class="flex-1 bg-red-500 text-white font-bold py-3.5 px-4 rounded-xl hover:bg-red-600 shadow-lg shadow-red-500/20 active:scale-[0.98] transition-all">
         Ya, Keluar
       </button>
     </div>
   </div>
 </div>
 
+<div id="jailbreakModal"
+  class="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm hidden opacity-0 transition-all duration-300">
+
+  <div id="jailbreakRequestState"
+    class="bg-white dark:bg-slate-900 w-full max-w-md rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden transform scale-95 transition-all duration-300">
+    <div class="p-8 pb-4 text-center">
+      <div class="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-6 shadow-inner">
+        <span class="material-symbols-outlined text-primary text-4xl"
+          style="font-variation-settings: 'FILL' 1;">lock</span>
+      </div>
+      <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-2">Request Menu Access</h2>
+      <p class="text-slate-500 text-sm leading-relaxed">
+        Saluran <span class="font-bold text-slate-700 dark:text-slate-300">Jailbreak</span> memuat protokol
+        eksperimental serta transmisi data dengan privilese tinggi. Menu ini membutuhkan persetujuan administratif
+        secara formal untuk diakses oleh node tamu.
+      </p>
+    </div>
+
+    <div class="px-8 mb-8">
+      <div
+        class="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg p-4 flex items-start gap-3">
+        <span class="material-symbols-outlined text-slate-400 text-sm mt-0.5">info</span>
+        <div>
+          <p class="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Access
+            Requirements</p>
+          <p class="text-xs text-slate-500 mt-1">Izin Akses Tingkat 1 atau di atasnya. Permintaan biasanya diproses
+            dalam 1x24 Jam.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="px-8 pb-8 flex flex-col gap-3">
+      <button id="btnRequestJailbreak"
+        class="w-full bg-primary hover:bg-primary/90 text-white py-3 rounded-lg font-bold text-sm shadow-sm transition-colors active:scale-[0.98] flex justify-center items-center gap-2">
+        Request Access
+      </button>
+      <button id="btnCancelJailbreak"
+        class="w-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 py-3 rounded-lg font-semibold text-sm transition-colors active:scale-[0.98]">
+        Batal
+      </button>
+    </div>
+    <div class="h-1.5 w-full bg-gradient-to-r from-primary/10 via-primary to-primary/10"></div>
+  </div>
+
+
+  <div id="jailbreakPendingState"
+    class="hidden bg-white dark:bg-slate-900 w-full max-w-md mx-4 rounded-xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800 transform scale-95 transition-all duration-300">
+    <div class="p-8 flex flex-col items-center text-center">
+
+      <div class="relative mb-8">
+        <style>
+          @keyframes slow-spin {
+            from {
+              transform: rotate(0deg);
+            }
+
+            to {
+              transform: rotate(360deg);
+            }
+          }
+
+          .animate-slow-spin {
+            animation: slow-spin 3s linear infinite;
+          }
+
+          @keyframes pulse-ring {
+            0% {
+              transform: scale(0.8);
+              opacity: 0.5;
+            }
+
+            50% {
+              transform: scale(1);
+              opacity: 0.3;
+            }
+
+            100% {
+              transform: scale(0.8);
+              opacity: 0.5;
+            }
+          }
+
+          .animate-pulse-ring {
+            animation: pulse-ring 2s ease-in-out infinite;
+          }
+        </style>
+        <div class="absolute inset-0 animate-slow-spin">
+          <div
+            class="h-24 w-24 rounded-full border-2 border-t-primary border-r-transparent border-b-transparent border-l-transparent">
+          </div>
+        </div>
+        <div class="h-24 w-24 rounded-full bg-primary/10 flex items-center justify-center animate-pulse-ring"></div>
+        <div class="absolute inset-0 flex items-center justify-center">
+          <div
+            class="h-16 w-16 bg-white dark:bg-slate-800 rounded-full shadow-sm border border-slate-100 dark:border-slate-700 flex items-center justify-center">
+            <span class="material-symbols-outlined text-primary text-3xl font-semibold">history</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="space-y-3">
+        <h2 class="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Request Pending</h2>
+        <div
+          class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-800 mb-2">
+          <span class="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse"></span>
+          <span class="text-[11px] font-bold uppercase tracking-wider text-blue-700 dark:text-blue-400">Waiting for
+            Approval</span>
+        </div>
+        <p class="text-slate-500 text-sm leading-relaxed px-4">
+          Administrator kami sedang meninjau permintaan akses Anda. Anda akan diberi tahu setelah disetujui.
+        </p>
+      </div>
+
+      <div
+        class="w-full mt-8 bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 rounded-lg p-4 flex items-center gap-4">
+        <div class="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center flex-shrink-0">
+          <span class="material-symbols-outlined text-[18px]">check</span>
+        </div>
+        <div class="text-left">
+          <p class="text-xs font-bold text-slate-900 dark:text-white">Application Submitted</p>
+          <p id="pendingTimestamp" class="text-[10px] text-slate-400 mt-0.5">Timestamp: -</p>
+        </div>
+      </div>
+
+      <div class="mt-8 w-full">
+        <button id="btnClosePending"
+          class="w-full bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 dark:hover:bg-slate-700 text-white font-semibold py-3 rounded-lg transition-all active:scale-[0.98] shadow-lg shadow-slate-900/20">
+          Close
+        </button>
+        <button id="btnRevokeRequest"
+          class="mt-4 text-slate-400 hover:text-red-500 text-xs font-medium transition-colors">
+          Revoke Access Request
+        </button>
+      </div>
+    </div>
+    <div class="h-1 w-full bg-gradient-to-r from-blue-400 via-primary to-blue-600"></div>
+  </div>
+</div>
+
 <!-- Backdrop transparan untuk mode mobile -->
-<div
-  id="sidebar-backdrop"
-  class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 hidden lg:hidden transition-opacity"
-></div>
+<div id="sidebar-backdrop"
+  class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 hidden lg:hidden transition-opacity"></div>
