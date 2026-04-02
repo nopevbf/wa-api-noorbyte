@@ -21,7 +21,8 @@ function formatNumber(number) {
 // Tambahan parameter 'io' (Socket.io)
 async function connectToWhatsApp(apiKey, io) {
     try {
-        const sessionDir = path.join(__dirname, '../../sessions', apiKey);
+        const sessionBaseDir = process.env.SESSION_PATH || path.join(__dirname, '../../sessions');
+        const sessionDir = path.join(sessionBaseDir, apiKey);
         const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
         const { version } = await fetchLatestBaileysVersion();
 
@@ -148,7 +149,8 @@ async function disconnectWa(apiKey) {
         await waSocket.logout();
         activeSessions.delete(apiKey);
     }
-    const sessionDir = path.join(__dirname, '../../sessions', apiKey);
+    const sessionBaseDir = process.env.SESSION_PATH || path.join(__dirname, '../../sessions');
+    const sessionDir = path.join(sessionBaseDir, apiKey);
     if (fs.existsSync(sessionDir)) {
         fs.rmSync(sessionDir, { recursive: true, force: true });
     }

@@ -1,0 +1,5 @@
+node_modules/
+
+# Ignore session data files (keep the folder structure)
+backend/sessions/**
+!backend/sessions/.gitkeep

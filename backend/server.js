@@ -5,6 +5,7 @@ const { Server } = require("socket.io");
 
 const apiRoutes = require("./src/routes/apiRoutes");
 const { initAllSessions } = require("./src/services/waEngine");
+const path = require("path");
 
 const app = express();
 const server = http.createServer(app);
@@ -26,9 +27,34 @@ global.io = new Server(server, {
 // 3. Daftarkan API Routes dengan prefix '/api' biar rapi
 app.use("/api", apiRoutes);
 
+// --- TAMBAHAN: Sajikan Frontend UI di Port yang Sama ---
+const frontendPath = path.join(__dirname, "../frontend/public");
+app.use(express.static(frontendPath));
+
+// ROUTE UNTUK HALAMAN UI
+app.get("/login", (req, res) => res.sendFile(path.join(frontendPath, "login.html")));
+app.get("/dashboard", (req, res) => res.sendFile(path.join(frontendPath, "dashboard.html")));
+app.get("/devices", (req, res) => res.sendFile(path.join(frontendPath, "devices.html")));
+app.get("/groups", (req, res) => res.sendFile(path.join(frontendPath, "groups.html")));
+app.get("/tester", (req, res) => res.sendFile(path.join(frontendPath, "tester.html")));
+app.get("/automation", (req, res) => res.sendFile(path.join(frontendPath, "automation.html")));
+app.get("/verify", (req, res) => res.sendFile(path.join(frontendPath, "verify.html")));
+
+// Redirect sisanya ke login jika bukan request ke API
+app.get("*", (req, res, next) => {
+  if (req.path.startsWith('/api') || req.path.startsWith('/socket.io')) return next();
+  res.redirect("/login");
+});
+// ---------------------------------------------------------
+
 // 4. Nyalakan Backend Service di Port 3000
 const PORT = 3000;
 server.listen(PORT, () => {
   console.log(`⚙️  [BACKEND] Service API & WA Engine berjalan di http://localhost:${PORT}`);
-  initAllSessions(global.io); 
+  initAllSessions(global.io);
+
+  // 5. Start Automation Engine (background scheduler)
+  const { startAutomationEngine } = require("./src/services/automationEngine");
+  startAutomationEngine();
 });
+

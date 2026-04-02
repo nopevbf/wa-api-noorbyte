@@ -1,6 +1,5 @@
 const API_URL = "/api";
 
-
 document.addEventListener("DOMContentLoaded", async () => {
   // ==========================================
   // 0. FITUR SHOW/HIDE PASSWORD
@@ -43,6 +42,15 @@ document.addEventListener("DOMContentLoaded", async () => {
           if (!isOnline) option.disabled = true;
           selector.appendChild(option);
         });
+
+        // Restore previously selected device from localStorage
+        const savedDevice = localStorage.getItem("automationSelectedDevice");
+        if (savedDevice) {
+          const matchOption = Array.from(selector.options).find(o => o.value === savedDevice);
+          if (matchOption && !matchOption.disabled) {
+            selector.value = savedDevice;
+          }
+        }
       }
     } catch (error) {
       selector.innerHTML = '<option value="">Gagal memuat device.</option>';
@@ -50,11 +58,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   // ==========================================
-  // 2. FUNGSI TERMINAL LOG (VERSI INSTAN SUPER NGEBUT)
+  // 2. FUNGSI TERMINAL LOG
   // ==========================================
   const terminal = document.getElementById("terminalLog");
 
-  // Hapus parameter delay dan setTimeout biar gak ada jeda buatan sama sekali
   const addLog = (colorClass, label, text) => {
     const time = new Date().toLocaleTimeString("en-US", { hour12: false });
     if (terminal) {
@@ -65,291 +72,238 @@ document.addEventListener("DOMContentLoaded", async () => {
                     <span class="break-words flex-1">${text}</span>
                 </div>
             `;
-      // Auto scroll ke bawah
       terminal.scrollTop = terminal.scrollHeight;
     }
-    // Return promise instan biar syntax 'await addLog(...)' di bawah gak error
     return Promise.resolve();
   };
 
+  // Render backend logs into terminal
+  function renderBackendLogs(logs) {
+    if (!terminal) return;
+    terminal.innerHTML = "";
+    if (!logs || logs.length === 0) return;
+    logs.forEach((log) => {
+      terminal.innerHTML += `
+                <div class="flex gap-3">
+                    <span class="text-slate-500">[${log.time}]</span>
+                    <span class="${log.colorClass} font-bold">${log.label}:</span>
+                    <span class="break-words flex-1">${log.text}</span>
+                </div>
+            `;
+    });
+    terminal.scrollTop = terminal.scrollHeight;
+  }
+
   let cachedMessage = null;
 
-  // ==========================================
-  // 3. FUNGSI TARIK DATA REAL (STEP 1 - 5)
-  // ==========================================
-  async function tarikDataDparagon() {
-    const dpApiUrl = document
-      .getElementById("dpApiUrl")
-      .value.replace(/\/$/, "");
-    const dpEmail = document.getElementById("dpEmail").value;
-    const dpPassword = document.getElementById("accountPassword").value;
-
-    if (!dpApiUrl || !dpEmail || !dpPassword)
-      throw new Error("Kredensial DParagon belum lengkap.");
-
-    // [STEP 1] LOGIN
-    await addLog(
-      "text-blue-400",
-      "STEP 1",
-      "Melakukan login ke sistem DParagon...",
-      100,
-    );
-    const authRes = await fetch(`${dpApiUrl}/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: dpEmail, password: dpPassword }),
-    });
-    if (!authRes.ok) throw new Error(`Login gagal (HTTP ${authRes.status})`);
-    const authData = await authRes.json();
-    let dpToken =
-      authData.access_token ||
-      authData.data?.access_token ||
-      authData.payload?.access_token;
-    if (!dpToken)
-      throw new Error("Gagal mendapatkan access_token dari response.");
-    await addLog(
-      "text-emerald-400",
-      "SUCCESS",
-      "Login berhasil, access_token didapatkan.",
-      300,
-    );
-
-    // [STEP 2] ON PROGRESS TASK
-    await addLog(
-      "text-blue-400",
-      "STEP 2",
-      "Mengambil data on-progress task...",
-      500,
-    );
-    const taskRes = await fetch(`${dpApiUrl}/daily-reports/on-progress-task`, {
-      headers: {
-        Authorization: `Bearer ${dpToken}`,
-        "Content-Type": "application/json",
-      },
-    });
-    if (!taskRes.ok)
-      throw new Error(`Gagal fetch on-progress task (HTTP ${taskRes.status})`);
-    const taskData = await taskRes.json();
-    const payloadData = taskData.payload || [];
-    if (payloadData.length === 0)
-      throw new Error("Data payload kosong atau tidak ditemukan.");
-
-    const tasksList = payloadData.map((task) => ({
-      dates: `${task.start_date || ""} - ${task.end_date || ""}`,
-      task_description: task.task_description || "",
-    }));
-    await addLog(
-      "text-emerald-400",
-      "SUCCESS",
-      `Data task berhasil diekstrak (${tasksList.length} task).`,
-      300,
-    );
-
-    // [STEP 3] POST NEW TASK
-    await addLog(
-      "text-blue-400",
-      "STEP 3",
-      "Melakukan POST data ke /daily-reports/new-task...",
-      500,
-    );
-    const now = new Date();
-    const todayDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-
-    const postTaskRes = await fetch(`${dpApiUrl}/daily-reports/new-task`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${dpToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ daily_date: todayDate, tasks: tasksList }),
-    });
-    if (!postTaskRes.ok)
-      throw new Error(`Gagal POST new-task (HTTP ${postTaskRes.status})`);
-    await addLog(
-      "text-emerald-400",
-      "SUCCESS",
-      "POST /new-task berhasil dikirim ke server!",
-      300,
-    );
-
-    // [STEP 4] GET REPORT CODE
-    await addLog(
-      "text-blue-400",
-      "STEP 4",
-      "Mengambil daily_report_code dari list terbaru...",
-      500,
-    );
-    const listRes = await fetch(
-      `${dpApiUrl}/daily-reports/list?dates=&employee_position_id=`,
-      {
-        headers: {
-          Authorization: `Bearer ${dpToken}`,
-          "Content-Type": "application/json",
-        },
-      },
-    );
-    if (!listRes.ok)
-      throw new Error(`Gagal ambil list report (HTTP ${listRes.status})`);
-    const listData = await listRes.json();
-
-    const group = listData.payload?.group || {};
-    const keys = Object.keys(group);
-    if (keys.length === 0)
-      throw new Error("Tidak ada data report ditemukan (Keys length 0).");
-
-    const lastKey = keys[keys.length - 1];
-    const reportCode = group[lastKey]?.daily_report_code;
-    if (!reportCode) throw new Error("Key daily_report_code tidak ditemukan.");
-    await addLog(
-      "text-emerald-400",
-      "SUCCESS",
-      `Berhasil menyimpan code: ${reportCode}`,
-      300,
-    );
-
-    // [STEP 5] GET SUMMARY REPORT
-    await addLog("text-blue-400", "STEP 5", `Mengambil detail laporan...`, 500);
-    const summaryRes = await fetch(
-      `${dpApiUrl}/daily-reports/summary-daily-report?code=${reportCode}`,
-      {
-        headers: {
-          Authorization: `Bearer ${dpToken}`,
-          "Content-Type": "application/json",
-        },
-      },
-    );
-    if (!summaryRes.ok)
-      throw new Error(`Gagal ambil summary (HTTP ${summaryRes.status})`);
-    const summaryData = await summaryRes.json();
-
-    let rawMessage = null;
-    if (summaryData.payload?.message) rawMessage = summaryData.payload.message;
-    else if (typeof summaryData.payload === "string")
-      rawMessage = summaryData.payload;
-    else if (summaryData.data?.message) rawMessage = summaryData.data.message;
-    else if (summaryData.message && summaryData.message.length > 50)
-      rawMessage = summaryData.message;
-
-    if (!rawMessage)
-      throw new Error("Message laporan tidak ditemukan atau kosong!");
-    await addLog(
-      "text-emerald-400",
-      "SUCCESS",
-      "Payload message berhasil diekstrak.",
-      300,
-    );
-
-    cachedMessage = rawMessage;
-    document.getElementById("messagePreview").innerText = rawMessage;
-    return rawMessage;
+  function formatPreviewText(text) {
+    if (!text) return "";
+    const lines = text.split('\n');
+    if (lines.length <= 15) return text;
+    
+    const topLines = lines.slice(0, 8).join('\n');
+    const bottomLines = lines.slice(-5).join('\n');
+    return `${topLines}\n\n....\n...\n\n${bottomLines}`;
   }
 
   // ==========================================
-  // 4. FUNGSI KIRIM WA (STEP 6)
+  // 3. HELPER: Kumpulkan semua form data
   // ==========================================
-  async function kirimKeWhatsApp(pesan) {
-    const apiKey = selector.value;
-    const targetNumber = document.getElementById("targetNumber").value;
+  function getFormData() {
+    return {
+      api_key: selector ? selector.value : "",
+      dp_api_url: (document.getElementById("dpApiUrl")?.value || "").replace(/\/$/, ""),
+      dp_email: document.getElementById("dpEmail")?.value || "",
+      dp_password: document.getElementById("accountPassword")?.value || "",
+      target_number: document.getElementById("targetNumber")?.value || "",
+      fetch_time: document.getElementById("fetchTime")?.value || "08:00",
+      send_wa_time: document.getElementById("sendWaTime")?.value || "09:00",
+      frequency: document.querySelector('input[name="frequency"]:checked')?.value || "daily",
+      is_active: document.getElementById("scheduleToggle")?.checked || false,
+    };
+  }
 
-    if (!apiKey || !targetNumber)
-      throw new Error("Device WA atau Target Nomor kosong.");
-    if (!pesan)
-      throw new Error(
-        "Pesan kosong, jalankan proses fetch data terlebih dahulu.",
-      );
+  // ==========================================
+  // 4. TOMBOL RUN Otomatis (Delegasi ke Backend)
+  // ==========================================
+  const btnRun = document.getElementById("btnRunAutomation");
+  const runModal = document.getElementById("runAutomationModal");
+  const cancelRunBtn = document.getElementById("cancelRunAutomationBtn");
+  const confirmRunBtn = document.getElementById("confirmRunAutomationBtn");
+  const runTimeInput = document.getElementById("runAutomationTime");
 
-    await addLog(
-      "text-amber-400",
-      "STEP 6",
-      `Mengirim pesan ke WhatsApp (${targetNumber})...`,
-      500,
-    );
-    const waRes = await fetch(`${API_URL}/send-message`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        number: targetNumber,
-        message: pesan,
-        msg_type: "text",
-      }),
+  if (btnRun && runModal) {
+    btnRun.addEventListener("click", () => {
+      const now = new Date();
+      if (runTimeInput) {
+        runTimeInput.value = now.toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit" });
+      }
+      runModal.classList.remove("hidden");
     });
 
-    const waResult = await waRes.json();
-    if (waRes.ok && waResult.status === "success") {
-      await addLog(
-        "text-emerald-400",
-        "SUCCESS",
-        `Laporan terkirim! (ID: ${waResult.data?.message_id})`,
-        300,
-      );
-    } else {
-      throw new Error(waResult.message || "Gagal mengirim pesan via WA");
+    if (cancelRunBtn) {
+      cancelRunBtn.addEventListener("click", () => {
+        runModal.classList.add("hidden");
+      });
+    }
+
+    if (confirmRunBtn) {
+      confirmRunBtn.addEventListener("click", async () => {
+        const selectedTime = runTimeInput.value;
+        if (!selectedTime) {
+          showModal("Peringatan", "Silakan pilih jam eksekusi terlebih dahulu.");
+          return;
+        }
+
+        const formData = getFormData();
+        if (!formData.api_key || !formData.dp_api_url || !formData.dp_email || !formData.dp_password) {
+          showModal("Peringatan", "Lengkapi semua kredensial dan pilih device terlebih dahulu.");
+          return;
+        }
+
+        runModal.classList.add("hidden");
+
+        // Save selected device
+        localStorage.setItem("automationSelectedDevice", formData.api_key);
+
+        btnRun.disabled = true;
+        btnRun.innerHTML = `<span class="material-symbols-outlined animate-spin">autorenew</span> Menjadwalkan...`;
+        if (terminal) terminal.innerHTML = "";
+
+        try {
+          const res = await fetch(`${API_URL}/automation/run-manual`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              api_key: formData.api_key,
+              run_time: selectedTime,
+              dp_api_url: formData.dp_api_url,
+              dp_email: formData.dp_email,
+              dp_password: formData.dp_password,
+              target_number: formData.target_number,
+            }),
+          });
+
+          const result = await res.json();
+          if (result.status) {
+            await addLog("text-emerald-400", "SERVER", result.message);
+            await addLog("text-purple-400", "INFO", "Eksekusi akan berjalan di server. Anda bisa menutup browser.");
+            showModal("Terjadwal ✅", result.message);
+            // Start polling for status updates
+            startStatusPolling();
+          } else {
+            throw new Error(result.message);
+          }
+        } catch (err) {
+          await addLog("text-red-500", "ERROR", err.message);
+          showModal("Gagal", err.message);
+        }
+
+        btnRun.disabled = false;
+        btnRun.innerHTML = `<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">bolt</span> Run Automation Now`;
+      });
     }
   }
 
   // ==========================================
-  // 5. TOMBOL RUN MANUAL (Menjalankan semua)
+  // 5. POLLING STATUS DARI BACKEND
   // ==========================================
-  const btnRun = document.getElementById("btnRunAutomation");
-  if (btnRun) {
-    btnRun.addEventListener("click", async () => {
-      btnRun.disabled = true;
-      btnRun.innerHTML = `<span class="material-symbols-outlined animate-spin">autorenew</span> Executing...`;
-      if (terminal) terminal.innerHTML = "";
+  let statusPollInterval = null;
 
-      try {
-        const hasilPesan = await tarikDataDparagon();
-        await kirimKeWhatsApp(hasilPesan);
-        showModal("Berhasil 🎉", "Proses penarikan dan pengiriman selesai!");
-      } catch (error) {
-        await addLog("text-red-500", "ERROR", `Terhenti: ${error.message}`);
-        showModal("Gagal Eksekusi", error.message);
-      } finally {
-        btnRun.disabled = false;
-        btnRun.innerHTML = `<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">bolt</span> Run Automation Now`;
+  function startStatusPolling() {
+    if (statusPollInterval) clearInterval(statusPollInterval);
+    pollStatus(); // Run immediately
+    statusPollInterval = setInterval(pollStatus, 10000); // Poll every 10s
+  }
+
+  function stopStatusPolling() {
+    if (statusPollInterval) {
+      clearInterval(statusPollInterval);
+      statusPollInterval = null;
+    }
+  }
+
+  async function pollStatus() {
+    // Try selector value first, fallback to localStorage
+    let apiKey = selector ? selector.value : "";
+    if (!apiKey) {
+      apiKey = localStorage.getItem("automationSelectedDevice") || "";
+    }
+    if (!apiKey) return;
+
+    try {
+      const res = await fetch(`${API_URL}/automation/status?api_key=${apiKey}`);
+      const result = await res.json();
+      if (result.status && result.data) {
+        const data = result.data;
+
+        // Render backend logs into terminal (always, even on page reload)
+        if (data.logs && data.logs.length > 0) {
+          renderBackendLogs(data.logs);
+        }
+
+        // Restore schedule toggle from backend state
+        const schedToggle = document.getElementById("scheduleToggle");
+        if (schedToggle && data.is_active && !schedToggle.checked) {
+          schedToggle.checked = true;
+          updatePreviewUI(true);
+        }
+
+        // Update message preview from backend cached message
+        if (data.cached_message) {
+          cachedMessage = data.cached_message;
+          const msgPreview = document.getElementById("messagePreview");
+          if (msgPreview && !data.is_active) {
+            msgPreview.innerText = formatPreviewText(data.cached_message);
+          }
+        }
+
+        // Update button based on manual_run_status
+        if (btnRun) {
+          if (data.manual_run_status === "waiting") {
+            btnRun.disabled = true;
+            btnRun.innerHTML = `<span class="material-symbols-outlined animate-spin">autorenew</span> Menunggu ${data.manual_run_time || "..."}`;
+          } else if (data.manual_run_status === "running") {
+            btnRun.disabled = true;
+            btnRun.innerHTML = `<span class="material-symbols-outlined animate-spin">autorenew</span> Executing...`;
+          } else {
+            btnRun.disabled = false;
+            btnRun.innerHTML = `<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">bolt</span> Run Automation Now`;
+          }
+        }
       }
-    });
+    } catch {
+      // Silently ignore polling errors
+    }
   }
 
   // ==========================================
-  // 6. LOGIC SCHEDULER (MESIN WAKTU)
+  // 6. LOGIC SCHEDULER TOGGLE (Preview UI only)
   // ==========================================
-  let scheduleInterval = null;
-
-  // FUNGSI BARU: Mengubah isi kotak Message Preview
   function updatePreviewUI(isActive) {
     const msgPreview = document.getElementById("messagePreview");
     if (!msgPreview) return;
 
     if (isActive) {
-      // Ambil data jam dari form
       const fetchTime = document.getElementById("fetchTime").value || "--:--";
       const sendTime = document.getElementById("sendWaTime").value || "--:--";
       const isWeekdays = document.getElementById("freqWeekdays").checked
         ? " (Hari Kerja)"
         : "";
 
-      // Tampilkan Banner ala Colab
       msgPreview.innerText = `=========================
 🤖 SISTEM OTOMATISASI DAILY REPORT DPARAGON AKTIF
 🌍 Zona Waktu Server: Asia/Jakarta (WIB)
 ⏰ Jadwal${isWeekdays}: Tarik Data (${fetchTime} WIB) --> Kirim WA (${sendTime} WIB)
-⚠️ BIARKAN TAB BROWSER INI TERUS TERBUKA (RUNNING)
+✅ EKSEKUSI BERJALAN DI SERVER (Aman tutup browser)
 =========================
 
-Mendeteksi waktu berjalan...`;
+Mendeteksi waktu berjalan di backend...`;
 
-      // Tambah warna biru biar kelihatan ini status sistem
       msgPreview.classList.add("text-primary", "font-bold");
       msgPreview.classList.remove("text-slate-700");
     } else {
-      // Kalau dimatikan, kembalikan ke teks default/hasil tarikan terakhir
-      msgPreview.innerText =
-        cachedMessage ||
-        `🔔 DAILY REPORT - DPARAGON
+      let fallbackText = `🔔 DAILY REPORT - DPARAGON
 Period: ${new Date().toLocaleDateString("id-ID", { month: "long", day: "numeric", year: "numeric" })}
 
 ✅ Total Tasks: 0
@@ -361,101 +315,21 @@ Occupancy Rate: 0%
 
 (Sistem otomatisasi MATI. Klik Run Automation Now untuk manual)`;
 
-      // Kembalikan warna teks normal
+      msgPreview.innerText = cachedMessage ? formatPreviewText(cachedMessage) : fallbackText;
       msgPreview.classList.remove("text-primary", "font-bold");
       msgPreview.classList.add("text-slate-700");
-    }
-  }
-
-  function startScheduler() {
-    if (scheduleInterval) clearInterval(scheduleInterval);
-    addLog(
-      "text-purple-400",
-      "SCHEDULER",
-      "Jadwal Otomatis AKTIF. Memantau waktu...",
-      0,
-    );
-    updatePreviewUI(true); // Panggil fungsi baru di sini
-
-    scheduleInterval = setInterval(async () => {
-      const isEnabled = document.getElementById("scheduleToggle").checked;
-      if (!isEnabled) return;
-
-      const now = new Date();
-      const currentHourMin = now.toLocaleTimeString("en-US", {
-        hour12: false,
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-
-      const isWeekdaysOnly = document.getElementById("freqWeekdays").checked;
-      const dayOfWeek = now.getDay();
-      if (isWeekdaysOnly && (dayOfWeek === 0 || dayOfWeek === 6)) return;
-
-      const fetchTimeSetting = document.getElementById("fetchTime").value;
-      const sendWaTimeSetting = document.getElementById("sendWaTime").value;
-
-      // Logika flag agar hanya tereksekusi 1 kali per menit yang cocok
-      if (currentHourMin === fetchTimeSetting && !window.hasFetchedForMinute) {
-        window.hasFetchedForMinute = true;
-        await addLog(
-          "text-purple-400",
-          "SCHEDULER",
-          `Waktu Fetch Data tiba (${fetchTimeSetting}). Memulai proses...`,
-        );
-        try {
-          await tarikDataDparagon();
-        } catch (e) {
-          await addLog(
-            "text-red-500",
-            "SCHEDULER ERROR",
-            `Gagal fetch data: ${e.message}`,
-          );
-        }
-      } else if (currentHourMin !== fetchTimeSetting) {
-        window.hasFetchedForMinute = false; // Reset kalau menit udah lewat
-      }
-
-      if (currentHourMin === sendWaTimeSetting && !window.hasSentWaForMinute) {
-        window.hasSentWaForMinute = true;
-        await addLog(
-          "text-purple-400",
-          "SCHEDULER",
-          `Waktu Send WA tiba (${sendWaTimeSetting}). Memulai pengiriman...`,
-        );
-        try {
-          await kirimKeWhatsApp(cachedMessage);
-        } catch (e) {
-          await addLog(
-            "text-red-500",
-            "SCHEDULER ERROR",
-            `Gagal kirim WA: ${e.message}`,
-          );
-        }
-      } else if (currentHourMin !== sendWaTimeSetting) {
-        window.hasSentWaForMinute = false; // Reset kalau menit udah lewat
-      }
-    }, 15000); // Cek setiap 15 detik biar lebih responsif
-  }
-
-  function stopScheduler() {
-    if (scheduleInterval) {
-      updatePreviewUI(false); // Panggil fungsi baru di sini
-      clearInterval(scheduleInterval);
-      addLog("text-slate-500", "SCHEDULER", "Jadwal Otomatis DIMATIKAN.", 0);
     }
   }
 
   const toggleBtn = document.getElementById("scheduleToggle");
   if (toggleBtn) {
     toggleBtn.addEventListener("change", (e) => {
-      if (e.target.checked) startScheduler();
-      else stopScheduler();
+      updatePreviewUI(e.target.checked);
     });
   }
 
   // ==========================================
-  // 7. SIMPAN SETTINGAN KE LOCALSTORAGE & VALIDASI JADWAL
+  // 7. SIMPAN SETTINGAN (Kirim ke Backend)
   // ==========================================
   const btnSaveSettings = document.getElementById("btnSaveSettings");
   const fetchTimeInput = document.getElementById("fetchTime");
@@ -463,7 +337,6 @@ Occupancy Rate: 0%
   const toggleScheduleInput = document.getElementById("scheduleToggle");
   const scheduleWarningMsg = document.getElementById("scheduleWarningMsg");
 
-  // Fungsi Validasi Waktu
   function validateScheduleTimes() {
     if (
       !fetchTimeInput ||
@@ -477,99 +350,68 @@ Occupancy Rate: 0%
     const fetchT = fetchTimeInput.value;
     const sendT = sendWaTimeInput.value;
 
-    // Kalau jadwal nyala DAN waktunya sama
     if (isEnabled && fetchT === sendT) {
       scheduleWarningMsg.classList.remove("hidden");
       fetchTimeInput.classList.add(
-        "border-red-500",
-        "bg-red-50/50",
-        "text-red-600",
-        "focus:border-red-500",
-        "focus:ring-red-500/20",
+        "border-red-500", "bg-red-50/50", "text-red-600",
+        "focus:border-red-500", "focus:ring-red-500/20",
       );
       sendWaTimeInput.classList.add(
-        "border-red-500",
-        "bg-red-50/50",
-        "text-red-600",
-        "focus:border-red-500",
-        "focus:ring-red-500/20",
+        "border-red-500", "bg-red-50/50", "text-red-600",
+        "focus:border-red-500", "focus:ring-red-500/20",
       );
       return false;
     } else {
-      // Kalau aman, hilangkan efek merah
       scheduleWarningMsg.classList.add("hidden");
       fetchTimeInput.classList.remove(
-        "border-red-500",
-        "bg-red-50/50",
-        "text-red-600",
-        "focus:border-red-500",
-        "focus:ring-red-500/20",
+        "border-red-500", "bg-red-50/50", "text-red-600",
+        "focus:border-red-500", "focus:ring-red-500/20",
       );
       sendWaTimeInput.classList.remove(
-        "border-red-500",
-        "bg-red-50/50",
-        "text-red-600",
-        "focus:border-red-500",
-        "focus:ring-red-500/20",
+        "border-red-500", "bg-red-50/50", "text-red-600",
+        "focus:border-red-500", "focus:ring-red-500/20",
       );
       return true;
     }
   }
 
-  // Pasang Pendengar (Event Listener) biar langsung divalidasi tiap kali user ngetik/ngeklik
-  if (fetchTimeInput)
-    fetchTimeInput.addEventListener("input", validateScheduleTimes);
-  if (sendWaTimeInput)
-    sendWaTimeInput.addEventListener("input", validateScheduleTimes);
-  if (toggleScheduleInput)
-    toggleScheduleInput.addEventListener("change", validateScheduleTimes);
+  if (fetchTimeInput) fetchTimeInput.addEventListener("input", validateScheduleTimes);
+  if (sendWaTimeInput) sendWaTimeInput.addEventListener("input", validateScheduleTimes);
+  if (toggleScheduleInput) toggleScheduleInput.addEventListener("change", validateScheduleTimes);
 
-  // Load Data awal
+  // Load saved settings from localStorage
   function loadSavedSettings() {
-    const savedSettings = JSON.parse(
-      localStorage.getItem("connectApiSettings"),
-    );
+    const savedSettings = JSON.parse(localStorage.getItem("connectApiSettings"));
     if (savedSettings) {
       if (document.getElementById("dpApiUrl"))
-        document.getElementById("dpApiUrl").value =
-          savedSettings.dpApiUrl || "";
+        document.getElementById("dpApiUrl").value = savedSettings.dpApiUrl || "";
       if (document.getElementById("dpEmail"))
         document.getElementById("dpEmail").value = savedSettings.dpEmail || "";
       if (document.getElementById("accountPassword"))
-        document.getElementById("accountPassword").value =
-          savedSettings.dpPassword || "";
-
+        document.getElementById("accountPassword").value = savedSettings.dpPassword || "";
       if (document.getElementById("scheduleToggle"))
-        document.getElementById("scheduleToggle").checked =
-          savedSettings.scheduleEnabled || false;
+        document.getElementById("scheduleToggle").checked = savedSettings.scheduleEnabled || false;
       if (document.getElementById("fetchTime"))
-        document.getElementById("fetchTime").value =
-          savedSettings.fetchTime || "08:00";
+        document.getElementById("fetchTime").value = savedSettings.fetchTime || "08:00";
       if (document.getElementById("sendWaTime"))
-        document.getElementById("sendWaTime").value =
-          savedSettings.sendWaTime || "09:00";
-
+        document.getElementById("sendWaTime").value = savedSettings.sendWaTime || "09:00";
       if (savedSettings.frequency === "weekdays")
         document.getElementById("freqWeekdays").checked = true;
       else document.getElementById("freqDaily").checked = true;
-
       if (document.getElementById("targetNumber"))
-        document.getElementById("targetNumber").value =
-          savedSettings.targetNumber || "";
-
-      if (savedSettings.scheduleEnabled) startScheduler();
+        document.getElementById("targetNumber").value = savedSettings.targetNumber || "";
+      if (savedSettings.scheduleEnabled) {
+        updatePreviewUI(true);
+      }
     }
-
-    // Panggil validasi sekali saat data pertama kali dimuat
     validateScheduleTimes();
   }
 
   loadSavedSettings();
 
-  // Aksi Klik Simpan
+  // Save settings — send to backend AND localStorage
   if (btnSaveSettings) {
-    btnSaveSettings.addEventListener("click", () => {
-      // CEGAT DISINI: Kalau validasi gagal, tolak save-nya!
+    btnSaveSettings.addEventListener("click", async () => {
       if (!validateScheduleTimes()) {
         return showModal(
           "Peringatan Jadwal",
@@ -577,69 +419,97 @@ Occupancy Rate: 0%
         );
       }
 
-      const settings = {
-        dpApiUrl: document.getElementById("dpApiUrl").value,
-        dpEmail: document.getElementById("dpEmail").value,
-        dpPassword: document.getElementById("accountPassword").value,
-        scheduleEnabled: document.getElementById("scheduleToggle").checked,
-        fetchTime: document.getElementById("fetchTime").value,
-        sendWaTime: document.getElementById("sendWaTime").value,
-        frequency: document.querySelector('input[name="frequency"]:checked')
-          .value,
-        targetNumber: document.getElementById("targetNumber").value,
+      const formData = getFormData();
+
+      if (!formData.api_key) {
+        return showModal("Peringatan", "Pilih device pengirim terlebih dahulu.");
+      }
+
+      // Save selected device
+      localStorage.setItem("automationSelectedDevice", formData.api_key);
+
+      // Save to localStorage (for UI reload)
+      const localSettings = {
+        dpApiUrl: formData.dp_api_url,
+        dpEmail: formData.dp_email,
+        dpPassword: formData.dp_password,
+        scheduleEnabled: formData.is_active,
+        fetchTime: formData.fetch_time,
+        sendWaTime: formData.send_wa_time,
+        frequency: formData.frequency,
+        targetNumber: formData.target_number,
       };
-      localStorage.setItem("connectApiSettings", JSON.stringify(settings));
+      localStorage.setItem("connectApiSettings", JSON.stringify(localSettings));
 
       const originalText = btnSaveSettings.innerHTML;
       btnSaveSettings.innerHTML = `<span class="material-symbols-outlined animate-spin text-sm">autorenew</span> Saving...`;
       btnSaveSettings.disabled = true;
 
-      setTimeout(() => {
-        btnSaveSettings.innerHTML = originalText;
-        btnSaveSettings.disabled = false;
-        showModal(
-          "Pengaturan Disimpan",
-          "Konfigurasi jadwal dan API berhasil disimpan.",
-        );
+      try {
+        // Send to backend for persistent execution
+        const res = await fetch(`${API_URL}/automation/save-settings`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(formData),
+        });
 
-        if (settings.scheduleEnabled) startScheduler();
-        else stopScheduler();
-      }, 800);
+        const result = await res.json();
+
+        setTimeout(() => {
+          btnSaveSettings.innerHTML = originalText;
+          btnSaveSettings.disabled = false;
+
+          if (result.status) {
+            showModal(
+              "Pengaturan Disimpan ✅",
+              "Konfigurasi berhasil disimpan di server. Jadwal otomasi " +
+              (formData.is_active
+                ? "AKTIF dan akan berjalan di background meskipun browser ditutup."
+                : "NONAKTIF."),
+            );
+            updatePreviewUI(formData.is_active);
+
+            if (formData.is_active) {
+              startStatusPolling();
+            } else {
+              stopStatusPolling();
+            }
+          } else {
+            showModal("Gagal Simpan", result.message || "Gagal menyimpan ke server.");
+          }
+        }, 800);
+      } catch (err) {
+        setTimeout(() => {
+          btnSaveSettings.innerHTML = originalText;
+          btnSaveSettings.disabled = false;
+          showModal("Gagal Simpan", `Error: ${err.message}`);
+        }, 800);
+      }
     });
   }
 
-  if (btnSaveSettings) {
-    btnSaveSettings.addEventListener("click", () => {
-      const settings = {
-        dpApiUrl: document.getElementById("dpApiUrl").value,
-        dpEmail: document.getElementById("dpEmail").value,
-        dpPassword: document.getElementById("accountPassword").value,
-        scheduleEnabled: document.getElementById("scheduleToggle").checked,
-        fetchTime: document.getElementById("fetchTime").value,
-        sendWaTime: document.getElementById("sendWaTime").value,
-        frequency: document.querySelector('input[name="frequency"]:checked')
-          .value,
-        targetNumber: document.getElementById("targetNumber").value,
-      };
-      localStorage.setItem("connectApiSettings", JSON.stringify(settings));
-
-      const originalText = btnSaveSettings.innerHTML;
-      btnSaveSettings.innerHTML = `<span class="material-symbols-outlined animate-spin text-sm">autorenew</span> Saving...`;
-      btnSaveSettings.disabled = true;
-
-      setTimeout(() => {
-        btnSaveSettings.innerHTML = originalText;
-        btnSaveSettings.disabled = false;
-        showModal(
-          "Pengaturan Disimpan",
-          "Konfigurasi jadwal dan API berhasil disimpan.",
-        );
-
-        if (settings.scheduleEnabled) startScheduler();
-        else stopScheduler();
-      }, 800);
+  // ==========================================
+  // 8. ON LOAD: Fetch existing backend status
+  // ==========================================
+  // When device selector changes, save selection and poll status
+  if (selector) {
+    selector.addEventListener("change", () => {
+      if (selector.value) {
+        localStorage.setItem("automationSelectedDevice", selector.value);
+      }
+      pollStatus();
     });
   }
+
+  // ALWAYS try to restore state from backend on page load
+  // This ensures logs, button state, and preview are never lost
+  setTimeout(() => {
+    const savedDevice = localStorage.getItem("automationSelectedDevice");
+    const currentDevice = selector ? selector.value : "";
+    if (currentDevice || savedDevice) {
+      startStatusPolling();
+    }
+  }, 1000);
 });
 
 function showModal(title, message) {
