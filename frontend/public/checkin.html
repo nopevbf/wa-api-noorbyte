@@ -86,14 +86,14 @@
                                                 class="text-[9px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Lat</label>
                                             <input id="inputLat"
                                                 class="w-full bg-slate-950 border border-slate-800 rounded-lg py-2.5 px-3 text-slate-300 font-mono text-xs focus:outline-none transition-all"
-                                                type="text" value="-6.2088" placeholder="e.g. -6.2088" />
+                                                type="text" value="-7.75723" placeholder="e.g. -7.75723" />
                                         </div>
                                         <div>
                                             <label
                                                 class="text-[9px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Long</label>
                                             <input id="inputLng"
                                                 class="w-full bg-slate-950 border border-slate-800 rounded-lg py-2.5 px-3 text-slate-300 font-mono text-xs focus:outline-none transition-all"
-                                                type="text" value="106.8456" placeholder="e.g. 106.8456" />
+                                                type="text" value="110.41448" placeholder="e.g. 110.41448" />
                                         </div>
                                     </div>
 
@@ -214,10 +214,28 @@
 
                                     <div class="camera-gradient-overlay"></div>
 
-                                    <div
-                                        class="absolute inset-0 w-full h-full bg-slate-900 opacity-60 flex items-center justify-center">
+                                    <div id="cameraPlaceholder"
+                                        class="absolute inset-0 w-full h-full bg-slate-900 opacity-80 flex flex-col items-center justify-center z-0 transition-opacity duration-500">
                                         <span
-                                            class="material-symbols-outlined text-slate-700 text-5xl md:text-6xl">linked_camera</span>
+                                            class="material-symbols-outlined text-slate-700 text-5xl md:text-6xl animate-pulse">videocam_off</span>
+                                        <span
+                                            class="text-[9px] text-slate-500 font-mono mt-2 tracking-widest uppercase">Kamera
+                                            Offline</span>
+                                    </div>
+
+                                    <video id="cameraFeed" autoplay playsinline
+                                        class="absolute inset-0 w-full h-full object-cover z-0 opacity-0 transition-opacity duration-1000 -scale-x-100"></video>
+
+                                    <img id="cameraPreview"
+                                        class="absolute inset-0 w-full h-full object-cover z-30 hidden" />
+
+                                    <button id="btnRetake" type="button"
+                                        class="absolute top-4 right-4 z-40 bg-slate-900/80 hover:bg-error text-white p-2 md:p-2.5 rounded-full backdrop-blur-md border border-slate-700 transition-all shadow-lg active:scale-90 hidden">
+                                        <span class="material-symbols-outlined text-xl md:text-2xl">refresh</span>
+                                    </button>
+                                    <canvas id="captureCanvas" class="hidden"></canvas>
+                                    <div id="cameraFlash"
+                                        class="absolute inset-0 bg-white opacity-0 pointer-events-none z-50 transition-opacity duration-75">
                                     </div>
 
                                     <div class="camera-reticle">
@@ -245,7 +263,7 @@
                                     </div>
                                 </div>
                                 <div class="p-4 md:p-6 bg-slate-900">
-                                    <button
+                                    <button id="btnCapture"
                                         class="w-full bg-red-600 hover:bg-red-700 text-white py-3.5 md:py-4 rounded-xl font-black text-sm md:text-lg uppercase tracking-widest flex items-center justify-center gap-3 active:scale-95 transition-all shadow-lg">
                                         <span class="material-symbols-outlined text-xl md:text-2xl">photo_camera</span>
                                         Ambil & Kirim
@@ -341,8 +359,70 @@
                 </div>
             </div>
 
-            <script src="/js/checkin.js"></script>
-            <script src="/js/sidebar.js"></script>
+            <div id="lateReasonModal"
+                class="fixed inset-0 z-[110] hidden items-center justify-center p-4 bg-slate-950/90 backdrop-blur-sm transition-all duration-300">
+                <div
+                    class="bg-slate-900 border border-error/50 rounded-2xl w-full max-w-sm p-6 shadow-[0_0_50px_rgba(239,68,68,0.2)] relative overflow-hidden transform transition-all duration-300">
+
+                    <div class="absolute top-0 left-0 w-full h-1 bg-error shadow-[0_0_10px_rgba(239,68,68,1)]"></div>
+
+                    <div class="flex items-center gap-3 mb-4 text-error border-b border-slate-800 pb-3">
+                        <span class="material-symbols-outlined text-3xl animate-pulse">warning</span>
+                        <div>
+                            <h3 class="font-black text-lg uppercase tracking-widest text-white leading-tight">Akses
+                                Ditolak</h3>
+                            <p class="text-[9px] font-mono tracking-widest">SYSTEM REJECTION DETECTED</p>
+                        </div>
+                    </div>
+
+                    <p class="text-xs text-slate-400 mb-4 leading-relaxed">
+                        Sistem mendeteksi anomali waktu/lokasi. Otorisasi manual diperlukan. Masukkan <span
+                            class="text-error font-bold">Late Reason</span> untuk memaksa sinkronisasi:
+                    </p>
+
+                    <textarea id="lateReasonInput" rows="3" required
+                        class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 font-mono text-sm focus:ring-1 focus:ring-error focus:border-error focus:outline-none mb-5"
+                        placeholder="Misal: Macet parah di Perempatan Alpha..."></textarea>
+
+                    <div class="flex gap-3">
+                        <button id="btnCancelReason"
+                            class="flex-1 bg-slate-800 text-slate-300 py-3 rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-slate-700 transition-colors">Abort</button>
+                        <button id="btnSubmitReason"
+                            class="flex-1 bg-error text-white py-3 rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-red-700 shadow-[0_0_15px_rgba(239,68,68,0.2)] transition-all active:scale-95 flex justify-center items-center gap-2">
+                            <span class="material-symbols-outlined text-base">gavel</span> Force Submit
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <div id="systemAlertModal"
+            class="fixed inset-0 z-[150] hidden items-center justify-center p-4 bg-slate-950/90 backdrop-blur-sm transition-all duration-300 opacity-0">
+            <div id="systemAlertBox"
+                class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-sm p-6 shadow-2xl relative overflow-hidden flex flex-col items-center text-center transform scale-95 transition-all duration-300">
+
+                <div id="systemAlertTopBar"
+                    class="absolute top-0 left-0 w-full h-1 bg-error shadow-[0_0_10px_rgba(239,68,68,1)]"></div>
+
+                <div id="systemAlertIconContainer"
+                    class="w-16 h-16 rounded-full flex items-center justify-center mb-4 bg-error/10 border border-error/30 text-error shadow-[0_0_15px_rgba(239,68,68,0.3)]">
+                    <span id="systemAlertIcon" class="material-symbols-outlined text-3xl">warning</span>
+                </div>
+
+                <h3 id="systemAlertTitle" class="font-black text-lg uppercase tracking-widest text-white mb-2">SYSTEM
+                    ALERT</h3>
+                <p id="systemAlertMessage" class="text-xs text-slate-400 mb-6 leading-relaxed">Pesan sistem akan muncul
+                    di sini.</p>
+
+                <button id="btnAcknowledgeAlert"
+                    class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 py-3 rounded-lg text-xs font-bold uppercase tracking-widest transition-all active:scale-95 shadow-sm">
+                    Mengerti
+                </button>
+            </div>
+        </div>
+
+        <script src="/js/checkin.js"></script>
+        <script src="/js/sidebar.js"></script>
 </body>
 
 </html>

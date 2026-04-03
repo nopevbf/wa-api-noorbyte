@@ -230,8 +230,9 @@
         opacity: 0.5;
     }
 
+    /* Ubah top: 100% jadi top: calc(100% - 5px) biar gak nabrak batas bawah */
     100% {
-        top: 100%;
+        top: calc(100% - 5px);
         opacity: 0;
     }
 }
