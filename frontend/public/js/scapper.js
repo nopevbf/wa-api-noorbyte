@@ -1,5 +1,23 @@
 // 1. Trik SQA: Load dotenv biasa dulu, kalau gagal baru pake path manual
 require('dotenv').config();
+
+// ==========================================
+// HELPER: KIRIM LOG REAL-TIME KE FRONTEND
+// ==========================================
+function sendLog(message, type = 'info') {
+    // Tetap print di terminal server
+    console.log(message);
+
+    // Kirim via Socket.io ke frontend kalau socketnya udah ready
+    if (global.io) {
+        global.io.emit('security_log', {
+            message: message,
+            type: type,
+            timestamp: new Date().toLocaleTimeString('id-ID', { hour12: false })
+        });
+    }
+}
+
 if (!process.env.NODE_ENV) {
     // Fallback kalau path .env ada di folder root (luar folder controllers)
     require("dotenv").config({ path: require("path").join(__dirname, "../.env") });
@@ -36,7 +54,8 @@ async function scrapeDparagonAttendance(fullName = "", targetPage = 1) {
     const env = process.env.NODE_ENV || 'development';
     const config = ENV_CONFIG[env] || ENV_CONFIG['development'];
 
-    console.log(`[SYSTEM] Initiating Puppeteer Engine for ENV: [${env.toUpperCase()}]...`);
+    // console.log(`[SYSTEM] Initiating Puppeteer Engine for ENV: [${env.toUpperCase()}]...`);
+    sendLog(`[SYSTEM] Initiating Puppeteer Engine for ENV: [${env.toUpperCase()}]...`, 'info');
 
     // Pisahkan folder session berdasarkan env biar cookies nggak bentrok!
     const sessionDir = `browser_session_${env}`;
@@ -77,13 +96,15 @@ async function scrapeDparagonAttendance(fullName = "", targetPage = 1) {
                 page.click('button[type="submit"]')
             ]);
 
-            console.log(`[SUCCESS] Login ${env.toUpperCase()} Berhasil! Session tersimpan.`);
+            // console.log(`[SUCCESS] Login ${env.toUpperCase()} Berhasil! Session tersimpan.`);
+            sendLog(`[SUCCESS] Login ${env.toUpperCase()} Berhasil! Session tersimpan.`, 'success');
 
             console.log("[PROCESS] Berpindah ke Halaman Report...");
             await page.goto(targetUrl, { waitUntil: 'networkidle2' });
 
         } else {
-            console.log(`[SUCCESS] Session Login ${env.toUpperCase()} masih AKTIF! Skip login...`);
+            // console.log(`[SUCCESS] Session Login ${env.toUpperCase()} masih AKTIF! Skip login...`);
+            sendLog(`[SUCCESS] Session Login ${env.toUpperCase()} masih AKTIF! Skip login...`, 'success');
         }
 
         /// ==========================================
@@ -145,11 +166,13 @@ async function scrapeDparagonAttendance(fullName = "", targetPage = 1) {
             return extracted;
         });
 
-        console.log(`[SUCCESS] Scraping selesai! Ditemukan ${attendanceData.length} baris. atas nama ${fullName}`);
+        // console.log(`[SUCCESS] Scraping selesai! Ditemukan ${attendanceData.length} baris. atas nama ${fullName}`);
+        sendLog(`[SUCCESS] Scraping selesai! Ditemukan ${attendanceData.length} baris. atas nama ${fullName}`, 'success');
         return attendanceData;
 
     } catch (error) {
-        console.error("[CRITICAL ERROR] Proses Scraping Terhenti!", error);
+        // console.error("[CRITICAL ERROR] Proses Scraping Terhenti!", error);
+        sendLog(`[CRITICAL ERROR] Proses Scraping Terhenti: ${error.message}`, 'error');
         throw error;
     } finally {
         await browser.close();
