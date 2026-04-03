@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const db = require("../config/database");
+const appConfig = require("../config/appConfig");
 const checkApiKey = require("../middlewares/auth");
 const {
   sendMessageViaWa,
@@ -9,6 +10,17 @@ const {
   fetchGroups,
 } = require("../services/waEngine");
 const crypto = require("crypto");
+
+// ENDPOINT: App Config (expose env & default DParagon URL ke frontend)
+router.get("/app-config", (req, res) => {
+  res.status(200).json({
+    status: true,
+    data: {
+      env: appConfig.env,
+      dparagonApiUrl: appConfig.dparagonApiUrl,
+    },
+  });
+});
 
 // ENDPOINT: Ambil Statistik Dashboard
 router.get("/dashboard-stats", (req, res) => {

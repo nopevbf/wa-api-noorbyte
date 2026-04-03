@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html class="dark" lang="id">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Chronos Vault - Clock In</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+        rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet" />
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "error": "#ef4444",
+                    },
+                    fontFamily: {
+                        "inter": ["Inter", "sans-serif"],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        @keyframes scan {
+            0% {
+                top: 0;
+            }
+
+            100% {
+                top: 100%;
+            }
+        }
+
+        .animate-scan {
+            position: absolute;
+            animation: scan 3s linear infinite;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #ef4444;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-950 text-slate-200 antialiased overflow-hidden">
+
+    <div class="flex h-screen w-full">
+
+        <div id="sidebar-container" class="h-full flex-shrink-0 z-50 relative [&>aside]:h-full"></div>
+
+        <main class="flex-1 relative overflow-y-auto p-8">
+            <div class="max-w-6xl mx-auto">
+
+                <div class="flex justify-between items-start mb-6">
+                    <nav class="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-slate-500">
+                        <a href="/jailbreak" class="hover:text-red-500 cursor-pointer transition-colors">Jailbreak</a>
+                        <span class="material-symbols-outlined text-[14px]">chevron_right</span>
+                        <span class="text-red-600">Absen Masuk</span>
+                    </nav>
+                    <div class="text-right">
+                        <h2 class="text-xl font-bold tracking-tighter text-red-600">Chronos Vault</h2>
+                        <p class="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Secure Clock-In Node
+                        </p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 relative z-10">
+                    <div class="lg:col-span-5 space-y-6">
+                        <section
+                            class="bg-slate-900/50 backdrop-blur-md border border-slate-800 p-6 rounded-xl relative overflow-hidden group">
+                            <div
+                                class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                                <span class="material-symbols-outlined text-6xl text-red-600">my_location</span>
+                            </div>
+                            <h3 class="text-slate-100 font-bold text-lg mb-6 flex items-center gap-2">
+                                <span class="material-symbols-outlined text-red-500">share_location</span>
+                                Location & Verification
+                            </h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <label
+                                        class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Latitude</label>
+                                    <div class="relative">
+                                        <input
+                                            class="w-full bg-slate-950 border border-slate-800 rounded-lg py-3 px-4 text-slate-300 font-mono focus:ring-1 focus:ring-red-600 focus:outline-none"
+                                            readonly="" type="text" value="-6.2088" />
+                                        <span
+                                            class="material-symbols-outlined absolute right-3 top-3 text-slate-600">pin_drop</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label
+                                        class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Longitude</label>
+                                    <div class="relative">
+                                        <input
+                                            class="w-full bg-slate-950 border border-slate-800 rounded-lg py-3 px-4 text-slate-300 font-mono focus:ring-1 focus:ring-red-600 focus:outline-none"
+                                            readonly="" type="text" value="106.8456" />
+                                        <span
+                                            class="material-symbols-outlined absolute right-3 top-3 text-slate-600">explore</span>
+                                    </div>
+                                </div>
+                                <button
+                                    class="w-full bg-slate-800 text-slate-200 py-3 rounded-lg font-bold flex items-center justify-center gap-2 transition-all opacity-50 cursor-not-allowed"
+                                    disabled="true"><span class="material-symbols-outlined text-xl">lock</span> Set
+                                    Location</button>
+                                <div class="pt-4 border-t border-slate-800 flex items-center justify-between">
+                                    <div class="flex items-center gap-2">
+                                        <span class="relative flex h-3 w-3">
+                                            <span
+                                                class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                            <span class="relative inline-flex rounded-full h-3 w-3 bg-red-600"></span>
+                                        </span>
+                                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">GPS
+                                            Signal Status</span>
+                                    </div>
+                                    <span
+                                        class="px-2 py-0.5 bg-red-600/10 border border-red-600 text-red-500 text-[10px] font-bold rounded uppercase">Locked/Strong</span>
+                                </div>
+                            </div>
+                        </section>
+
+                        <div class="bg-red-600/5 border border-red-600/20 p-4 rounded-xl flex gap-4 backdrop-blur-md">
+                            <span class="material-symbols-outlined text-red-500 shrink-0">info</span>
+                            <div>
+                                <h4 class="text-xs font-bold text-red-500 uppercase tracking-wide mb-1">Bandwidth
+                                    Optimization</h4>
+                                <p class="text-xs text-slate-400 leading-relaxed">
+                                    System node automatically scales and compresses visual data streams to ensure
+                                    maximum transfer speed.
+                                </p>
+                            </div>
+                        </div>
+
+                        <section class="bg-slate-900/50 backdrop-blur-md border border-slate-800 p-6 rounded-xl">
+                            <h3
+                                class="text-slate-100 font-bold text-sm mb-4 uppercase tracking-widest flex items-center justify-between">
+                                <span>Riwayat Absen Masuk</span>
+                                <span class="material-symbols-outlined text-slate-500 text-sm">history</span>
+                            </h3>
+                            <div class="space-y-3">
+                                <div
+                                    class="flex items-center gap-4 bg-slate-950/50 p-2 rounded-lg border border-slate-800/50 hover:border-red-600/30 transition-colors group">
+                                    <div class="w-12 h-12 rounded-md overflow-hidden bg-slate-900 shrink-0">
+                                        <div
+                                            class="w-full h-full bg-slate-800 flex items-center justify-center text-slate-600 group-hover:text-red-500 transition-colors">
+                                            <span class="material-symbols-outlined text-2xl">person</span></div>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-xs font-bold text-slate-300">Today, 08:30 AM</p>
+                                        <p class="text-[10px] text-slate-500 truncate">HQ Perimeter Alpha</p>
+                                    </div>
+                                    <div class="flex items-center gap-1 px-2 py-1 bg-green-500/10 rounded-full">
+                                        <span class="w-1 h-1 bg-green-500 rounded-full"></span>
+                                        <span class="text-[9px] font-bold text-green-500 uppercase">Verified</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <button
+                                class="w-full mt-4 py-2 text-[10px] font-bold text-slate-500 hover:text-red-500 transition-colors uppercase tracking-widest">View
+                                Full Log</button>
+                        </section>
+                    </div>
+
+                    <div class="lg:col-span-7 space-y-6">
+                        <section
+                            class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-2xl flex flex-col h-full">
+                            <div class="p-4 border-b border-slate-800 flex items-center justify-between">
+                                <h3 class="text-slate-100 font-bold text-lg flex items-center gap-2">
+                                    <span class="material-symbols-outlined text-red-500">videocam</span>
+                                    Visual Confirmation
+                                </h3>
+                                <div class="flex items-center gap-2">
+                                    <span
+                                        class="text-[10px] font-bold text-slate-500 bg-slate-950 px-2 py-1 border border-slate-800 rounded uppercase">Auto-Optimization
+                                        Active: Max 500KB</span>
+                                </div>
+                            </div>
+
+                            <div
+                                class="relative w-full aspect-square bg-black flex items-center justify-center group overflow-hidden">
+                                <div
+                                    class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent z-10">
+                                </div>
+                                <div
+                                    class="absolute inset-0 w-full h-full bg-slate-900 opacity-60 flex items-center justify-center">
+                                    <span class="material-symbols-outlined text-slate-700 text-6xl">linked_camera</span>
+                                </div>
+
+                                <div class="absolute inset-0 z-20 pointer-events-none flex items-center justify-center">
+                                    <div class="w-64 h-64 border border-red-500/50 rounded-xl relative">
+                                        <div class="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-red-600">
+                                        </div>
+                                        <div
+                                            class="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-red-600">
+                                        </div>
+                                        <div
+                                            class="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-red-600">
+                                        </div>
+                                        <div
+                                            class="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-red-600">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="absolute top-4 left-4 z-20 flex flex-col gap-1">
+                                    <div
+                                        class="flex items-center gap-2 text-[10px] font-mono text-red-500 bg-black/60 px-2 py-1 rounded">
+                                        <span class="w-1.5 h-1.5 bg-red-600 rounded-full animate-pulse"></span>
+                                        LIVE FEED 01_NODE
+                                    </div>
+                                    <div class="text-[8px] font-mono text-slate-400 bg-black/60 px-2 py-1 rounded"
+                                        id="liveTimestamp">
+                                        TS: --
+                                    </div>
+                                </div>
+
+                                <div class="absolute inset-0 z-20 pointer-events-none opacity-20">
+                                    <div class="h-1 bg-red-600 w-full animate-scan shadow-[0_0_15px_rgba(220,38,38,1)]">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="p-6 bg-slate-900">
+                                <button
+                                    class="w-full bg-red-600 hover:bg-red-700 text-white py-4 rounded-xl font-black text-lg uppercase tracking-widest flex items-center justify-center gap-4 transition-all transform active:scale-95 shadow-lg shadow-red-900/40">
+                                    <span class="material-symbols-outlined text-2xl">photo_camera</span>
+                                    Ambil Foto & Kirim
+                                </button>
+                                <p
+                                    class="text-center text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-4">
+                                    Secure Protocol Encryption Enabled (AES-256)
+                                </p>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+            </div>
+
+            <div class="fixed bottom-0 right-0 w-64 h-64 opacity-5 pointer-events-none -mr-12 -mb-12 rotate-12 z-0">
+                <span class="material-symbols-outlined text-[200px] text-red-600">map</span>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Update Live Timestamp for aesthetic
+        setInterval(() => {
+            const now = new Date();
+            const ts = now.toISOString().replace('T', ' ').substring(0, 23);
+            const el = document.getElementById('liveTimestamp');
+            if (el) el.innerText = `TS: ${ts}`;
+        }, 100);
+    </script>
+    <script src="/js/sidebar.js"></script>
+</body>
+
+</html>

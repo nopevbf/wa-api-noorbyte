@@ -19,7 +19,7 @@ async function loadSidebar() {
     sidebarContainer.innerHTML = html;
 
     const currentPath = window.location.pathname;
-    const isJailbreakPage = currentPath === '/jailbreak';
+    const isJailbreakPage = currentPath.startsWith('/jailbreak');
 
     // ==========================================
     // 1. TEMA KHUSUS: HALAMAN JAILBREAK

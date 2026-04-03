@@ -1,3 +1,4 @@
+require("dotenv").config({ path: require("path").join(__dirname, "../.env") });
 const express = require("express");
 const cors = require("cors");
 const http = require("http");
@@ -49,8 +50,11 @@ app.get("*", (req, res, next) => {
 
 // 4. Nyalakan Backend Service di Port 3000
 const PORT = 3000;
+const appConfig = require("./src/config/appConfig");
+
 server.listen(PORT, () => {
   console.log(`⚙️  [BACKEND] Service API & WA Engine berjalan di http://localhost:${PORT}`);
+  console.log(`🌍 [ENV] Mode: ${appConfig.env.toUpperCase()} | DParagon API: ${appConfig.dparagonApiUrl}`);
   initAllSessions(global.io);
 
   // 5. Start Automation Engine (background scheduler)

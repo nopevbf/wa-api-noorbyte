@@ -57,6 +57,11 @@ app.get('/jailbreak', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'jailbreak.html'));
 });
 
+// ROUTE UNTUK HALAMAN CHECK-IN (BARU)
+app.get('/jailbreak/checkin', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'checkin.html'));
+});
+
 // ROUTE UNTUK PROSES VERIFIKASI MAGIC LINK
 app.get("/verify", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "verify.html"));

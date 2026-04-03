@@ -1,6 +1,41 @@
 const API_URL = "/api";
 
+// Variabel global untuk menyimpan default DParagon URL dari backend config
+let defaultDparagonApiUrl = "";
+
 document.addEventListener("DOMContentLoaded", async () => {
+  // ==========================================
+  // 0a. FETCH APP CONFIG (ENV-BASED DEFAULT URL)
+  // ==========================================
+  try {
+    const configRes = await fetch(`${API_URL}/app-config`);
+    const configData = await configRes.json();
+    if (configData.status && configData.data) {
+      defaultDparagonApiUrl = configData.data.dparagonApiUrl || "";
+
+      // Tampilkan badge environment
+      const envBadge = document.getElementById("envBadge");
+      if (envBadge) {
+        const env = configData.data.env || "development";
+        const isDev = env !== "production";
+        envBadge.textContent = isDev ? "DEV" : "PROD";
+        envBadge.classList.remove("hidden");
+        if (isDev) {
+          envBadge.classList.add("bg-amber-100", "text-amber-700");
+        } else {
+          envBadge.classList.add("bg-emerald-100", "text-emerald-700");
+        }
+      }
+
+      // Set default value kalau belum ada input dari localStorage
+      const dpApiUrlInput = document.getElementById("dpApiUrl");
+      if (dpApiUrlInput && !dpApiUrlInput.value) {
+        dpApiUrlInput.value = defaultDparagonApiUrl;
+      }
+    }
+  } catch (e) {
+    console.warn("Gagal memuat app config:", e.message);
+  }
   // ==========================================
   // 0. FITUR SHOW/HIDE PASSWORD
   // ==========================================
@@ -383,8 +418,8 @@ Occupancy Rate: 0%
   function loadSavedSettings() {
     const savedSettings = JSON.parse(localStorage.getItem("connectApiSettings"));
     if (savedSettings) {
-      if (document.getElementById("dpApiUrl"))
-        document.getElementById("dpApiUrl").value = savedSettings.dpApiUrl || "";
+      if (document.getElementById("dpApiUrl") && savedSettings.dpApiUrl)
+        document.getElementById("dpApiUrl").value = savedSettings.dpApiUrl;
       if (document.getElementById("dpEmail"))
         document.getElementById("dpEmail").value = savedSettings.dpEmail || "";
       if (document.getElementById("accountPassword"))
