@@ -6,4 +6,7 @@ backend/sessions/**
 !backend/sessions/.gitkeep
 
 # Ignore Puppeteer browser sessions
-browser_session*/
+**/browser_session*/
+
+# Ignore database files
+**/database.db

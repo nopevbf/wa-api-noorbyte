@@ -518,7 +518,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const passInput = document.getElementById('dpPassword');
                 passInput.value = '';
                 passInput.focus();
-            }, 5000);
+            }, 2000);
         }
     });
 

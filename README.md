@@ -79,5 +79,14 @@ wa-api-noorbyte/
 - Migrasi *module import wrapper* pada scraping module (`scrapper.js`).
 - Pembedaan Endpoints dan Host Environment Dev/Prod.
 
+## Troubleshooting & Known Warnings
+
+- **[DEP0060] DeprecationWarning: The `util._extend` API is deprecated**:  
+  Peringatan ini berasal dari library bawaan frontend (seperti `http-proxy-middleware` pada `server-ui.js`). Warning ini tidak akan menyebabkan error sistem. Jika mengganggu, solusi manualnya adalah melakukan update dependency di frontend: `npm install http-proxy-middleware@latest`.
+- **Banyak folder `browser_session_...` bermunculan di source code**:  
+  Saat proses scraping D'Paragon berjalan, koneksi Puppeteer menghasilkan cache session sesuai dengan `NODE_ENV` aktif (misal `browser_session_development`). Abaikan pembuatannya karena sudah tidak diekspor ke git (`.gitignore`). Boleh menghapus sisa folder lain yang sudah tak terpakai untuk merapikan workspace.
+- **Terdapat lebih dari satu `database.db`**:  
+  Aplikasi ini berjalan dengan menautkan data ke `backend/database.db`. Jika mendapati file serupa ukuran kosong (0 KB) di luar folder backend, silakan dihapus karena itu hanyalah file sisa yang tidak terpakai.
+
 ## Keamanan
 Perhatikan `DEPENDENCIES.md` mengenai petunjuk audit (`npm audit fix`) untuk vulnerability yang timbul, terutama di sisi frontend.
