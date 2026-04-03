@@ -472,6 +472,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (extractedName) {
                     localStorage.setItem('full_name', extractedName);
                     console.log("[AUTH] Nama User berhasil ditangkap:", extractedName);
+                    const apiInputUrl = document.getElementById('dpApiUrl').value || "";
+                    // Kalau URL-nya ada angka 6 nya (dparagon6), berarti DEV. Selain itu PROD.
+                    const detectedEnv = apiInputUrl.includes('dparagon6') ? 'dev' : 'prod';
+                    localStorage.setItem('active_env', detectedEnv);
+
+                    console.log(`[AUTH] Environment diset ke: ${detectedEnv.toUpperCase()}`);
                 } else {
                     console.warn("[AUTH] Gagal menangkap nama user dari payload.");
                 }
@@ -581,6 +587,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Fungsi Fetch ke Backend
     async function loadHistoryData() {
+
         if (isFetchingHistory || isHistoryEnd) return; // Cegah double fetch
 
         isFetchingHistory = true;
@@ -588,7 +595,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         try {
             const token = localStorage.getItem('access_token') || localStorage.getItem('dparagon_token');
-            const fullName = localStorage.getItem('full_name') || ''; // Ambil nama dari storage
+            const fullName = localStorage.getItem('full_name') || ''; // Ambil nama dari storage    
 
             // NOTE: Sesuaikan URL ini dengan endpoint GET riwayat di Node.js lo!
             // Backend lo HARUS bisa nangkep query ?page=x & limit=5
@@ -633,29 +640,30 @@ document.addEventListener('DOMContentLoaded', async () => {
             const statusColor = isCheckin ? 'text-emerald-400 bg-emerald-400/10 border-emerald-500/30' : 'text-orange-400 bg-orange-400/10 border-orange-500/30';
             const iconName = isCheckin ? 'login' : 'logout';
 
-            // ==========================================
-            // PENANGANAN TEKS WAKTU DARI SCRAPING
-            // ==========================================
-            // Contoh raw_time: "Rabu, 01 April 2026 \n 11:05:52 (WIB)"
+            // Penanganan Waktu
             let dateStr = "Unknown Date";
             let timeStr = "--:-- WIB";
 
             if (item.raw_time) {
-                // Pisahkan berdasarkan baris baru (enter)
                 const parts = item.raw_time.split('\n');
                 if (parts.length >= 2) {
-                    dateStr = parts[0].trim(); // "Rabu, 01 April 2026"
-                    timeStr = parts[1].trim(); // "11:05:52 (WIB)"
+                    dateStr = parts[0].trim();
+                    timeStr = parts[1].trim();
                 } else {
-                    // Kalau satu baris aja, masukin ke time
-                    timeStr = item.raw_time.trim();
+                    const timeMatch = item.raw_time.match(/\d{2}:\d{2}:\d{2}/);
+                    if (timeMatch) {
+                        dateStr = item.raw_time.substring(0, timeMatch.index).trim();
+                        timeStr = item.raw_time.substring(timeMatch.index).trim();
+                    } else {
+                        timeStr = item.raw_time.trim();
+                    }
                 }
-            } else if (item.created_at || item.timestamp) {
-                // Fallback kalau backend pakai format timestamp database biasa
-                const dateObj = new Date(item.created_at || item.timestamp);
-                timeStr = dateObj.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB';
-                dateStr = dateObj.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
             }
+
+            // ==========================================
+            // TANGKAP SHIFT TEXT DI SINI
+            // ==========================================
+            const shiftText = item.shift_info && item.shift_info !== "-" ? item.shift_info : "Regular Shift";
 
             // Render HTML Kartu
             const html = `
@@ -672,8 +680,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                             </span>
                         </div>
                         <div class="flex flex-col">
-                            <span class="text-sm text-slate-200 font-bold tracking-wide">${timeStr}</span>
-                            <span class="text-[10px] font-mono text-slate-500">${dateStr}</span>
+                            <span class="text-sm text-slate-200 font-bold tracking-wide truncate">${shiftText}</span>
+                            <span class="text-[10px] font-mono text-slate-500 mt-0.5">${dateStr} • ${timeStr}</span>
                         </div>
                     </div>
                 </div>
@@ -740,7 +748,7 @@ async function loadRecentAttendanceWidget(forceSync = false) {
 
     try {
         const token = localStorage.getItem('access_token') || localStorage.getItem('dparagon_token');
-        const fullName = localStorage.getItem('full_name') || ''; // Ambil nama dari storage
+        const fullName = localStorage.getItem('full_name') || '';    // Ambil nama dari storage
 
         // Selipkan &name= ke URL
         const url = forceSync
@@ -784,6 +792,8 @@ async function loadRecentAttendanceWidget(forceSync = false) {
                 const badgeHtml = `<span class="${badgeClass} border text-[10px] px-2 py-1 rounded-full font-bold uppercase flex items-center gap-1 shadow-sm"><div class="w-1.5 h-1.5 ${dotClass} rounded-full animate-pulse"></div> ${item.status}</span>`;
 
                 // Render HTML Kartu
+                const shiftText = item.shift_info && item.shift_info !== "-" ? item.shift_info : "D'Paragon Node";
+
                 const html = `
                     <div class="flex items-center gap-4 p-3 bg-slate-900 border border-slate-800 rounded-xl hover:border-slate-700 transition-colors shadow-sm">
                         <div class="w-12 h-12 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center shrink-0 overflow-hidden">
@@ -794,8 +804,8 @@ async function loadRecentAttendanceWidget(forceSync = false) {
                         </div>
                         
                         <div class="flex-1 min-w-0">
-                            <h4 class="text-slate-200 text-xs font-bold truncate">${dateText}, ${timeText}</h4>
-                            <p class="text-slate-500 text-[10px] mt-0.5 truncate">D'Paragon Node Network</p>
+                            <h4 class="text-slate-200 text-xs font-bold truncate">${shiftText}</h4>
+                            <p class="text-slate-500 text-[10px] mt-0.5 truncate">${dateText} • ${timeText}</p>
                         </div>
                         
                         <div>${badgeHtml}</div>

@@ -165,16 +165,27 @@ app.get('/api/attendance/recent', async (req, res) => {
     if (forceSync || cachedHistoryData.length === 0 || isCacheExpired) {
       console.log(forceSync ? "[SYSTEM] FORCE SYNC DETECTED! Membangunkan robot..." : "[SYSTEM] Cache expired/kosong, memulai scraping...");
 
+      /// Cukup kirim fullName saja!
       const rawData = await scrapeDparagonAttendance(fullName);
       let formattedData = [];
 
       // MAPPING DATA
       rawData.forEach(item => {
         if (item.waktu_masuk && item.waktu_masuk !== '-') {
-          formattedData.push({ status: 'checkin', raw_time: item.waktu_masuk, image_url: item.foto_masuk });
+          formattedData.push({
+            status: 'checkin',
+            raw_time: item.waktu_masuk,
+            image_url: item.foto_masuk,
+            shift_info: item.shift_info // <--- TANGKAP DI SINI
+          });
         }
         if (item.waktu_keluar && item.waktu_keluar !== '-') {
-          formattedData.push({ status: 'checkout', raw_time: item.waktu_keluar, image_url: item.foto_keluar });
+          formattedData.push({
+            status: 'checkout',
+            raw_time: item.waktu_keluar,
+            image_url: item.foto_keluar,
+            shift_info: item.shift_info // <--- TANGKAP DI SINI
+          });
         }
       });
 
