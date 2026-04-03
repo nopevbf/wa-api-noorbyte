@@ -569,7 +569,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // ==========================================
-    // LOGIC RIWAYAT ABSEN (INFINITE SCROLL)
+    // LOGIC RIWAYAT ABSEN (PULL-UP TO LOAD MORE)
     // ==========================================
     const btnViewFullLog = document.getElementById('btnViewFullLog');
     const historyModal = document.getElementById('historyLogModal');
@@ -579,68 +579,68 @@ document.addEventListener('DOMContentLoaded', async () => {
     const loadingIndicator = document.getElementById('historyLoadingIndicator');
     const endIndicator = document.getElementById('historyEndIndicator');
 
-    // State Pagination
     let historyPage = 1;
-    const historyLimit = 5; // Cuma narik 5 data per request
     let isFetchingHistory = false;
     let isHistoryEnd = false;
 
-    // Fungsi Fetch ke Backend
-    async function loadHistoryData() {
+    // --- VARIABEL UNTUK EFEK BOUNCE TARIK ---
+    let startY = 0;
+    let currentY = 0;
+    const PULL_THRESHOLD = 60; // Seberapa jauh harus ditarik sebelum meledak (load)
 
-        if (isFetchingHistory || isHistoryEnd) return; // Cegah double fetch
+    async function loadHistoryData() {
+        if (isFetchingHistory || isHistoryEnd) return;
 
         isFetchingHistory = true;
+        // Ubah teks loading jadi mode memproses
+        loadingIndicator.innerHTML = `
+            <span class="material-symbols-outlined animate-spin text-emerald-500 text-2xl">autorenew</span>
+            <p class="text-[9px] font-mono text-slate-400 uppercase mt-1 tracking-widest">Decrypting Page ${historyPage}...</p>
+        `;
         loadingIndicator.classList.remove('hidden');
 
         try {
             const token = localStorage.getItem('access_token') || localStorage.getItem('dparagon_token');
-            const fullName = localStorage.getItem('full_name') || ''; // Ambil nama dari storage    
+            const fullName = localStorage.getItem('full_name') || '';
 
-            // NOTE: Sesuaikan URL ini dengan endpoint GET riwayat di Node.js lo!
-            // Backend lo HARUS bisa nangkep query ?page=x & limit=5
-            // Selipkan &name= di akhir URL
-            const response = await fetch(`${API_URL}/attendance/history?page=${historyPage}&limit=${historyLimit}&name=${encodeURIComponent(fullName)}`, {
+            // Tembak API dengan page yang sesuai (Gak usah pake limit lagi)
+            const response = await fetch(`${API_URL}/attendance/history?page=${historyPage}&name=${encodeURIComponent(fullName)}`, {
                 method: 'GET',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 
             const result = await response.json();
-            const data = result.data || []; // Asumsi balikan API ada di result.data
+            const data = result.data || [];
 
             if (data.length === 0) {
-                // Kalau datanya kosong sama sekali
                 isHistoryEnd = true;
                 endIndicator.classList.remove('hidden');
             } else {
-                // Kalau ada datanya, gambar ke layar
-                renderHistoryItems(data);
-                historyPage++; // Naikkan halaman biar scroll berikutnya minta data lama
+                renderHistoryItems(data); // Tambahkan data ke bawah (gak ngehapus page 1)
+                historyPage++; // Siapkan untuk tarikan berikutnya
 
-                // Kalau balikan API kurang dari 5, berarti ini sisa terakhir di database
-                if (data.length < historyLimit) {
+                // Asumsi: Kalau data yang balik kurang dari 10 (atau jumlah baris standar DParagon), berarti itu halaman terakhir
+                if (data.length < 5) {
                     isHistoryEnd = true;
                     endIndicator.classList.remove('hidden');
                 }
             }
         } catch (error) {
-            console.error("Gagal mengambil log:", error);
-            showSystemAlert('API ERROR', 'Gagal memuat log sinkronisasi dari server Node.', 'error');
+            console.error("API Fetch Error:", error);
+            showSystemAlert('API ERROR', 'Gagal memuat log dari server Node.', 'error');
         } finally {
             isFetchingHistory = false;
             loadingIndicator.classList.add('hidden');
+            loadingIndicator.style.transform = `translateY(0px)`; // Kembalikan posisi bounce
         }
     }
 
-    // Fungsi Gambar UI Tiap Item
     function renderHistoryItems(items) {
         items.forEach(item => {
-            // Styling dinamis: Hijau buat Checkin, Merah/Orange buat Checkout
             const isCheckin = item.status.toLowerCase() === 'checkin';
             const statusColor = isCheckin ? 'text-emerald-400 bg-emerald-400/10 border-emerald-500/30' : 'text-orange-400 bg-orange-400/10 border-orange-500/30';
             const iconName = isCheckin ? 'login' : 'logout';
 
-            // Penanganan Waktu
             let dateStr = "Unknown Date";
             let timeStr = "--:-- WIB";
 
@@ -660,18 +660,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
 
-            // ==========================================
-            // TANGKAP SHIFT TEXT DI SINI
-            // ==========================================
             const shiftText = item.shift_info && item.shift_info !== "-" ? item.shift_info : "Regular Shift";
 
-            // Render HTML Kartu
             const html = `
                 <div class="flex items-center gap-4 p-3 bg-slate-950/80 border border-slate-800 rounded-xl hover:border-slate-700 transition-colors shadow-sm">
                     <div class="w-14 h-14 rounded-lg overflow-hidden border border-slate-700 shrink-0 bg-slate-900 relative">
                         <img src="${item.image_url || item.image || item.photo}" class="w-full h-full object-cover">
                     </div>
-                    
                     <div class="flex-1 min-w-0">
                         <div class="flex items-center justify-between mb-1">
                             <span class="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded border ${statusColor} flex items-center gap-1 w-max">
@@ -690,12 +685,71 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // Event Listener Scroll (Pemicu Minta Data Baru)
+    // ==========================================
+    // MAGIC TOUCH: DETEKSI PULL UP (MOBILE)
+    // ==========================================
     if (historyContainer) {
+        historyContainer.addEventListener('touchstart', (e) => {
+            // Cek apakah scroll sudah mentok di bawah
+            if (historyContainer.scrollTop + historyContainer.clientHeight >= historyContainer.scrollHeight - 5) {
+                startY = e.touches[0].clientY;
+            } else {
+                startY = 0;
+            }
+        });
+
+        historyContainer.addEventListener('touchmove', (e) => {
+            if (!startY || isFetchingHistory || isHistoryEnd) return;
+
+            currentY = e.touches[0].clientY;
+            const pullDistance = startY - currentY;
+
+            // Jika ditarik ke atas (pullDistance positif)
+            if (pullDistance > 0) {
+                e.preventDefault(); // Cegah scroll bawaan browser
+                loadingIndicator.classList.remove('hidden');
+
+                // Efek mentul ke atas pelan-pelan
+                const translateY = Math.min(pullDistance, PULL_THRESHOLD);
+                loadingIndicator.style.transform = `translateY(-${translateY}px)`;
+
+                if (pullDistance >= PULL_THRESHOLD) {
+                    loadingIndicator.innerHTML = `
+                        <span class="material-symbols-outlined text-emerald-500 text-3xl animate-bounce">arrow_upward</span>
+                        <p class="text-[10px] font-bold text-emerald-500 uppercase mt-1 tracking-widest">Lepas untuk memuat...</p>
+                    `;
+                } else {
+                    loadingIndicator.innerHTML = `
+                        <span class="material-symbols-outlined text-slate-500 text-2xl">drag_handle</span>
+                        <p class="text-[9px] font-mono text-slate-500 uppercase mt-1 tracking-widest">Tarik ke atas...</p>
+                    `;
+                }
+            }
+        });
+
+        historyContainer.addEventListener('touchend', () => {
+            if (!startY || !currentY || isFetchingHistory || isHistoryEnd) return;
+
+            const pullDistance = startY - currentY;
+            loadingIndicator.style.transform = `translateY(0px)`; // Kembalikan ke dasar
+
+            if (pullDistance >= PULL_THRESHOLD) {
+                // Eksekusi load data kalau tarikannya cukup kuat!
+                loadHistoryData();
+            } else {
+                loadingIndicator.classList.add('hidden'); // Sembunyikan kalau tarikan nanggung
+            }
+
+            // Reset
+            startY = 0;
+            currentY = 0;
+        });
+
+        // Fallback untuk Desktop (Scroll pakai Mouse)
         historyContainer.addEventListener('scroll', () => {
-            // Rumus deteksi scroll nyentuh dasar: ScrollTop + ClientHeight >= ScrollHeight
-            // Angka 20 adalah toleransi pixel sebelum mentok banget
-            if (historyContainer.scrollTop + historyContainer.clientHeight >= historyContainer.scrollHeight - 20) {
+            if (isFetchingHistory || isHistoryEnd) return;
+            if (historyContainer.scrollTop + historyContainer.clientHeight >= historyContainer.scrollHeight - 2) {
+                // Langsung load kalau pakai mouse mentok bawah
                 loadHistoryData();
             }
         });
@@ -705,14 +759,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (btnViewFullLog) {
         btnViewFullLog.addEventListener('click', (e) => {
             e.preventDefault();
-
-            // Reset ke awal biar kalau modal ditutup terus dibuka lagi, datanya bersih
             historyContainer.innerHTML = '';
             historyPage = 1;
             isHistoryEnd = false;
             endIndicator.classList.add('hidden');
 
-            // Animasi Buka Modal
             historyModal.classList.remove('hidden');
             historyModal.classList.add('flex');
             setTimeout(() => {
@@ -720,7 +771,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 historyBox.classList.remove('scale-95');
             }, 10);
 
-            // Tembak API buat ambil 5 data pertama
             loadHistoryData();
         });
     }

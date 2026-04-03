@@ -31,7 +31,7 @@ const ENV_CONFIG = {
 };
 
 // Tambahkan parameter env (default 'development')
-async function scrapeDparagonAttendance(fullName = "") {
+async function scrapeDparagonAttendance(fullName = "", targetPage = 1) {
     // Ambil config sesuai env (kalau env ngaco, fallback ke development)
     const env = process.env.NODE_ENV || 'development';
     const config = ENV_CONFIG[env] || ENV_CONFIG['development'];
@@ -52,10 +52,11 @@ async function scrapeDparagonAttendance(fullName = "") {
 
     try {
         const encodedName = encodeURIComponent(fullName);
-        // Gunakan baseUrl yang dinamis dari config
-        const targetUrl = `${config.baseUrl}/hrd/reportAttendance?devision_filter=&location_filter=&area_filter=&name_filter=${encodedName}&date_range_filter=&status_filter=&page=1`;
 
-        console.log(`[PROCESS] Mengecek Session & Membuka Target URL: ${config.baseUrl}`);
+        // MASUKKAN targetPage KE DALAM URL!
+        const targetUrl = `${config.baseUrl}/hrd/reportAttendance?devision_filter=&location_filter=&area_filter=&name_filter=${encodedName}&date_range_filter=&status_filter=&page=${targetPage}`;
+
+        console.log(`[PROCESS] Membuka Target URL Page ${targetPage}: ${config.baseUrl}`);
         await page.goto(targetUrl, { waitUntil: 'networkidle2' });
 
         const currentUrl = page.url();

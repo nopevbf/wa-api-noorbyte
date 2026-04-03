@@ -4,3 +4,6 @@ node_modules/
 # Ignore session data files (keep the folder structure)
 backend/sessions/**
 !backend/sessions/.gitkeep
+
+# Ignore Puppeteer browser sessions
+browser_session*/

@@ -64,87 +64,65 @@ server.listen(PORT, () => {
 
 const { scrapeDparagonAttendance } = require('../frontend/public/js/scapper.js');
 
-// Variabel global buat nyimpen hasil scrape sementara (Cache)
+// Variabel global buat nyimpen hasil scrape sementara (HANYA UNTUK PAGE 1)
 let cachedHistoryData = [];
 let lastScrapeTime = null;
 
-// Endpoint yang dipanggil oleh Frontend (View Full Log)
+// ==========================================
+// ENDPOINT: HISTORY FULL LOG (PAGINATED)
+// ==========================================
 app.get('/api/attendance/history', async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 5;
-    const fullName = req.query.name || ""; // Ambil nama dari query, default kosong
+    const targetPage = parseInt(req.query.page) || 1;
+    const fullName = req.query.name || "";
 
-    // 1. CEK CACHE: Kalau page 1 atau cache kosong/kadaluarsa (lebih dari 5 menit), Scrape ulang!
+    console.log(`[SYSTEM] Menarik data riwayat untuk Page: ${targetPage}`);
+
+    let resultData = [];
     const isCacheExpired = !lastScrapeTime || (new Date() - lastScrapeTime > 5 * 60 * 1000);
 
-    if (page === 1 || cachedHistoryData.length === 0 || isCacheExpired) {
-      console.log("[SYSTEM] Memulai Scraping Data Terbaru...");
-      const rawData = await scrapeDparagonAttendance(fullName);
+    // LOGIKA CACHE: Gunakan cache HANYA jika memanggil Page 1 dan cache masih fresh
+    if (targetPage === 1 && cachedHistoryData.length > 0 && !isCacheExpired) {
+      console.log("[SYSTEM] Menggunakan cache data untuk Page 1...");
+      resultData = cachedHistoryData;
+    } else {
+      console.log(`[SYSTEM] Memulai Scraping Data Langsung untuk Page ${targetPage}...`);
+      const rawData = await scrapeDparagonAttendance(fullName, targetPage);
 
       let formattedData = [];
 
       // MAPPING DATA
       rawData.forEach(item => {
         if (item.waktu_masuk && item.waktu_masuk !== '-') {
-          formattedData.push({ status: 'checkin', raw_time: item.waktu_masuk, image_url: item.foto_masuk });
+          formattedData.push({ status: 'checkin', raw_time: item.waktu_masuk, image_url: item.foto_masuk, shift_info: item.shift_info });
         }
         if (item.waktu_keluar && item.waktu_keluar !== '-') {
-          formattedData.push({ status: 'checkout', raw_time: item.waktu_keluar, image_url: item.foto_keluar });
+          formattedData.push({ status: 'checkout', raw_time: item.waktu_keluar, image_url: item.foto_keluar, shift_info: item.shift_info });
         }
       });
 
-      // ==========================================
       // MAGIC SORT: URUTKAN TERBARU KE TERLAMA
-      // ==========================================
       formattedData.sort((a, b) => {
         const timeA = parseDparagonTime(a.raw_time);
         const timeB = parseDparagonTime(b.raw_time);
-        return timeB - timeA; // B kurang A = Descending (Terbaru di atas)
+        return timeB - timeA;
       });
 
-      // ==========================================
-      // INTEGRASI DATABASE: SIMPAN HASIL SCRAPE
-      // ==========================================
-      console.log(`[DATABASE] Menyimpan ${formattedData.length} data ke database user...`);
+      resultData = formattedData;
 
-      // CONTOH JIKA LO PAKAI MySQL/PostgreSQL:
-      /*
-      for (const record of formattedData) {
-          // Pakai INSERT IGNORE atau ON DUPLICATE KEY UPDATE biar gak dobel
-          await db.query(`
-              INSERT INTO user_attendance (user_id, status, raw_time, image_url) 
-              VALUES (?, ?, ?, ?)
-              ON DUPLICATE KEY UPDATE image_url = VALUES(image_url)
-          `, [req.user.id, record.status, record.raw_time, record.image_url]);
+      // PERBARUI CACHE HANYA JIKA INI PAGE 1
+      if (targetPage === 1) {
+        console.log(`[DATABASE] Memperbarui cache dengan ${formattedData.length} data terbaru...`);
+        cachedHistoryData = formattedData;
+        lastScrapeTime = new Date();
       }
-      */
-
-      // CONTOH JIKA LO PAKAI MONGODB (Mongoose):
-      /*
-      for (const record of formattedData) {
-          await AttendanceModel.updateOne(
-              { user_id: req.user.id, raw_time: record.raw_time }, // Cari berdasarkan waktu yg unik
-              { $set: { status: record.status, image_url: record.image_url } },
-              { upsert: true } // Kalau blm ada bikin baru, kalau ada di-update
-          );
-      }
-      */
-
-      // Simpan ke Cache yang udah berurutan
-      cachedHistoryData = formattedData;
-      lastScrapeTime = new Date();
     }
 
-    // 3. PAGINATION: Potong array sesuai Page dan Limit
-    const startIndex = (page - 1) * limit;
-    const endIndex = page * limit;
-    const paginatedData = cachedHistoryData.slice(startIndex, endIndex);
-
-    // 4. KIRIM KE FRONTEND
+    // KIRIM KE FRONTEND: Langsung kirim 1 halaman utuh dari DParagon!
     res.json({
       status: true,
-      data: paginatedData
+      data: resultData,
+      current_page: targetPage
     });
 
   } catch (error) {
@@ -153,30 +131,31 @@ app.get('/api/attendance/history', async (req, res) => {
   }
 });
 
-// Endpoint khusus untuk widget Dashboard Depan (Mendukung Force Sync)
+
+// ==========================================
+// ENDPOINT: RECENT LOGS WIDGET (DASHBOARD)
+// ==========================================
 app.get('/api/attendance/recent', async (req, res) => {
   try {
-    // Cek apakah frontend mengirim perintah paksa (force=true)
     const forceSync = req.query.force === 'true';
-    const fullName = req.query.name || ""; // Ambil nama dari query, default kosong
+    const fullName = req.query.name || "";
     const isCacheExpired = !lastScrapeTime || (new Date() - lastScrapeTime > 5 * 60 * 1000);
 
-    // Kalau dipaksa ATAU cache kosong ATAU cache kadaluarsa -> JALANKAN PUPPETEER!
+    // Kalau dipaksa ATAU cache kosong ATAU cache kadaluarsa -> JALANKAN PUPPETEER PAGE 1
     if (forceSync || cachedHistoryData.length === 0 || isCacheExpired) {
       console.log(forceSync ? "[SYSTEM] FORCE SYNC DETECTED! Membangunkan robot..." : "[SYSTEM] Cache expired/kosong, memulai scraping...");
 
-      /// Cukup kirim fullName saja!
-      const rawData = await scrapeDparagonAttendance(fullName);
+      // Default targetPage adalah 1
+      const rawData = await scrapeDparagonAttendance(fullName, 1);
       let formattedData = [];
 
-      // MAPPING DATA
       rawData.forEach(item => {
         if (item.waktu_masuk && item.waktu_masuk !== '-') {
           formattedData.push({
             status: 'checkin',
             raw_time: item.waktu_masuk,
             image_url: item.foto_masuk,
-            shift_info: item.shift_info // <--- TANGKAP DI SINI
+            shift_info: item.shift_info
           });
         }
         if (item.waktu_keluar && item.waktu_keluar !== '-') {
@@ -184,26 +163,22 @@ app.get('/api/attendance/recent', async (req, res) => {
             status: 'checkout',
             raw_time: item.waktu_keluar,
             image_url: item.foto_keluar,
-            shift_info: item.shift_info // <--- TANGKAP DI SINI
+            shift_info: item.shift_info
           });
         }
       });
 
-      // ==========================================
-      // MAGIC SORT: URUTKAN TERBARU KE TERLAMA
-      // ==========================================
       formattedData.sort((a, b) => {
         const timeA = parseDparagonTime(a.raw_time);
         const timeB = parseDparagonTime(b.raw_time);
-        return timeB - timeA; // B kurang A = Descending (Terbaru di atas)
+        return timeB - timeA;
       });
 
-      // Simpan ke Cache yang udah berurutan
       cachedHistoryData = formattedData;
       lastScrapeTime = new Date();
     }
 
-    // Ambil 2 data terbaru dari cache yang udah fresh
+    // WIDGET HANYA BUTUH 2 DATA PALING ATAS
     const recentLogs = cachedHistoryData.slice(0, 2);
     res.json({ status: true, data: recentLogs });
 
@@ -213,30 +188,41 @@ app.get('/api/attendance/recent', async (req, res) => {
   }
 });
 
+
 // ==========================================
-// HELPER: TRANSLATOR WAKTU INDO -> TIMESTAMP
+// HELPER: TRANSLATOR WAKTU INDO -> TIMESTAMP (FIXED SQA APPROVED)
 // ==========================================
 function parseDparagonTime(rawTime) {
   if (!rawTime || rawTime === '-') return 0;
 
-  // Format mentah: "Rabu, 01 April 2026 \n 11:05:52 (WIB)"
-  let timeStr = rawTime.replace(/\(WIB\)/gi, '').trim();
+  // 1. Bersihkan (WIB)
+  let rawStr = String(rawTime).replace(/\(WIB\)/gi, '').trim();
 
-  // Buang nama hari "Rabu, " biar sisa tanggalnya aja
-  timeStr = timeStr.replace(/^[a-zA-Z]+,\s+/i, '');
+  // 2. Ekstrak Jam (Pakai Regex sapu jagat)
+  const timeMatch = rawStr.match(/(\d{1,2}:\d{2}(:\d{2})?)/);
+  let timePart = "00:00:00";
+  if (timeMatch) {
+    timePart = timeMatch[0]; // Dapat "16:02:31"
+  }
 
-  // Translate bulan Indo ke Inggris biar dibaca sama fungsi Date() JavaScript
+  // 3. Ekstrak Tanggal (Buang Jam, Buang Nama Hari "Kamis,")
+  let datePart = rawStr.replace(timePart, '').replace(/^[a-zA-Z]+,\s+/i, '').trim();
+
+  // 4. Ratakan spasi dan enter yang nyangkut
+  datePart = datePart.replace(/[\n\r]+/g, ' ').replace(/\s{2,}/g, ' ').trim();
+
+  // 5. Translate Bulan Indo -> Eng biar bisa dibaca Node.js
   const bulanId = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
   const bulanEn = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
   bulanId.forEach((id, index) => {
-    timeStr = timeStr.replace(new RegExp(id, 'gi'), bulanEn[index]);
+    datePart = datePart.replace(new RegExp(id, 'gi'), bulanEn[index]);
   });
 
-  // Ratakan enter (\n) menjadi spasi
-  timeStr = timeStr.replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
+  // 6. Gabungkan jadi format standar (Misal: "02 April 2026 16:02:31")
+  const finalDateTimeStr = `${datePart} ${timePart}`;
+  const parsedDate = new Date(finalDateTimeStr).getTime();
 
-  // Ubah ke format Timestamp (Angka milidetik) biar bisa diurutkan
-  const parsedDate = new Date(timeStr).getTime();
+  // Kembalikan Timestamp (Angka milidetik), kalau masih gagal kembalikan 0
   return isNaN(parsedDate) ? 0 : parsedDate;
 }
