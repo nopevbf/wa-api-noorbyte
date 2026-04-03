@@ -10,7 +10,8 @@
     "axios": "^1.13.6",
     "cors": "^2.8.6",
     "express": "^4.22.1",
-    "http-proxy-middleware": "^3.0.5"
+    "http-proxy-middleware": "^3.0.5",
+    "puppeteer": "^24.40.0"
   },
   "keywords": [],
   "author": "",

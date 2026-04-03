@@ -257,12 +257,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             // 4. Handle Response
             if (response.ok && result.status !== false) {
                 // ABSEN SUKSES
+                showSystemAlert('BYPASS SUCCESS', "Data kehadiran diterima. Memulai sinkronisasi log otomatis...", 'success');
 
-                // Hilangkan fungsi callback (window.location.href) biar gak pindah halaman
-                showSystemAlert('BYPASS SUCCESS', "Data kehadiran diterima. Sinkronisasi node selesai.", 'success');
-
-                // Opsional: Ubah tombol biar ngasih tau kalau udah kelar
+                // Ubah tulisan tombol biar keren
                 btnCapture.innerHTML = `<span class="material-symbols-outlined text-xl">check_circle</span> TERKIRIM`;
+
+                // ==========================================
+                // MAGIC HAPPENS HERE: Panggil widget dengan nilai TRUE
+                // Ini akan memaksa Puppeteer jalan di background!
+                // ==========================================
+                loadRecentAttendanceWidget(true);
 
             } else {
                 // DITOLAK OLEH SERVER
@@ -433,7 +437,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const result = await response.json();
 
             // Pengecekan sukses lebih fleksibel (pakai response.ok)
-            if (response.ok) {
+            if (response.ok && result.message === "Login success") {
 
                 progressBar.style.width = '100%';
                 processLog.innerText = `[SUCCESS] ACCESS GRANTED.`;
@@ -441,12 +445,40 @@ document.addEventListener('DOMContentLoaded', async () => {
                 processLog.classList.add('text-green-500');
                 progressBar.classList.replace('bg-error', 'bg-green-500');
 
-                // Simpan token 
-                const token = result.token || result.access_token || (result.data && (result.data.token || result.data.access_token)) || (result.payload && (result.payload.token || result.payload.access_token));
-                if (token) {
-                    localStorage.setItem('dparagon_token', token);
+                // ==========================================
+                // 1. SIMPAN TOKEN (Sesuai wujud JSON asli)
+                // ==========================================
+                let token = "";
+                if (result.payload && result.payload.access_token) {
+                    token = result.payload.access_token;
+                } else if (result.token) {
+                    token = result.token; // Fallback jaga-jaga
                 }
 
+                if (token) {
+                    // Simpan dua-duanya biar fungsi absen & fungsi history gak bingung nyari token
+                    localStorage.setItem('dparagon_token', token);
+                    localStorage.setItem('access_token', token);
+                }
+
+                // ==========================================
+                // 2. SIMPAN NAMA LENGKAP (Sesuai wujud JSON asli)
+                // ==========================================
+                let extractedName = "";
+                if (result.payload && result.payload.user && result.payload.user.full_name) {
+                    extractedName = result.payload.user.full_name;
+                }
+
+                if (extractedName) {
+                    localStorage.setItem('full_name', extractedName);
+                    console.log("[AUTH] Nama User berhasil ditangkap:", extractedName);
+                } else {
+                    console.warn("[AUTH] Gagal menangkap nama user dari payload.");
+                }
+
+                // ==========================================
+                // 3. TUTUP MODAL & NYALAKAN KAMERA
+                // ==========================================
                 setTimeout(() => {
                     authContent.classList.replace('scale-100', 'scale-95');
                     authContent.classList.replace('opacity-100', 'opacity-0');
@@ -529,4 +561,271 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
     }
+
+    // ==========================================
+    // LOGIC RIWAYAT ABSEN (INFINITE SCROLL)
+    // ==========================================
+    const btnViewFullLog = document.getElementById('btnViewFullLog');
+    const historyModal = document.getElementById('historyLogModal');
+    const historyBox = document.getElementById('historyLogBox');
+    const btnCloseHistory = document.getElementById('btnCloseHistory');
+    const historyContainer = document.getElementById('historyListContainer');
+    const loadingIndicator = document.getElementById('historyLoadingIndicator');
+    const endIndicator = document.getElementById('historyEndIndicator');
+
+    // State Pagination
+    let historyPage = 1;
+    const historyLimit = 5; // Cuma narik 5 data per request
+    let isFetchingHistory = false;
+    let isHistoryEnd = false;
+
+    // Fungsi Fetch ke Backend
+    async function loadHistoryData() {
+        if (isFetchingHistory || isHistoryEnd) return; // Cegah double fetch
+
+        isFetchingHistory = true;
+        loadingIndicator.classList.remove('hidden');
+
+        try {
+            const token = localStorage.getItem('access_token') || localStorage.getItem('dparagon_token');
+            const fullName = localStorage.getItem('full_name') || ''; // Ambil nama dari storage
+
+            // NOTE: Sesuaikan URL ini dengan endpoint GET riwayat di Node.js lo!
+            // Backend lo HARUS bisa nangkep query ?page=x & limit=5
+            // Selipkan &name= di akhir URL
+            const response = await fetch(`${API_URL}/attendance/history?page=${historyPage}&limit=${historyLimit}&name=${encodeURIComponent(fullName)}`, {
+                method: 'GET',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            const result = await response.json();
+            const data = result.data || []; // Asumsi balikan API ada di result.data
+
+            if (data.length === 0) {
+                // Kalau datanya kosong sama sekali
+                isHistoryEnd = true;
+                endIndicator.classList.remove('hidden');
+            } else {
+                // Kalau ada datanya, gambar ke layar
+                renderHistoryItems(data);
+                historyPage++; // Naikkan halaman biar scroll berikutnya minta data lama
+
+                // Kalau balikan API kurang dari 5, berarti ini sisa terakhir di database
+                if (data.length < historyLimit) {
+                    isHistoryEnd = true;
+                    endIndicator.classList.remove('hidden');
+                }
+            }
+        } catch (error) {
+            console.error("Gagal mengambil log:", error);
+            showSystemAlert('API ERROR', 'Gagal memuat log sinkronisasi dari server Node.', 'error');
+        } finally {
+            isFetchingHistory = false;
+            loadingIndicator.classList.add('hidden');
+        }
+    }
+
+    // Fungsi Gambar UI Tiap Item
+    function renderHistoryItems(items) {
+        items.forEach(item => {
+            // Styling dinamis: Hijau buat Checkin, Merah/Orange buat Checkout
+            const isCheckin = item.status.toLowerCase() === 'checkin';
+            const statusColor = isCheckin ? 'text-emerald-400 bg-emerald-400/10 border-emerald-500/30' : 'text-orange-400 bg-orange-400/10 border-orange-500/30';
+            const iconName = isCheckin ? 'login' : 'logout';
+
+            // ==========================================
+            // PENANGANAN TEKS WAKTU DARI SCRAPING
+            // ==========================================
+            // Contoh raw_time: "Rabu, 01 April 2026 \n 11:05:52 (WIB)"
+            let dateStr = "Unknown Date";
+            let timeStr = "--:-- WIB";
+
+            if (item.raw_time) {
+                // Pisahkan berdasarkan baris baru (enter)
+                const parts = item.raw_time.split('\n');
+                if (parts.length >= 2) {
+                    dateStr = parts[0].trim(); // "Rabu, 01 April 2026"
+                    timeStr = parts[1].trim(); // "11:05:52 (WIB)"
+                } else {
+                    // Kalau satu baris aja, masukin ke time
+                    timeStr = item.raw_time.trim();
+                }
+            } else if (item.created_at || item.timestamp) {
+                // Fallback kalau backend pakai format timestamp database biasa
+                const dateObj = new Date(item.created_at || item.timestamp);
+                timeStr = dateObj.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB';
+                dateStr = dateObj.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+            }
+
+            // Render HTML Kartu
+            const html = `
+                <div class="flex items-center gap-4 p-3 bg-slate-950/80 border border-slate-800 rounded-xl hover:border-slate-700 transition-colors shadow-sm">
+                    <div class="w-14 h-14 rounded-lg overflow-hidden border border-slate-700 shrink-0 bg-slate-900 relative">
+                        <img src="${item.image_url || item.image || item.photo}" class="w-full h-full object-cover">
+                    </div>
+                    
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded border ${statusColor} flex items-center gap-1 w-max">
+                                <span class="material-symbols-outlined text-[11px]">${iconName}</span>
+                                ${item.status}
+                            </span>
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="text-sm text-slate-200 font-bold tracking-wide">${timeStr}</span>
+                            <span class="text-[10px] font-mono text-slate-500">${dateStr}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            historyContainer.insertAdjacentHTML('beforeend', html);
+        });
+    }
+
+    // Event Listener Scroll (Pemicu Minta Data Baru)
+    if (historyContainer) {
+        historyContainer.addEventListener('scroll', () => {
+            // Rumus deteksi scroll nyentuh dasar: ScrollTop + ClientHeight >= ScrollHeight
+            // Angka 20 adalah toleransi pixel sebelum mentok banget
+            if (historyContainer.scrollTop + historyContainer.clientHeight >= historyContainer.scrollHeight - 20) {
+                loadHistoryData();
+            }
+        });
+    }
+
+    // Event Klik "View Full Log"
+    if (btnViewFullLog) {
+        btnViewFullLog.addEventListener('click', (e) => {
+            e.preventDefault();
+
+            // Reset ke awal biar kalau modal ditutup terus dibuka lagi, datanya bersih
+            historyContainer.innerHTML = '';
+            historyPage = 1;
+            isHistoryEnd = false;
+            endIndicator.classList.add('hidden');
+
+            // Animasi Buka Modal
+            historyModal.classList.remove('hidden');
+            historyModal.classList.add('flex');
+            setTimeout(() => {
+                historyModal.classList.remove('opacity-0');
+                historyBox.classList.remove('scale-95');
+            }, 10);
+
+            // Tembak API buat ambil 5 data pertama
+            loadHistoryData();
+        });
+    }
+
+    // Event Tutup Modal
+    if (btnCloseHistory) {
+        btnCloseHistory.addEventListener('click', () => {
+            historyModal.classList.add('opacity-0');
+            historyBox.classList.add('scale-95');
+            setTimeout(() => {
+                historyModal.classList.remove('flex');
+                historyModal.classList.add('hidden');
+            }, 300);
+        });
+    }
+
+});
+
+async function loadRecentAttendanceWidget(forceSync = false) {
+    const container = document.getElementById('dashboardRecentLogs');
+    if (!container) return;
+
+    // Tampilkan efek loading animasi
+    container.innerHTML = `<div class="text-center text-xs text-slate-500 animate-pulse py-4"><span class="material-symbols-outlined animate-spin mb-1 text-red-500">autorenew</span><br>Syncing node...</div>`;
+
+    try {
+        const token = localStorage.getItem('access_token') || localStorage.getItem('dparagon_token');
+        const fullName = localStorage.getItem('full_name') || ''; // Ambil nama dari storage
+
+        // Selipkan &name= ke URL
+        const url = forceSync
+            ? `/api/attendance/recent?force=true&name=${encodeURIComponent(fullName)}`
+            : `/api/attendance/recent?name=${encodeURIComponent(fullName)}`;
+
+        const response = await fetch(url, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        const result = await response.json();
+
+        if (result.status && result.data && result.data.length > 0) {
+            container.innerHTML = ''; // Bersihkan container
+
+            result.data.forEach(item => {
+                // Formatting Teks Waktu
+                let dateText = "Unknown Date";
+                let timeText = "--:--";
+
+                if (item.raw_time) {
+                    const parts = item.raw_time.split('\n');
+                    if (parts.length >= 2) {
+                        dateText = parts[0].trim();
+                        const rawTimeStr = parts[1].trim();
+                        timeText = rawTimeStr.replace(' (WIB)', '');
+                    } else {
+                        timeText = item.raw_time.trim();
+                    }
+                }
+
+                // ==========================================
+                // DYNAMIC BADGE: Checkin (Hijau) | Checkout (Orange)
+                // ==========================================
+                const isCheckin = item.status.toLowerCase() === 'checkin';
+                const badgeClass = isCheckin
+                    ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/30"
+                    : "bg-orange-500/10 text-orange-500 border-orange-500/30";
+                const dotClass = isCheckin ? "bg-emerald-500" : "bg-orange-500";
+
+                const badgeHtml = `<span class="${badgeClass} border text-[10px] px-2 py-1 rounded-full font-bold uppercase flex items-center gap-1 shadow-sm"><div class="w-1.5 h-1.5 ${dotClass} rounded-full animate-pulse"></div> ${item.status}</span>`;
+
+                // Render HTML Kartu
+                const html = `
+                    <div class="flex items-center gap-4 p-3 bg-slate-900 border border-slate-800 rounded-xl hover:border-slate-700 transition-colors shadow-sm">
+                        <div class="w-12 h-12 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center shrink-0 overflow-hidden">
+                            ${item.image_url
+                        ? `<img src="${item.image_url}" class="w-full h-full object-cover">`
+                        : `<span class="material-symbols-outlined text-slate-500 text-xl">person</span>`
+                    }
+                        </div>
+                        
+                        <div class="flex-1 min-w-0">
+                            <h4 class="text-slate-200 text-xs font-bold truncate">${dateText}, ${timeText}</h4>
+                            <p class="text-slate-500 text-[10px] mt-0.5 truncate">D'Paragon Node Network</p>
+                        </div>
+                        
+                        <div>${badgeHtml}</div>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', html);
+            });
+        } else {
+            // ==========================================
+            // JIKA DATA KOSONG: Munculkan Info Klik View Log
+            // ==========================================
+            container.innerHTML = `
+                <div class="flex flex-col items-center justify-center py-5 bg-slate-950/50 rounded-xl border border-slate-800 border-dashed text-center">
+                    <span class="material-symbols-outlined text-slate-600 mb-2 text-2xl">history_toggle_off</span>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Belum Ada Data Disinkronkan.</p>
+                    <p class="text-[9px] text-slate-500 mt-1">Klik <span class="text-red-500 font-bold uppercase">View Full Log</span> terlebih dahulu.</p>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error("Widget Error:", error);
+        container.innerHTML = `
+            <div class="flex items-center justify-center py-4 bg-error/10 border border-error/20 rounded-lg">
+                <p class="text-[10px] font-bold text-error uppercase tracking-widest">Failed to sync node.</p>
+            </div>
+        `;
+    }
+}
+
+// Langsung panggil fungsinya pas halaman dashboard beres dimuat
+document.addEventListener('DOMContentLoaded', () => {
+    loadRecentAttendanceWidget();
 });
