@@ -167,10 +167,10 @@
 }
 
 .camera-label-live-dot {
-    width: 1.5rem;
-    /* w-1.5 */
-    height: 1.5rem;
-    /* h-1.5 */
+    width: 0.5rem;
+    /* w-0.5 */
+    height: 0.5rem;
+    /* h-0.5 */
     background-color: #ef4444;
     /* bg-error */
     border-radius: 9999px;
@@ -243,4 +243,27 @@
     background-color: #ef4444;
     box-shadow: 0 0 15px rgba(239, 68, 68, 0.8);
     animation: modal-scan-line 3s linear infinite;
+}
+
+/* ==========================================
+   4. GLOBAL INPUT OVERRIDES (TAILWIND FORMS HACK)
+   ========================================== */
+
+/* Memaksa semua input, textarea, dan select pakai ring warna merah */
+input:focus,
+textarea:focus,
+select:focus {
+    --tw-ring-color: #ef4444 !important;
+    /* Warna text-error (Merah Jailbreak) */
+    border-color: #ef4444 !important;
+    /* Border ikut jadi merah */
+}
+
+/* KHUSUS input yang ReadOnly (seperti Lat, Lng, dan Target URL) */
+/* Biar gak nyala merah pas gak sengaja diklik */
+input[readonly]:focus {
+    --tw-ring-color: transparent !important;
+    border-color: #1e293b !important;
+    /* Tetap border-slate-800 */
+    box-shadow: none !important;
 }

@@ -84,21 +84,24 @@
                                         <div>
                                             <label
                                                 class="text-[9px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Lat</label>
-                                            <input
-                                                class="w-full bg-slate-950 border border-slate-800 rounded-lg py-2.5 px-3 text-slate-300 font-mono text-xs focus:outline-none"
-                                                readonly type="text" value="-6.2088" />
+                                            <input id="inputLat"
+                                                class="w-full bg-slate-950 border border-slate-800 rounded-lg py-2.5 px-3 text-slate-300 font-mono text-xs focus:outline-none transition-all"
+                                                type="text" value="-6.2088" placeholder="e.g. -6.2088" />
                                         </div>
                                         <div>
                                             <label
-                                                class="text-[9px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Lng</label>
-                                            <input
-                                                class="w-full bg-slate-950 border border-slate-800 rounded-lg py-2.5 px-3 text-slate-300 font-mono text-xs focus:outline-none"
-                                                readonly type="text" value="106.8456" />
+                                                class="text-[9px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Long</label>
+                                            <input id="inputLng"
+                                                class="w-full bg-slate-950 border border-slate-800 rounded-lg py-2.5 px-3 text-slate-300 font-mono text-xs focus:outline-none transition-all"
+                                                type="text" value="106.8456" placeholder="e.g. 106.8456" />
                                         </div>
                                     </div>
-                                    <button
-                                        class="w-full bg-slate-800 text-slate-200 py-3 rounded-lg font-bold text-xs md:text-sm flex items-center justify-center gap-2 opacity-50 cursor-not-allowed">
-                                        <span class="material-symbols-outlined text-lg">lock</span> Set Location
+
+                                    <button id="btnSetLocation"
+                                        class="w-full bg-slate-800 hover:bg-slate-700 hover:border-error/50 text-slate-200 border border-slate-700 py-3 rounded-lg font-bold text-xs md:text-sm flex items-center justify-center gap-2 transition-all active:scale-95 shadow-sm">
+                                        <span id="iconLocation"
+                                            class="material-symbols-outlined text-lg">my_location</span>
+                                        <span id="textLocation">Set Location</span>
                                     </button>
 
                                     <div class="pt-4 border-t border-slate-800 flex items-center justify-between">

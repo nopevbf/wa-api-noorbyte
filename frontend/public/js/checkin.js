@@ -112,4 +112,65 @@ document.addEventListener('DOMContentLoaded', async () => {
             }, 500);
         }, 3000);
     });
+
+    // ==========================================
+    // LOGIC SET LOCATION (TOGGLE LOCK/UNLOCK)
+    // ==========================================
+    const inputLat = document.getElementById('inputLat');
+    const inputLng = document.getElementById('inputLng');
+    const btnSetLocation = document.getElementById('btnSetLocation');
+    const iconLocation = document.getElementById('iconLocation');
+    const textLocation = document.getElementById('textLocation');
+
+    // Variabel penyimpan status (Awalnya tidak terkunci)
+    let isLocationLocked = false;
+
+    if (btnSetLocation) {
+        btnSetLocation.addEventListener('click', () => {
+
+            if (!isLocationLocked) {
+                // ====================================
+                // PROSES MENGUNCI LOKASI
+                // ====================================
+                if (inputLat.value.trim() === '' || inputLng.value.trim() === '') {
+                    alert('Koordinat Latitude dan Longitude tidak boleh kosong!');
+                    return;
+                }
+
+                isLocationLocked = true; // Ubah status
+                inputLat.readOnly = true;
+                inputLng.readOnly = true;
+
+                // UI Input (Redup dan dilarang klik)
+                inputLat.classList.add('cursor-not-allowed', 'opacity-60', 'bg-slate-950/50');
+                inputLng.classList.add('cursor-not-allowed', 'opacity-60', 'bg-slate-950/50');
+
+                // UI Button (Tema Merah Terkunci)
+                iconLocation.innerText = 'lock';
+                textLocation.innerText = 'Unlock Location';
+
+                // Ganti class tombol jadi aura Jailbreak/Alert
+                btnSetLocation.className = "w-full bg-error/10 text-error border border-error/50 hover:bg-error/20 py-3 rounded-lg font-bold text-xs md:text-sm flex items-center justify-center gap-2 transition-all active:scale-95 shadow-[0_0_15px_rgba(239,68,68,0.1)]";
+
+            } else {
+                // ====================================
+                // PROSES MEMBUKA KUNCI LOKASI
+                // ====================================
+                isLocationLocked = false; // Ubah status kembali
+                inputLat.readOnly = false;
+                inputLng.readOnly = false;
+
+                // UI Input (Kembali normal)
+                inputLat.classList.remove('cursor-not-allowed', 'opacity-60', 'bg-slate-950/50');
+                inputLng.classList.remove('cursor-not-allowed', 'opacity-60', 'bg-slate-950/50');
+
+                // UI Button (Kembali normal)
+                iconLocation.innerText = 'my_location';
+                textLocation.innerText = 'Set Location';
+
+                // Ganti class tombol balik ke awal
+                btnSetLocation.className = "w-full bg-slate-800 hover:bg-slate-700 hover:border-error/50 text-slate-200 border border-slate-700 py-3 rounded-lg font-bold text-xs md:text-sm flex items-center justify-center gap-2 transition-all active:scale-95 shadow-sm";
+            }
+        });
+    }
 });
