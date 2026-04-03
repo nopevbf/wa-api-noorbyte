@@ -1,0 +1,246 @@
+/* ==========================================
+   CHECKIN.CSS - CYBERPUNK ATTENDANCE STYLE
+   ========================================== */
+
+/* 1. KEYFRAMES ANIMATIONS */
+
+/* Animasi Ping/Kedip Signal GPS */
+@keyframes signal-ping {
+    0% {
+        transform: scale(0.8);
+        opacity: 0.5;
+    }
+
+    50% {
+        transform: scale(1.2);
+        opacity: 0.2;
+    }
+
+    100% {
+        transform: scale(0.8);
+        opacity: 0.5;
+    }
+}
+
+/* Animasi Scan Biometrik Kamera */
+@keyframes biometric-scan {
+    0% {
+        top: 0%;
+        opacity: 0.3;
+    }
+
+    50% {
+        opacity: 1;
+    }
+
+    100% {
+        top: 100%;
+        opacity: 0.3;
+    }
+}
+
+/* 2. SPECIFIC UTILITIES */
+
+/* Element Ping Kedip GPS */
+.gps-ping-dot {
+    animation: signal-ping 2s ease-in-out infinite;
+}
+
+/* Container Kamera (Wajib relative & overflow-hidden) */
+.camera-preview-area {
+    position: relative;
+    width: 100%;
+    background-color: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+/* Gradient Overlay Tembus Pandang di Kamera */
+.camera-gradient-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, transparent 60%, transparent 100%);
+    z-index: 10;
+}
+
+/* Targeting Reticle (Kotak Target Wajah) */
+.camera-reticle {
+    position: absolute;
+    inset: 0;
+    z-index: 20;
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.camera-reticle-box {
+    width: 192px;
+    /* Setara w-48 */
+    height: 192px;
+    /* Setara h-48 */
+    border: 1px solid rgba(239, 68, 68, 0.5);
+    /* border-error/50 */
+    border-radius: 0.75rem;
+    /* rounded-xl */
+    position: relative;
+}
+
+@media (min-width: 768px) {
+    .camera-reticle-box {
+        width: 256px;
+        /* Setara md:w-64 */
+        height: 256px;
+        /* Setara md:h-64 */
+    }
+}
+
+/* Sudut-sudut Reticle Merah Tebal */
+.camera-reticle-corner {
+    position: absolute;
+    width: 12px;
+    /* Setara w-3 */
+    height: 12px;
+    /* Setara h-3 */
+    border-color: #ef4444;
+    /* border-error */
+}
+
+.camera-reticle-corner.top-left {
+    top: 0;
+    left: 0;
+    border-top-width: 2px;
+    border-left-width: 2px;
+}
+
+.camera-reticle-corner.top-right {
+    top: 0;
+    right: 0;
+    border-top-width: 2px;
+    border-right-width: 2px;
+}
+
+.camera-reticle-corner.bottom-left {
+    bottom: 0;
+    left: 0;
+    border-bottom-width: 2px;
+    border-left-width: 2px;
+}
+
+.camera-reticle-corner.bottom-right {
+    bottom: 0;
+    right: 0;
+    border-bottom-width: 2px;
+    border-right-width: 2px;
+}
+
+/* Live Feed & Timestamp Overlays */
+.camera-overlay-info {
+    position: absolute;
+    top: 1rem;
+    /* Setara top-4 */
+    left: 1rem;
+    /* Setara left-4 */
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    /* Setara gap-1 */
+}
+
+.camera-label-live {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    /* Setara gap-2 */
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 10px;
+    color: #ef4444;
+    /* text-error */
+    background-color: rgba(0, 0, 0, 0.6);
+    /* bg-black/60 */
+    padding: 0.25rem 0.5rem;
+    /* px-2 py-1 */
+    border-radius: 0.25rem;
+}
+
+.camera-label-live-dot {
+    width: 1.5rem;
+    /* w-1.5 */
+    height: 1.5rem;
+    /* h-1.5 */
+    background-color: #ef4444;
+    /* bg-error */
+    border-radius: 9999px;
+    opacity: 1;
+}
+
+/* Biometric Scan Effect (Garis Merah Jalan) */
+.camera-scan-effect {
+    position: absolute;
+    inset: 0;
+    z-index: 20;
+    pointer-events: none;
+    opacity: 0.2;
+}
+
+.camera-scan-bar {
+    position: absolute;
+    height: 4px;
+    /* Setara h-1 */
+    background-color: #ef4444;
+    /* bg-error */
+    width: 100%;
+    box-shadow: 0 0 15px rgba(220, 38, 38, 1);
+    animation: biometric-scan 3s linear infinite;
+}
+
+/* ==========================================
+   3. MODAL D'PARAGON AUTH STYLES
+   ========================================== */
+
+/* Scrollbar Tipis Khusus di Dalam Modal */
+#dparagonAuthContent::-webkit-scrollbar {
+    width: 4px;
+}
+
+#dparagonAuthContent::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+#dparagonAuthContent::-webkit-scrollbar-thumb {
+    background: #ef4444;
+    border-radius: 4px;
+}
+
+/* Efek Garis Scan Background di Modal */
+@keyframes modal-scan-line {
+    0% {
+        top: 0%;
+        opacity: 0;
+    }
+
+    10% {
+        opacity: 0.5;
+    }
+
+    90% {
+        opacity: 0.5;
+    }
+
+    100% {
+        top: 100%;
+        opacity: 0;
+    }
+}
+
+.animate-scan {
+    position: absolute;
+    width: 100%;
+    height: 4px;
+    background-color: #ef4444;
+    box-shadow: 0 0 15px rgba(239, 68, 68, 0.8);
+    animation: modal-scan-line 3s linear infinite;
+}
