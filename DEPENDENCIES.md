@@ -23,8 +23,10 @@ Lokasi: `backend/package.json`
 | `axios`                   | `^1.13.6`     | HTTP client untuk webhook dan request eksternal           |
 | `better-sqlite3`          | `^12.8.0`     | Penyimpanan data user/device/log dengan SQLite            |
 | `cors`                    | `^2.8.6`      | Mengizinkan akses lintas origin ke API backend            |
+| `dotenv`                  | `^17.4.0`     | Membaca variabel environment dari file `.env`             |
 | `express`                 | `^4.22.1`     | Framework HTTP server dan routing API                     |
 | `pino`                    | `^10.3.1`     | Logger untuk Baileys dan proses backend                   |
+| `puppeteer`               | `^24.40.0`    | Headless browser untuk automasi dan scraping web          |
 | `qrcode`                  | `^1.5.4`      | Generate QR code (data URL / image)                       |
 | `qrcode-terminal`         | `^0.12.0`     | Tampilkan QR code langsung di terminal                    |
 | `socket.io`               | `^4.8.3`      | Komunikasi real-time antara backend dan UI                |
@@ -33,12 +35,13 @@ Lokasi: `backend/package.json`
 
 Lokasi: `frontend/package.json`
 
-| Library                 | Versi     | Kegunaan                               |
-| ----------------------- | --------- | -------------------------------------- |
-| `axios`                 | `^1.13.6` | Request HTTP dari UI ke backend API    |
-| `cors`                  | `^2.8.6`  | Dukungan CORS untuk server UI          |
-| `express`               | `^4.22.1` | Menjalankan server UI statis           |
-| `http-proxy-middleware` | `^3.0.5`  | Proxy request dari frontend ke backend |
+| Library                 | Versi      | Kegunaan                               |
+| ----------------------- | ---------- | -------------------------------------- |
+| `axios`                 | `^1.13.6`  | Request HTTP dari UI ke backend API    |
+| `cors`                  | `^2.8.6`   | Dukungan CORS untuk server UI          |
+| `express`               | `^4.22.1`  | Menjalankan server UI statis           |
+| `http-proxy-middleware` | `^3.0.5`   | Proxy request dari frontend ke backend |
+| `puppeteer`             | `^24.40.0` | Headless browser automasi & interaksi  |
 
 ## Catatan Keamanan
 
