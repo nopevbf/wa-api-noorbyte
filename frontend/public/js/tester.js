@@ -5,26 +5,41 @@ const API_URL = "/api";
 document.addEventListener("DOMContentLoaded", async () => {
     const selector = document.getElementById('deviceSelector');
     selector.innerHTML = '<option value="">Memuat device...</option>';
-    
+
     try {
         const isAdmin = localStorage.getItem('connectApi_loggedIn') === 'true';
         const guestApiKey = localStorage.getItem('noorbyte_session');
         const query = isAdmin ? '?role=admin' : (guestApiKey ? `?api_key=${guestApiKey}` : '');
         const response = await fetch(`${API_URL}/get-devices${query}`);
         const result = await response.json();
-        
+
         if (result.status && result.data.length > 0) {
             selector.innerHTML = '<option value="">-- Pilih Device Pengirim --</option>';
             result.data.forEach(device => {
                 const isOnline = device.status === 'Connected';
                 const option = document.createElement('option');
                 // Value-nya kita isi API Key untuk otorisasi pengiriman
-                option.value = device.api_key; 
+                option.value = device.api_key;
                 option.textContent = `${device.username} (${device.phone}) - ${isOnline ? '🟢 Online' : '🔴 Offline'}`;
-                
+
                 if (!isOnline) option.disabled = true; // Cuma bisa milih device yg connect
                 selector.appendChild(option);
             });
+
+            // Restore previously selected device from localStorage
+            const savedDevice = localStorage.getItem("automationSelectedDevice");
+            if (savedDevice) {
+                const matchOption = Array.from(selector.options).find(o => o.value === savedDevice);
+                if (matchOption && !matchOption.disabled) {
+                    selector.value = savedDevice;
+
+                    // ==========================================
+                    // TRIGGER EVENTNYA DI SINI BOS!
+                    // Karena di detik ini, opsi-opsinya udah 100% jadi.
+                    // ==========================================
+                    selector.dispatchEvent(new Event("change"));
+                }
+            }
         } else {
             selector.innerHTML = '<option value="">Belum ada device terdaftar.</option>';
         }
@@ -36,12 +51,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 // 2. Aksi saat form disubmit (Send Message)
 // Fungsi pembantu untuk mengubah file fisik jadi teks Base64
 function getBase64(file) {
-   return new Promise((resolve, reject) => {
-     const reader = new FileReader();
-     reader.readAsDataURL(file);
-     reader.onload = () => resolve(reader.result);
-     reader.onerror = error => reject(error);
-   });
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+    });
 }
 
 // =========================================
@@ -59,7 +74,7 @@ const fileHelpText = document.getElementById('fileHelpText');
 msgTypeRadios.forEach(radio => {
     radio.addEventListener('change', (e) => {
         const type = e.target.value;
-        
+
         // Reset file yang udah terlanjur dipilih kalau ganti tipe
         fileInput.value = '';
         document.getElementById('fileNameDisplay').innerText = "Klik atau drag file ke sini";
@@ -69,31 +84,31 @@ msgTypeRadios.forEach(radio => {
             // MODE TEKS            
             messageContentWrapper.classList.remove('hidden');
             messageContent.required = true;
-            
+
             attachmentWrapper.classList.remove('hidden');
             fileInput.required = false;
             fileInput.accept = '';
             attachmentLabel.innerHTML = 'Attachment (Optional)';
             fileHelpText.innerText = 'Batas maksimal ukuran 50MB';
-            
+
         } else if (type === 'image') {
             // MODE GAMBAR
             messageContentWrapper.classList.add('hidden');
             messageContent.required = false;
             messageContent.value = ''; // Kosongkan text
-            
+
             attachmentWrapper.classList.remove('hidden');
             fileInput.required = true; // Jadi WAJIB
             fileInput.accept = 'image/*'; // Filter File Browser HANYA GAMBAR
             attachmentLabel.innerHTML = 'Upload Image <span class="text-red-500">*wajib</span>';
             fileHelpText.innerText = 'Format: PNG, JPG, JPEG (Max 10MB)';
-            
+
         } else if (type === 'document') {
             // MODE DOKUMEN
             messageContentWrapper.classList.add('hidden');
             messageContent.required = false;
             messageContent.value = ''; // Kosongkan text
-            
+
             attachmentWrapper.classList.remove('hidden');
             fileInput.required = true; // Jadi WAJIB
             fileInput.accept = '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt'; // Filter File Browser HANYA DOKUMEN
@@ -107,7 +122,7 @@ msgTypeRadios.forEach(radio => {
 document.querySelector('input[name="msg_type"]:checked').dispatchEvent(new Event('change'));
 
 // Bikin nama file berubah pas user milih file
-document.getElementById('fileInput').addEventListener('change', function() {
+document.getElementById('fileInput').addEventListener('change', function () {
     const display = document.getElementById('fileNameDisplay');
     if (this.files.length > 0) {
         display.innerText = this.files[0].name;
@@ -121,22 +136,22 @@ document.getElementById('fileInput').addEventListener('change', function() {
 // Aksi saat form disubmit
 document.getElementById('testMessageForm').addEventListener('submit', async (e) => {
     e.preventDefault();
-    
+
     const apiKey = document.getElementById('deviceSelector').value;
     const targetNumber = document.getElementById('targetNumber').value;
     const messageContent = document.getElementById('messageContent').value;
-    
+
     // Ambil data Message Type dan File
     const msgType = document.querySelector('input[name="msg_type"]:checked').value;
     const fileInput = document.getElementById('fileInput');
-    
+
     const btnText = document.getElementById('btnText');
     const btnIcon = document.getElementById('btnIcon');
     const jsonBox = document.getElementById('responseJson');
     const httpStatus = document.getElementById('httpStatus');
 
     if (!apiKey) return showModal('Peringatan', 'Pilih device pengirim terlebih dahulu!');
-    
+
     // Validasi kalau pilih Image/Document tapi gak ada file
     if ((msgType === 'image' || msgType === 'document') && fileInput.files.length === 0) {
         return showModal('Peringatan', `Anda memilih tipe ${msgType}, silakan upload file attachment-nya.`);
@@ -170,9 +185,9 @@ document.getElementById('testMessageForm').addEventListener('submit', async (e) 
 
         const response = await fetch(`${API_URL}/send-message`, {
             method: 'POST',
-            headers: { 
+            headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${apiKey}` 
+                'Authorization': `Bearer ${apiKey}`
             },
             body: JSON.stringify(payload)
         });

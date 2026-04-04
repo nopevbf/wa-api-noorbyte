@@ -1,15 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="utf-8"/>
-    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-    
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+
     <link rel="stylesheet" href="/css/style.css">
-    
+
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet" />
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    
+
     <script id="tailwind-config">
         tailwind.config = {
             darkMode: "class",
@@ -23,141 +25,215 @@
     </script>
     <title>Device Management - WhatsApp API</title>
 </head>
+
 <body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100">
-<div class="flex h-screen overflow-hidden">
-    
-    <div id="sidebar-container"></div>
-
-    <main class="flex-1 overflow-y-auto relative">
-        <header class="h-16 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md px-4 sm:px-8 flex items-center justify-between sticky top-0 z-10">
-            <div class="flex items-center gap-4 flex-1 max-w-xl">
-                <button id="toggleSidebarBtn" class="lg:hidden p-2 -ml-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors">
-                    <span class="material-symbols-outlined">menu</span>
-                </button>
-                <div class="relative w-full">
-                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xl">search</span>
-                    <input class="w-full pl-10 pr-4 py-2 bg-slate-100 dark:bg-slate-800 border-none rounded-lg text-sm focus:ring-2 focus:ring-primary/20 transition-all" placeholder="Search devices..." type="text"/>
-                </div>
-            </div>
-            <div class="flex items-center gap-4">
-                <div class="text-right hidden sm:block">
-                    <p class="text-sm font-semibold leading-none">Admin User</p>
-                    <p class="text-[10px] text-slate-500 mt-1">admin@noorbyte.com</p>
-                </div>
-            </div>
-        </header>
-
-        <div class="p-8 max-w-7xl mx-auto">
-            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-                <div>
-                    <h2 class="text-3xl font-black tracking-tight text-slate-900 dark:text-slate-50">My Devices</h2>
-                    <p class="text-slate-500 dark:text-slate-400 mt-1">Manage and monitor your connected WhatsApp sessions.</p>
-                </div>
-                <button onclick="toggleAddModal(true)" class="flex items-center gap-2 px-6 py-2.5 bg-primary text-white font-bold rounded-lg shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all">
-                    <span class="material-symbols-outlined">add</span> Add New Device
-                </button>
-            </div>
-
-            <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
-                <div class="xl:col-span-2 space-y-4">
-                    <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left border-collapse">
-                                <thead>
-                                    <tr class="bg-slate-50 dark:bg-slate-800/50">
-                                        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Device Info</th>
-                                        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
-                                        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Token (API Key)</th>
-                                        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="deviceTableBody" class="divide-y divide-slate-100 dark:divide-slate-800">
-                                </tbody>
-                            </table>
-                        </div>
+    <div class="flex h-screen overflow-hidden">
+        <div id="sidebar-container"></div>
+        <main class="flex-1 overflow-y-auto relative">
+            <header
+                class="h-16 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md px-4 sm:px-8 flex items-center justify-between sticky top-0 z-10">
+                <div class="flex items-center gap-4 flex-1 max-w-xl">
+                    <button id="toggleSidebarBtn"
+                        class="lg:hidden p-2 -ml-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors">
+                        <span class="material-symbols-outlined">menu</span>
+                    </button>
+                    <div class="relative w-full">
+                        <span
+                            class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xl">search</span>
+                        <input
+                            class="w-full pl-10 pr-4 py-2 bg-slate-100 dark:bg-slate-800 border-none rounded-lg text-sm focus:ring-2 focus:ring-primary/20 transition-all"
+                            placeholder="Search devices..." type="text" />
                     </div>
                 </div>
+                <div class="flex items-center gap-4">
+                    <div class="text-right hidden sm:block">
+                        <p class="text-sm font-semibold leading-none">Admin User</p>
+                        <p class="text-[10px] text-slate-500 mt-1">admin@noorbyte.com</p>
+                    </div>
+                </div>
+            </header>
 
-                <div class="xl:col-span-1">
-                    <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm sticky top-24">
-                        <div class="text-center mb-6">
-                            <h3 id="qrPanelTitle" class="text-lg font-bold">QR Scanner</h3>
-                            <p id="qrPanelDesc" class="text-xs text-slate-500 mt-2">Pilih "Connect" pada salah satu device untuk memunculkan QR Code di sini.</p>
+            <div class="p-8 max-w-7xl mx-auto">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+                    <div>
+                        <h2 class="text-3xl font-black tracking-tight text-slate-900 dark:text-slate-50">My Devices</h2>
+                        <p class="text-slate-500 dark:text-slate-400 mt-1">Manage and monitor your connected WhatsApp
+                            sessions.</p>
+                    </div>
+                    <button onclick="toggleAddModal(true)"
+                        class="flex items-center gap-2 px-6 py-2.5 bg-primary text-white font-bold rounded-lg shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all">
+                        <span class="material-symbols-outlined">add</span> Add New Device
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
+                    <div class="xl:col-span-2 space-y-4">
+                        <div
+                            class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr class="bg-slate-50 dark:bg-slate-800/50">
+                                            <th
+                                                class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                                                Device Info</th>
+                                            <th
+                                                class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                                                Status</th>
+                                            <th
+                                                class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                                                Token (API Key)</th>
+                                            <th
+                                                class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">
+                                                Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="deviceTableBody" class="divide-y divide-slate-100 dark:divide-slate-800">
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
-                        
-                        <div class="relative group">
-                            <div class="aspect-square w-full max-w-[220px] mx-auto bg-slate-50 dark:bg-slate-800 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center p-4 relative overflow-hidden transition-all group-hover:border-primary/50">
-                                <div id="qrLoading" class="text-center text-slate-400">
-                                    <span class="material-symbols-outlined text-4xl mb-2 animate-pulse">qr_code_scanner</span>
-                                    <p class="text-xs font-semibold">Standby</p>
+                    </div>
+
+                    <div class="xl:col-span-1">
+                        <div
+                            class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm sticky top-24">
+                            <div class="text-center mb-6">
+                                <h3 id="qrPanelTitle" class="text-lg font-bold">QR Scanner</h3>
+                                <p id="qrPanelDesc" class="text-xs text-slate-500 mt-2">Pilih "Connect" pada salah satu
+                                    device untuk memunculkan QR Code di sini.</p>
+                            </div>
+
+                            <div class="relative group">
+                                <div
+                                    class="aspect-square w-full max-w-[220px] mx-auto bg-slate-50 dark:bg-slate-800 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center p-4 relative overflow-hidden transition-all group-hover:border-primary/50">
+                                    <div id="qrLoading" class="text-center text-slate-400">
+                                        <span
+                                            class="material-symbols-outlined text-4xl mb-2 animate-pulse">qr_code_scanner</span>
+                                        <p class="text-xs font-semibold">Standby</p>
+                                    </div>
+                                    <img id="qrImage" class="w-full h-full object-contain hidden animate-fade-in" src=""
+                                        alt="QR Code" />
                                 </div>
-                                <img id="qrImage" class="w-full h-full object-contain hidden animate-fade-in" src="" alt="QR Code"/>
+                            </div>
+
+                            <div class="mt-8 space-y-4">
+                                <div class="flex items-start gap-3">
+                                    <div
+                                        class="size-6 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-xs font-bold text-slate-500">
+                                        1</div>
+                                    <p class="text-xs text-slate-600 dark:text-slate-400">Buka WhatsApp di HP Anda</p>
+                                </div>
+                                <div class="flex items-start gap-3">
+                                    <div
+                                        class="size-6 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-xs font-bold text-slate-500">
+                                        2</div>
+                                    <p class="text-xs text-slate-600 dark:text-slate-400">Pilih menu <span
+                                            class="font-bold">Linked Devices</span></p>
+                                </div>
+                                <div class="flex items-start gap-3">
+                                    <div
+                                        class="size-6 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-xs font-bold text-slate-500">
+                                        3</div>
+                                    <p class="text-xs text-slate-600 dark:text-slate-400">Scan QR Code yang muncul di
+                                        atas</p>
+                                </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+        </main>
 
-                        <div class="mt-8 space-y-4">
-                            <div class="flex items-start gap-3">
-                                <div class="size-6 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-xs font-bold text-slate-500">1</div>
-                                <p class="text-xs text-slate-600 dark:text-slate-400">Buka WhatsApp di HP Anda</p>
-                            </div>
-                            <div class="flex items-start gap-3">
-                                <div class="size-6 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-xs font-bold text-slate-500">2</div>
-                                <p class="text-xs text-slate-600 dark:text-slate-400">Pilih menu <span class="font-bold">Linked Devices</span></p>
-                            </div>
-                            <div class="flex items-start gap-3">
-                                <div class="size-6 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-xs font-bold text-slate-500">3</div>
-                                <p class="text-xs text-slate-600 dark:text-slate-400">Scan QR Code yang muncul di atas</p>
-                            </div>
+        <div id="addModal"
+            class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 hidden flex justify-center items-center transition-opacity">
+            <div
+                class="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all">
+                <div
+                    class="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
+                    <h3 class="text-lg font-bold text-slate-900 dark:text-white">Register New Device</h3>
+                    <button onclick="toggleAddModal(false)" class="text-slate-400 hover:text-slate-600"><span
+                            class="material-symbols-outlined">close</span></button>
+                </div>
+                <div class="p-6">
+                    <form id="addDeviceForm" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Device
+                                Name</label>
+                            <input type="text" id="deviceName" required placeholder="e.g. CS Marketing"
+                                class="w-full px-4 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all">
                         </div>
-                    </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">WhatsApp
+                                Number</label>
+                            <input type="text" id="devicePhone" required placeholder="0812345..."
+                                class="w-full px-4 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all">
+                        </div>
+                        <div class="pt-4 flex gap-3">
+                            <button type="button" onclick="toggleAddModal(false)"
+                                class="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-lg font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">Cancel</button>
+                            <button type="submit" id="btnSubmit"
+                                class="flex-1 px-4 py-2 bg-primary text-white rounded-lg font-semibold shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all">Register</button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
-    </main>
 
-    <div id="addModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 hidden flex justify-center items-center transition-opacity">
-        <div class="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all">
-            <div class="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
-                <h3 class="text-lg font-bold text-slate-900 dark:text-white">Register New Device</h3>
-                <button onclick="toggleAddModal(false)" class="text-slate-400 hover:text-slate-600"><span class="material-symbols-outlined">close</span></button>
-            </div>
-            <div class="p-6">
-                <form id="addDeviceForm" class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Device Name</label>
-                        <input type="text" id="deviceName" required placeholder="e.g. CS Marketing" class="w-full px-4 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all">
+        <div id="globalModal"
+            class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] hidden flex justify-center items-center transition-opacity">
+            <div
+                class="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all border border-slate-200 dark:border-slate-800">
+                <div class="p-6 text-center">
+                    <div id="modalIconContainer"
+                        class="mx-auto flex items-center justify-center h-14 w-14 rounded-full bg-blue-100 text-blue-500 mb-4">
+                        <span id="modalIcon" class="material-symbols-outlined text-3xl">info</span>
                     </div>
-                    <div>
-                        <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">WhatsApp Number</label>
-                        <input type="text" id="devicePhone" required placeholder="0812345..." class="w-full px-4 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all">
-                    </div>
-                    <div class="pt-4 flex gap-3">
-                        <button type="button" onclick="toggleAddModal(false)" class="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-lg font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">Cancel</button>
-                        <button type="submit" id="btnSubmit" class="flex-1 px-4 py-2 bg-primary text-white rounded-lg font-semibold shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all">Register</button>
-                    </div>
-                </form>
+                    <h3 id="modalTitle" class="text-lg font-bold text-slate-900 dark:text-white mb-2">Title</h3>
+                    <p id="modalMessage" class="text-sm text-slate-500 dark:text-slate-400 break-words">Message</p>
+                </div>
+                <div id="modalActions" class="px-6 py-4 bg-slate-50 dark:bg-slate-800/50 flex gap-3 justify-center">
+                </div>
             </div>
         </div>
+
+        <div id="renameDeviceModal"
+            class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm transition-opacity opacity-0">
+            <div id="renameDeviceBox"
+                class="bg-slate-900 border border-slate-800 rounded-2xl w-[90%] max-w-sm p-6 shadow-2xl transform scale-95 transition-all relative">
+
+                <h3 class="text-slate-200 font-bold text-sm mb-4 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-emerald-500">edit_note</span> Rename Device
+                </h3>
+
+                <input type="hidden" id="renameSessionId">
+
+                <div class="mb-6">
+                    <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2">Nama Device
+                        Baru</label>
+                    <input type="text" id="renameInput"
+                        class="w-full bg-slate-950 border border-slate-700 text-slate-200 text-sm rounded-lg p-3 focus:outline-none focus:border-emerald-500 transition-colors shadow-inner"
+                        placeholder="Contoh: CS Marketing 01" autocomplete="off">
+                </div>
+
+                <div class="flex gap-3 justify-end">
+                    <button id="btnCancelRename"
+                        class="px-4 py-2 rounded-lg bg-slate-800 text-slate-300 text-xs font-bold hover:bg-slate-700 transition-colors">BATAL</button>
+                    <button id="btnSubmitRename"
+                        class="px-4 py-2 rounded-lg bg-emerald-500/20 text-emerald-500 border border-emerald-500/50 text-xs font-bold hover:bg-emerald-500 hover:text-slate-950 transition-all active:scale-95 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-sm hidden" id="renameSpinner">autorenew</span>
+                        SIMPAN
+                    </button>
+                </div>
+
+            </div>
+        </div>
+
     </div>
 
-    <div id="globalModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] hidden flex justify-center items-center transition-opacity">
-        <div class="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all border border-slate-200 dark:border-slate-800">
-            <div class="p-6 text-center">
-                <div id="modalIconContainer" class="mx-auto flex items-center justify-center h-14 w-14 rounded-full bg-blue-100 text-blue-500 mb-4">
-                    <span id="modalIcon" class="material-symbols-outlined text-3xl">info</span>
-                </div>
-                <h3 id="modalTitle" class="text-lg font-bold text-slate-900 dark:text-white mb-2">Title</h3>
-                <p id="modalMessage" class="text-sm text-slate-500 dark:text-slate-400 break-words">Message</p>
-            </div>
-            <div id="modalActions" class="px-6 py-4 bg-slate-50 dark:bg-slate-800/50 flex gap-3 justify-center">
-                </div>
-        </div>
-    </div>
-
-</div>
-
-<script src="/js/sidebar.js?v=2"></script>
-<script src="/js/devices.js?v=2"></script>
+    <script src="/js/sidebar.js?v=2"></script>
+    <script src="/js/devices.js?v=2"></script>
 
 </body>
+
 </html>

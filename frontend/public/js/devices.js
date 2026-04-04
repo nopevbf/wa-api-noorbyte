@@ -19,7 +19,7 @@ function showCustomModal(type, title, message, onConfirm = null) {
 
     titleEl.innerText = title;
     messageEl.innerHTML = message;
-    actionsEl.innerHTML = ''; 
+    actionsEl.innerHTML = '';
 
     if (type === 'success') {
         iconContainer.className = 'mx-auto flex items-center justify-center h-14 w-14 rounded-full bg-green-100 text-green-500 mb-4';
@@ -72,16 +72,16 @@ function toggleAddModal(show) {
 async function loadDevices() {
     const tableBody = document.getElementById('deviceTableBody');
     tableBody.innerHTML = '<tr><td colspan="4" class="px-6 py-8 text-center text-slate-500">Loading data...</td></tr>';
-    
+
     try {
         const isAdmin = localStorage.getItem('connectApi_loggedIn') === 'true';
         const guestApiKey = localStorage.getItem('noorbyte_session');
         const query = isAdmin ? '?role=admin' : (guestApiKey ? `?api_key=${guestApiKey}` : '');
         const response = await fetch(`/api/get-devices${query}`); // Mengambil data melalui proxy
         const result = await response.json();
-        
+
         if (result.status && result.data.length > 0) {
-            tableBody.innerHTML = ''; 
+            tableBody.innerHTML = '';
             result.data.forEach(device => renderDeviceRow(device));
         } else {
             tableBody.innerHTML = '<tr><td colspan="4" class="px-6 py-8 text-center text-slate-500">No devices found. Click "Add New Device" to start.</td></tr>';
@@ -95,11 +95,11 @@ function renderDeviceRow(device) {
     const tableBody = document.getElementById('deviceTableBody');
     const apiKey = device.api_key || device.token; // Penyesuaian variabel API Key
     const isOnline = device.status === 'Connected';
-    
+
     const tr = document.createElement('tr');
     tr.id = `row-${apiKey}`;
     tr.className = "hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors";
-    
+
     tr.innerHTML = `
         <td class="px-6 py-4">
             <div class="flex items-center gap-3">
@@ -107,7 +107,12 @@ function renderDeviceRow(device) {
                     <span class="material-symbols-outlined">smartphone</span>
                 </div>
                 <div>
-                    <p class="text-sm font-bold text-slate-900 dark:text-white">${device.username}</p>
+                    <div class="flex items-center gap-2">
+                        <p class="text-sm font-bold text-slate-900 dark:text-white">${device.username}</p>
+                        <button onclick="renameDevice('${apiKey}', '${device.username}')" class="text-slate-400 hover:text-primary transition-colors flex items-center justify-center" title="Edit Nama Device">
+                            <span class="material-symbols-outlined text-[16px]">edit</span>
+                        </button>
+                    </div>
                     <p class="text-xs text-slate-500">${device.phone || '-'}</p>
                 </div>
             </div>
@@ -120,7 +125,7 @@ function renderDeviceRow(device) {
         </td>
         <td class="px-6 py-4">
             <div class="flex items-center gap-2 group cursor-pointer" onclick="copyToken('${apiKey}')" title="Click to copy">
-                <span class="text-xs font-mono bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">${apiKey.substring(0,8)}...</span>
+                <span class="text-xs font-mono bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">${apiKey.substring(0, 8)}...</span>
                 <span class="material-symbols-outlined text-sm text-slate-400 group-hover:text-primary transition-colors">content_copy</span>
             </div>
         </td>
@@ -129,24 +134,24 @@ function renderDeviceRow(device) {
         </td>
     `;
     tableBody.appendChild(tr);
-    
+
     updateActionButtons(apiKey, device.status, device.username);
 
     // Realtime Listener
     socket.off(`status-${apiKey}`);
     socket.on(`status-${apiKey}`, (data) => {
         const isNowOnline = data.status === 'Connected';
-        
+
         const dot = document.getElementById(`dot-${apiKey}`);
         const text = document.getElementById(`text-${apiKey}`);
         const iconBox = document.getElementById(`iconBox-${apiKey}`);
-        
-        if(dot && text) {
+
+        if (dot && text) {
             dot.className = `h-2 w-2 rounded-full ${isNowOnline ? 'bg-green-500 animate-pulse' : 'bg-slate-400'}`;
             text.className = `text-xs font-semibold ${isNowOnline ? 'text-green-600 dark:text-green-400' : 'text-slate-500'}`;
             text.innerText = isNowOnline ? 'Online' : 'Offline';
         }
-        if(iconBox) {
+        if (iconBox) {
             iconBox.className = `h-10 w-10 rounded-lg ${isNowOnline ? 'bg-blue-50 text-primary dark:bg-blue-900/30' : 'bg-slate-100 text-slate-500 dark:bg-slate-800'} flex items-center justify-center transition-colors`;
         }
 
@@ -162,8 +167,8 @@ function renderDeviceRow(device) {
 function updateActionButtons(apiKey, status, username) {
     const actionArea = document.getElementById(`action-${apiKey}`);
     if (!actionArea) return;
-    actionArea.innerHTML = ''; 
-    
+    actionArea.innerHTML = '';
+
     if (status === 'Connected') {
         actionArea.innerHTML = `
             <button onclick="disconnectDevice('${apiKey}')" class="px-3 py-1.5 text-xs font-bold text-slate-600 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all border border-slate-200 dark:border-slate-700">Logout</button>
@@ -179,10 +184,10 @@ function updateActionButtons(apiKey, status, username) {
 async function triggerQr(apiKey, username) {
     document.getElementById('qrPanelTitle').innerText = `Link: ${username}`;
     document.getElementById('qrPanelDesc').innerText = "Menunggu server men-generate QR Code...";
-    
+
     const loadingBox = document.getElementById('qrLoading');
     const imgBox = document.getElementById('qrImage');
-    
+
     loadingBox.innerHTML = '<span class="material-symbols-outlined text-4xl mb-2 animate-spin text-primary">autorenew</span><p class="text-xs font-semibold text-primary">Generating...</p>';
     loadingBox.classList.remove('hidden');
     imgBox.classList.add('hidden');
@@ -200,7 +205,7 @@ async function triggerQr(apiKey, username) {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ api_key: apiKey })
         });
-    } catch (error) { 
+    } catch (error) {
         showCustomModal('error', 'Gagal', 'Gagal menghubungi server untuk generate QR.');
     }
 }
@@ -228,18 +233,18 @@ document.getElementById('addDeviceForm').addEventListener('submit', async (e) =>
             body: JSON.stringify({ name: document.getElementById('deviceName').value, phone: document.getElementById('devicePhone').value })
         });
         const data = await res.json();
-        if(data.status) {
-            toggleAddModal(false); 
-            document.getElementById('addDeviceForm').reset(); 
+        if (data.status) {
+            toggleAddModal(false);
+            document.getElementById('addDeviceForm').reset();
             loadDevices();
             showCustomModal('success', 'Device Terdaftar!', `Token Anda:<br><br><span class="font-mono bg-slate-100 dark:bg-slate-800 p-2 rounded block break-all text-primary border border-slate-200 dark:border-slate-700">${data.token || data.data.api_key}</span>`);
         } else {
             showCustomModal('error', 'Gagal Mendaftar', data.message);
         }
-    } catch(e) { 
-        showCustomModal('error', 'Error Server', 'Terjadi kesalahan pada server saat menyimpan.'); 
-    } finally { 
-        btn.innerText = 'Register'; btn.disabled = false; 
+    } catch (e) {
+        showCustomModal('error', 'Error Server', 'Terjadi kesalahan pada server saat menyimpan.');
+    } finally {
+        btn.innerText = 'Register'; btn.disabled = false;
     }
 });
 
@@ -254,8 +259,8 @@ function copyToken(token) {
 function disconnectDevice(apiKey) {
     showCustomModal('confirm', 'Logout Device', `Apakah Anda yakin ingin melakukan <b>Log Out</b> pada device ini?`, async () => {
         try {
-            await fetch('/api/disconnect-device', { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({api_key: apiKey}) });
-        } catch(e) {
+            await fetch('/api/disconnect-device', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ api_key: apiKey }) });
+        } catch (e) {
             showCustomModal('error', 'Gagal Logout', 'Gagal terhubung ke server.');
         }
     });
@@ -264,16 +269,63 @@ function disconnectDevice(apiKey) {
 function deleteDevice(apiKey) {
     showCustomModal('confirm', 'Hapus Permanen', `Data device ini dan semua sesinya akan <b>dihapus secara permanen</b>. Lanjutkan?`, async () => {
         try {
-            const res = await fetch('/api/delete-device', { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({api_key: apiKey}) });
+            const res = await fetch('/api/delete-device', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ api_key: apiKey }) });
             const data = await res.json();
-            if(data.status) {
+            if (data.status) {
                 showCustomModal('success', 'Terhapus', 'Device berhasil dihapus permanen.');
                 loadDevices();
             } else {
                 showCustomModal('error', 'Gagal Menghapus', data.message);
             }
-        } catch(e) {
+        } catch (e) {
             showCustomModal('error', 'Error', 'Gagal menghubungi server.');
+        }
+    });
+}
+
+function renameDevice(apiKey, currentName) {
+    // 1. Bikin form input HTML yang mau disuntik ke modal
+    const inputHtml = `
+        <div class="mt-4 text-left">
+            <label class="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest block mb-2">Masukkan Nama Baru</label>
+            <input type="text" id="renameInput-${apiKey}" value="${currentName}" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-sm rounded-lg p-3 focus:outline-none focus:border-primary transition-all" autocomplete="off">
+        </div>
+    `;
+
+    // 2. Panggil custom modal lo dengan tipe 'confirm'
+    showCustomModal('confirm', 'Rename Device', `Silakan ubah nama untuk device ini: ${inputHtml}`, async () => {
+
+        // Tangkap isi ketikan user
+        const newName = document.getElementById(`renameInput-${apiKey}`).value.trim();
+
+        // Validasi Kosong
+        if (!newName) {
+            setTimeout(() => showCustomModal('error', 'Validasi Gagal', 'Nama device tidak boleh kosong!'), 350);
+            return;
+        }
+
+        // Kalau namanya nggak diganti, nggak usah tembak API (hemat resource)
+        if (newName === currentName) return;
+
+        try {
+            // 3. Tembak API Backend
+            const res = await fetch('/api/rename-device', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ api_key: apiKey, new_name: newName })
+            });
+
+            const data = await res.json();
+
+            if (data.status) {
+                // Kasih delay dikit biar animasi modal confirm selesai nutup dulu
+                setTimeout(() => showCustomModal('success', 'Berhasil', 'Nama device berhasil diperbarui.'), 350);
+                loadDevices(); // Refresh isi tabel secara otomatis
+            } else {
+                setTimeout(() => showCustomModal('error', 'Gagal Rename', data.message), 350);
+            }
+        } catch (e) {
+            setTimeout(() => showCustomModal('error', 'Error Server', 'Gagal menghubungi server untuk rename.'), 350);
         }
     });
 }

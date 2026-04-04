@@ -127,12 +127,14 @@ async function processFetch(schedule) {
       schedule.dp_password
     );
 
+    const dataSizeMB = (Buffer.byteLength(message || '', 'utf8') / (1024 * 1024)).toFixed(3);
+
     // Save cached message and mark today as fetched
     db.prepare(
       "UPDATE automation_schedules SET cached_message = ?, last_fetched_date = ? WHERE id = ?"
     ).run(message, today, schedule.id);
 
-    addScheduleLog(schedule.id, "text-emerald-400", "SUCCESS", "Data DParagon berhasil ditarik dan di-cache.");
+    addScheduleLog(schedule.id, "text-emerald-400", "SUCCESS", `Data DParagon berhasil ditarik dan di-cache. (Size: ${dataSizeMB} MB)`);
   } catch (err) {
     addScheduleLog(schedule.id, "text-red-500", "ERROR", `Gagal fetch: ${err.message}`);
   }
@@ -157,18 +159,20 @@ async function processSend(schedule) {
   addScheduleLog(schedule.id, "text-amber-400", "SEND", `Mengirim pesan ke WhatsApp (${schedule.target_number})...`);
 
   try {
+    const sendStartTime = Date.now();
     await sendMessageViaWa(
       schedule.api_key,
       schedule.target_number,
       message,
       "text"
     );
+    const latencySec = ((Date.now() - sendStartTime) / 1000).toFixed(1);
 
     db.prepare(
       "UPDATE automation_schedules SET last_sent_date = ? WHERE id = ?"
     ).run(today, schedule.id);
 
-    addScheduleLog(schedule.id, "text-emerald-400", "SUCCESS", "Pesan WhatsApp berhasil terkirim!");
+    addScheduleLog(schedule.id, "text-emerald-400", "SUCCESS", `Pesan WhatsApp berhasil terkirim! (Latency: ${latencySec}s)`);
   } catch (err) {
     addScheduleLog(schedule.id, "text-red-500", "ERROR", `Gagal kirim WA: ${err.message}`);
   }
@@ -202,23 +206,27 @@ async function processManualRuns() {
           schedule.dp_password
         );
 
+        const dataSizeMB = (Buffer.byteLength(message || '', 'utf8') / (1024 * 1024)).toFixed(3);
+
         // Cache message
         const today = getTodayDateWIB();
         db.prepare(
           "UPDATE automation_schedules SET cached_message = ?, last_fetched_date = ? WHERE id = ?"
         ).run(message, today, schedule.id);
-        addScheduleLog(schedule.id, "text-emerald-400", "SUCCESS", "Data berhasil ditarik.");
+        addScheduleLog(schedule.id, "text-emerald-400", "SUCCESS", `Data berhasil ditarik. (Size: ${dataSizeMB} MB)`);
 
         // Langsung kirim WA setelah data berhasil ditarik (Step 6)
         addScheduleLog(schedule.id, "text-amber-400", "STEP 6", `Mengirim ke WhatsApp (${schedule.target_number})...`);
+        const sendStartTime = Date.now();
         await sendMessageViaWa(
           schedule.api_key,
           schedule.target_number,
           message,
           "text"
         );
+        const latencySec = ((Date.now() - sendStartTime) / 1000).toFixed(1);
 
-        addScheduleLog(schedule.id, "text-emerald-400", "SUCCESS", "Otomatis run selesai! Pesan terkirim.");
+        addScheduleLog(schedule.id, "text-emerald-400", "SUCCESS", `Otomatis run selesai! Pesan terkirim. (Latency: ${latencySec}s)`);
         db.prepare(
           "UPDATE automation_schedules SET manual_run_status = 'done', last_sent_date = ? WHERE id = ?"
         ).run(today, schedule.id);

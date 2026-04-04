@@ -602,4 +602,112 @@ router.get("/automation/status", (req, res) => {
   }
 });
 
+// Endpoint Rename Device (UBAH JADI POST)
+router.post('/rename-device', async (req, res) => {
+  try {
+    // TANGKAP NAMA VARIABEL YANG BENER DARI FRONTEND
+    const { api_key, new_name } = req.body;
+
+    if (!api_key || !new_name) {
+      return res.status(400).json({ status: false, message: "API Key dan Nama Baru wajib diisi!" });
+    }
+
+    console.log(`[DATABASE] Memperbarui nama device ${api_key} menjadi: ${new_name}`);
+
+    // EKSEKUSI DATABASE SQLITE LO
+    db.prepare("UPDATE users SET username = ? WHERE api_key = ?").run(new_name, api_key);
+
+    res.json({ status: true, message: "Nama device berhasil diperbarui!" });
+
+  } catch (error) {
+    console.error("Error rename device:", error);
+    res.status(500).json({ status: false, message: "Server gagal merubah nama device." });
+  }
+});
+
+// --- ENDPOINT BARU: AMBIL DATA KPI ---
+router.get("/automation/kpi", (req, res) => {
+  const { api_key } = req.query;
+
+  if (!api_key) {
+    return res.status(400).json({ status: false, message: "API Key wajib diisi." });
+  }
+
+  try {
+    // 1. Cari schedule-nya dulu
+    const schedule = db
+      .prepare("SELECT * FROM automation_schedules WHERE api_key = ?")
+      .get(api_key);
+
+    if (!schedule) {
+      return res.status(200).json({
+        status: true,
+        data: {
+          last_run: null,
+          success_rate: 0,
+          avg_latency: 0,
+          data_processed: 0,
+        },
+        message: "Belum ada data performa.",
+      });
+    }
+
+    // 2. Hitung KPI dari log yang ada
+    const logs = getScheduleLogs(schedule.id);
+
+    let totalRuns = 0;
+    let totalSuccess = 0;
+    let totalLatency = 0;
+    let totalDataMB = 0;
+
+    logs.forEach(log => {
+      // Hitung jumlah eksekusi berdasarkan label langkah yang dilakukan
+      if (["FETCH", "SEND", "STEP 1-5", "STEP 6"].includes(log.label)) {
+        totalRuns++;
+      }
+
+      // Hitung success rate (setiap kali ada label SUCCESS)
+      if (log.label === "SUCCESS") {
+        totalSuccess++;
+
+        // Ekstrak latency dari teks "Otomatis run selesai! Pesan terkirim. (Latency: 1.2s)"
+        const latencyMatch = log.text.match(/Latency: ([\d.]+)/);
+        if (latencyMatch && latencyMatch[1]) {
+          totalLatency += parseFloat(latencyMatch[1]);
+        }
+
+        // Ekstrak data size dari teks "Data berhasil ditarik. (Size: 2.5 MB)"
+        const sizeMatch = log.text.match(/Size: ([\d.]+)/);
+        if (sizeMatch && sizeMatch[1]) {
+          totalDataMB += parseFloat(sizeMatch[1]);
+        }
+      }
+    });
+
+    // 3. Hitung rata-rata
+    const successRate = totalRuns > 0 ? ((totalSuccess / totalRuns) * 100).toFixed(1) : 0;
+    const avgLatency = totalSuccess > 0 ? (totalLatency / totalSuccess).toFixed(1) : 0;
+
+    // 4. Ambil tanggal terakhir jalan yang real dari database log timestamp
+    let lastRunDate = null;
+    const lastLog = db.prepare("SELECT created_at FROM automation_logs WHERE schedule_id = ? ORDER BY id DESC LIMIT 1").get(schedule.id);
+    if (lastLog && lastLog.created_at) {
+        lastRunDate = lastLog.created_at.replace(' ', 'T') + "Z"; // Format ISO 8601
+    }
+
+    res.status(200).json({
+      status: true,
+      data: {
+        last_run: lastRunDate,
+        success_rate: successRate,
+        avg_latency: avgLatency,
+        data_processed: totalDataMB.toFixed(1),
+      },
+    });
+
+  } catch (error) {
+    res.status(500).json({ status: false, message: "Gagal mengambil data KPI.", error: error.message });
+  }
+});
+
 module.exports = router;
