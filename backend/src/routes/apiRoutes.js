@@ -3,6 +3,7 @@ const router = express.Router();
 const db = require("../config/database");
 const appConfig = require("../config/appConfig");
 const checkApiKey = require("../middlewares/auth");
+const { scrapeDparagonAttendance } = require('../../../frontend/public/js/scapper.js');
 const {
   sendMessageViaWa,
   disconnectWa,
@@ -692,7 +693,7 @@ router.get("/automation/kpi", (req, res) => {
     let lastRunDate = null;
     const lastLog = db.prepare("SELECT created_at FROM automation_logs WHERE schedule_id = ? ORDER BY id DESC LIMIT 1").get(schedule.id);
     if (lastLog && lastLog.created_at) {
-        lastRunDate = lastLog.created_at.replace(' ', 'T') + "Z"; // Format ISO 8601
+      lastRunDate = lastLog.created_at.replace(' ', 'T') + "Z"; // Format ISO 8601
     }
 
     res.status(200).json({
@@ -707,6 +708,37 @@ router.get("/automation/kpi", (req, res) => {
 
   } catch (error) {
     res.status(500).json({ status: false, message: "Gagal mengambil data KPI.", error: error.message });
+  }
+});
+
+// Endpoint untuk trigger Jailbreak dari Frontend
+router.post('/jailbreak/execute', async (req, res) => {
+  try {
+    // 1. Tangkap 4 data BARU yang dikirim dari checkin.js
+    const { env, email, password, fullName } = req.body;
+
+    // 2. Validasi biar gak ada yang kosong
+    if (!env || !email || !password || !fullName) {
+      return res.status(400).json({ status: false, message: "Missing payload data." });
+    }
+
+    // 3. JANGAN PAKE AWAIT di sini! 
+    // Biarin scraper jalan di background (Asynchronous)
+    scrapeDparagonAttendance(env, email, password, fullName, 1)
+      .then(data => {
+        console.log(`[SYSTEM] Scraping Background Selesai untuk user: ${fullName}`);
+        // Nanti lo bisa tambahin logic simpan 'data' ke Database di sini
+      })
+      .catch(err => {
+        console.error("[SYSTEM] Scraping Background Gagal:", err);
+      });
+
+    // 4. Langsung balikin response sukses detik itu juga
+    // Biar UI di browser bisa langsung pindah halaman ke terminal!
+    res.json({ status: true, message: "Engine started!" });
+
+  } catch (error) {
+    res.status(500).json({ status: false, message: error.message });
   }
 });
 

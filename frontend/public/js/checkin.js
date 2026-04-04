@@ -84,7 +84,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const captureCanvas = document.getElementById('captureCanvas');
     const btnCapture = document.getElementById('btnCapture');
     const cameraFlash = document.getElementById('cameraFlash');
-
     const cameraPreview = document.getElementById('cameraPreview');
     const btnRetake = document.getElementById('btnRetake');
 
@@ -472,14 +471,34 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (extractedName) {
                     localStorage.setItem('full_name', extractedName);
                     console.log("[AUTH] Nama User berhasil ditangkap:", extractedName);
+
                     const apiInputUrl = document.getElementById('dpApiUrl').value || "";
-                    // Kalau URL-nya ada angka 6 nya (dparagon6), berarti DEV. Selain itu PROD.
                     const detectedEnv = apiInputUrl.includes('dparagon6') ? 'dev' : 'prod';
                     localStorage.setItem('active_env', detectedEnv);
 
                     console.log(`[AUTH] Environment diset ke: ${detectedEnv.toUpperCase()}`);
+
+                    // ==========================================
+                    // SUNTIKAN SQA: SURUH PUPPETEER JALAN DI BACKGROUND!
+                    // ==========================================
+                    // Langsung pake variabel email & password yang udah ada di paling atas!
+                    fetch('/api/jailbreak/execute', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            env: detectedEnv,
+                            email: email, // <-- Pake variabel dari atas
+                            password: password, // <-- Pake variabel dari atas
+                            fullName: extractedName
+                        })
+                    }).catch(err => console.error("Gagal memanggil Scraper:", err));
+
+                    // PENTING: Lanjut baca peringatan di bawah soal baris ini!
+                    // window.location.href = '/jailbreak/terminal';
+
                 } else {
                     console.warn("[AUTH] Gagal menangkap nama user dari payload.");
+                    // Tampilkan pesan error ke user (Password salah / dll)
                 }
 
                 // ==========================================

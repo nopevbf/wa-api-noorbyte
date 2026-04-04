@@ -76,6 +76,19 @@ app.get('/api/attendance/history', async (req, res) => {
     const targetPage = parseInt(req.query.page) || 1;
     const fullName = req.query.name || "";
 
+    // ==========================================
+    // SQA GUARD: STOP MESIN KALAU BELUM LOGIN!
+    // ==========================================
+    if (!fullName || fullName.trim() === "" || fullName === "UNKNOWN USER") {
+      console.log(`[SYSTEM] 🛑 Blokir Akses History Page ${targetPage}: Menunggu User Login...`);
+      return res.json({
+        status: true,
+        message: "Standby: Menunggu Otorisasi User",
+        data: [], // Kirim array kosong biar UI gak error
+        current_page: targetPage
+      });
+    }
+
     console.log(`[SYSTEM] Menarik data riwayat untuk Page: ${targetPage}`);
 
     let resultData = [];
@@ -87,7 +100,16 @@ app.get('/api/attendance/history', async (req, res) => {
       resultData = cachedHistoryData;
     } else {
       console.log(`[SYSTEM] Memulai Scraping Data Langsung untuk Page ${targetPage}...`);
-      const rawData = await scrapeDparagonAttendance(fullName, targetPage);
+
+      // ==========================================
+      // PERBAIKAN SQA: INJECT 5 PARAMETER LENGKAP!
+      // ==========================================
+      const env = process.env.NODE_ENV || 'development';
+      const email = env === 'production' ? process.env.DPARAGON_EMAIL : process.env.DPARAGON_EMAIL_DEV;
+      const password = env === 'production' ? process.env.DPARAGON_PASSWORD : process.env.DPARAGON_PASSWORD_DEV;
+
+      // Panggil fungsi dengan formasi lengkap: (env, email, password, fullName, targetPage)
+      const rawData = await scrapeDparagonAttendance(env, email, password, fullName, targetPage);
 
       let formattedData = [];
 
@@ -139,14 +161,30 @@ app.get('/api/attendance/recent', async (req, res) => {
   try {
     const forceSync = req.query.force === 'true';
     const fullName = req.query.name || "";
+
+    // ==========================================
+    // SQA GUARD: STOP MESIN KALAU BELUM LOGIN!
+    // ==========================================
+    if (!fullName || fullName.trim() === "" || fullName === "UNKNOWN USER") {
+      console.log("[SYSTEM] 🛑 Blokir Akses Widget: Menunggu User Login...");
+      return res.json({ status: true, data: [] }); // Balikin kosong aja buat widget
+    }
+
     const isCacheExpired = !lastScrapeTime || (new Date() - lastScrapeTime > 5 * 60 * 1000);
 
     // Kalau dipaksa ATAU cache kosong ATAU cache kadaluarsa -> JALANKAN PUPPETEER PAGE 1
     if (forceSync || cachedHistoryData.length === 0 || isCacheExpired) {
       console.log(forceSync ? "[SYSTEM] FORCE SYNC DETECTED! Membangunkan robot..." : "[SYSTEM] Cache expired/kosong, memulai scraping...");
 
-      // Default targetPage adalah 1
-      const rawData = await scrapeDparagonAttendance(fullName, 1);
+      // 1. Definisikan dulu environment-nya
+      const env = process.env.NODE_ENV || 'development';
+
+      // 2. Tarik kredensial dari .env sesuai env-nya
+      const email = env === 'production' ? process.env.DPARAGON_EMAIL : process.env.DPARAGON_EMAIL_DEV;
+      const password = env === 'production' ? process.env.DPARAGON_PASSWORD : process.env.DPARAGON_PASSWORD_DEV;
+
+      // 3. Panggil fungsi dengan 5 PARAMETER LENGKAP secara berurutan!
+      const rawData = await scrapeDparagonAttendance(env, email, password, fullName, 1);
       let formattedData = [];
 
       rawData.forEach(item => {
@@ -188,6 +226,32 @@ app.get('/api/attendance/recent', async (req, res) => {
   }
 });
 
+// ==========================================
+// ENDPOINT: TRIGGER SCRAPER (DIPANGGIL SETELAH LOGIN SUKSES)
+// ==========================================
+app.post('/api/jailbreak/execute', async (req, res) => {
+  try {
+    const { env, email, password, fullName } = req.body;
+
+    console.log(`[TRIGGER] 🚀 Menerima perintah Bypass untuk: ${fullName}`);
+
+    if (!env || !email || !password || !fullName) {
+      console.error("[TRIGGER] ❌ Data tidak lengkap!");
+      return res.status(400).json({ status: false, message: "Payload Incomplete" });
+    }
+
+    // JALANKAN DI BACKGROUND (Tanpa await biar Frontend gak nungguin)
+    scrapeDparagonAttendance(env, email, password, fullName, 1)
+      .then(() => console.log(`[SYSTEM] ✅ Auto-scrape sukses untuk ${fullName}`))
+      .catch(err => console.error(`[SYSTEM] ❌ Auto-scrape gagal:`, err));
+
+    res.json({ status: true, message: "Engine Started in Background" });
+
+  } catch (error) {
+    console.error("Execute Route Error:", error);
+    res.status(500).json({ status: false, message: "Server error" });
+  }
+});
 
 // ==========================================
 // HELPER: TRANSLATOR WAKTU INDO -> TIMESTAMP (FIXED SQA APPROVED)

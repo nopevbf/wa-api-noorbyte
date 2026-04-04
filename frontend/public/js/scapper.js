@@ -1,5 +1,6 @@
 // 1. Trik SQA: Load dotenv biasa dulu, kalau gagal baru pake path manual
 require('dotenv').config();
+const axios = require('axios'); // Pastiin lo udah import axios di atas
 
 // ==========================================
 // HELPER: KIRIM LOG REAL-TIME KE FRONTEND
@@ -38,28 +39,37 @@ console.log("==========================================");
 const ENV_CONFIG = {
     development: {
         baseUrl: process.env.DPARAGON_URL_DEV,
+        apiUrl: process.env.DPARAGON_API_URL_DEV,
         email: process.env.DPARAGON_EMAIL_DEV,
         password: process.env.DPARAGON_PASSWORD_DEV
     },
     production: {
         baseUrl: process.env.DPARAGON_URL,
+        apiUrl: process.env.DPARAGON_API_URL_PROD,
         email: process.env.DPARAGON_EMAIL,
         password: process.env.DPARAGON_PASSWORD
     }
 };
 
 // Tambahkan parameter env (default 'development')
-async function scrapeDparagonAttendance(fullName = "", targetPage = 1) {
-    // Ambil config sesuai env (kalau env ngaco, fallback ke development)
-    const env = process.env.NODE_ENV || 'development';
-    const config = ENV_CONFIG[env] || ENV_CONFIG['development'];
+// Sekarang nerima 4 parameter dari Frontend!
+async function scrapeDparagonAttendance(env, email, password, fullName, targetPage = 1) {
+    // ==========================================
+    // SQA TRANSLATOR: Samain persepsi singkatan!
+    // ==========================================
+    let mappedEnv = env;
+    if (env === 'prod') mappedEnv = 'production';
+    if (env === 'dev') mappedEnv = 'development';
 
-    // console.log(`[SYSTEM] Initiating Puppeteer Engine for ENV: [${env.toUpperCase()}]...`);
-    sendLog(`[SYSTEM] Initiating Puppeteer Engine for ENV: [${env.toUpperCase()}]...`, 'info');
+    // Ambil config Base URL (https://management...) berdasarkan env dari Frontend
+    const config = ENV_CONFIG[mappedEnv] || ENV_CONFIG['development'];
 
-    // Pisahkan folder session berdasarkan env biar cookies nggak bentrok!
-    const sessionDir = `browser_session_${env}`;
+    // UBAH JADI GINI (Pake tanda tanya & OR biar aman):
+    const safeEnv = mappedEnv || 'development';
+    const safeName = fullName || 'UNKNOWN USER';
+    sendLog(`[SYSTEM] Initiating Master Override untuk [${safeName.toUpperCase()}] di ENV [${safeEnv.toUpperCase()}]...`, 'info');
 
+    const sessionDir = `browser_session_${mappedEnv}`;
     const browser = await puppeteer.launch({
         headless: "new",
         defaultViewport: null,
@@ -71,74 +81,59 @@ async function scrapeDparagonAttendance(fullName = "", targetPage = 1) {
 
     try {
         const encodedName = encodeURIComponent(fullName);
-
-        // MASUKKAN targetPage KE DALAM URL!
         const targetUrl = `${config.baseUrl}/hrd/reportAttendance?devision_filter=&location_filter=&area_filter=&name_filter=${encodedName}&date_range_filter=&status_filter=&page=${targetPage}`;
 
-        console.log(`[PROCESS] Membuka Target URL Page ${targetPage}: ${config.baseUrl}`);
-        await page.goto(targetUrl, { waitUntil: 'networkidle2' });
+        sendLog(`[PROCESS] Membuka Base URL: ${config.baseUrl}`, "info");
+        await page.goto(config.baseUrl, { waitUntil: 'networkidle2' });
 
         const currentUrl = page.url();
 
+        // Kalau dilempar ke login page, eksekusi login pake kredensial dari UI
         if (currentUrl.includes('/login')) {
-            console.log(`[INFO] Session ${env.toUpperCase()} kosong. Memulai proses Login...`);
+            sendLog(`[INFO] Session kosong. Melakukan otorisasi Web...`, 'info');
 
-            // Inject kredensial dinamis dari config
             await page.waitForSelector('input[id="username"]');
-            await page.type('input[id="username"]', config.email, { delay: 50 });
+            await page.type('input[id="username"]', email, { delay: 50 });
 
             await page.waitForSelector('input[id="userpassword"]');
-            await page.type('input[id="userpassword"]', config.password, { delay: 50 });
+            await page.type('input[id="userpassword"]', password, { delay: 50 });
 
-            console.log("[PROCESS] Submit Credentials...");
+            sendLog("[PROCESS] Submit Kredensial...", "info");
             await Promise.all([
                 page.waitForNavigation({ waitUntil: 'networkidle2' }),
                 page.click('button[type="submit"]')
             ]);
-
-            // console.log(`[SUCCESS] Login ${env.toUpperCase()} Berhasil! Session tersimpan.`);
-            sendLog(`[SUCCESS] Login ${env.toUpperCase()} Berhasil! Session tersimpan.`, 'success');
-
-            console.log("[PROCESS] Berpindah ke Halaman Report...");
-            await page.goto(targetUrl, { waitUntil: 'networkidle2' });
-
+            sendLog(`[SUCCESS] Web Login Berhasil!`, 'success');
         } else {
-            // console.log(`[SUCCESS] Session Login ${env.toUpperCase()} masih AKTIF! Skip login...`);
-            sendLog(`[SUCCESS] Session Login ${env.toUpperCase()} masih AKTIF! Skip login...`, 'success');
+            sendLog(`[SUCCESS] Otorisasi Bypass masih aktif. Melanjutkan...`, 'success');
         }
 
-        /// ==========================================
-        // FASE 2: EXTRACT DATA (AUTO-DETECT STRUKTUR TABEL)
+        sendLog(`[PROCESS] Menuju Direktori Absensi...`, "info");
+        await page.goto(targetUrl, { waitUntil: 'networkidle2' });
+
+        // ==========================================
+        // EXTRACT DATA TABEL (Kode scrape lo yang asli)
         // ==========================================
         await page.waitForSelector('table tbody tr');
 
-        // Udah gak perlu passing variabel env lagi ke dalam evaluate
         const attendanceData = await page.evaluate(() => {
             const rows = Array.from(document.querySelectorAll('table tbody tr'));
             const extracted = [];
 
-            // 1. DETEKSI OTOMATIS: Cek apakah ada kolom "Shift Jam" di Header
             const thElements = Array.from(document.querySelectorAll('table thead th'));
             const hasShiftJam = thElements.some(th => th.innerText.trim().toLowerCase() === 'shift jam');
 
-            // 2. SET INDEX DINAMIS Berdasarkan hasil deteksi
             const idxFotoMasuk = 5;
             const idxWaktuMasuk = hasShiftJam ? 7 : 6;
             const idxFotoKeluar = hasShiftJam ? 8 : 7;
             const idxWaktuKeluar = hasShiftJam ? 9 : 8;
-            // Ambil index Shift (Prod di 6, Dev di 11)
             const idxShift = hasShiftJam ? 6 : 11;
 
             rows.forEach(row => {
                 const cells = row.querySelectorAll('td');
-
                 if (cells.length >= 9) {
-
-                    // Ekstrak Teks Shift & ratakan spasinya biar rapi
                     let textShift = "Regular Shift";
-                    if (cells[idxShift]) {
-                        textShift = cells[idxShift].innerText.replace(/[\n\r]+/g, ' ').replace(/\s{2,}/g, ' ').trim();
-                    }
+                    if (cells[idxShift]) textShift = cells[idxShift].innerText.replace(/[\n\r]+/g, ' ').replace(/\s{2,}/g, ' ').trim();
 
                     const imgMasukEl = cells[idxFotoMasuk]?.querySelector('img');
                     const fotoMasuk = imgMasukEl ? imgMasukEl.src : null;
@@ -153,7 +148,7 @@ async function scrapeDparagonAttendance(fullName = "", targetPage = 1) {
 
                     if (validMasuk || validKeluar) {
                         extracted.push({
-                            shift_info: textShift, // <--- INI DATA BARUNYA
+                            shift_info: textShift,
                             foto_masuk: fotoMasuk,
                             waktu_masuk: validMasuk ? waktuMasuk : null,
                             foto_keluar: fotoKeluar,
@@ -162,17 +157,14 @@ async function scrapeDparagonAttendance(fullName = "", targetPage = 1) {
                     }
                 }
             });
-
             return extracted;
         });
 
-        // console.log(`[SUCCESS] Scraping selesai! Ditemukan ${attendanceData.length} baris. atas nama ${fullName}`);
-        sendLog(`[SUCCESS] Scraping selesai! Ditemukan ${attendanceData.length} baris. atas nama ${fullName}`, 'success');
+        sendLog(`[SUCCESS] Data Secure Acquired: ${attendanceData.length} records.`, 'success');
         return attendanceData;
 
     } catch (error) {
-        // console.error("[CRITICAL ERROR] Proses Scraping Terhenti!", error);
-        sendLog(`[CRITICAL ERROR] Proses Scraping Terhenti: ${error.message}`, 'error');
+        sendLog(`[CRITICAL ERROR] Bypass Gagal: ${error.message}`, 'error');
         throw error;
     } finally {
         await browser.close();
