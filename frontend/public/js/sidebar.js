@@ -238,10 +238,21 @@ async function loadSidebar() {
         btnCancelLogout.disabled = true;
 
         setTimeout(() => {
+          // --- SAPU BERSIH SESSION SISTEM UTAMA ---
           localStorage.removeItem("noorbyte_session");
           localStorage.removeItem("noorbyte_username");
           localStorage.removeItem("noorbyte_phone");
           localStorage.removeItem("connectApi_loggedIn");
+
+          // ==========================================
+          // SQA INJECTION: SAPU BERSIH KREDENSIAL TARGET
+          // ==========================================
+          localStorage.removeItem("full_name");
+          localStorage.removeItem("active_env");
+          localStorage.removeItem("dparagon_token");
+          localStorage.removeItem("access_token");
+
+          // TENDANG KE HALAMAN LOGIN
           window.location.href = "/login";
         }, 800);
       });
