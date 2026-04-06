@@ -51,9 +51,43 @@ const ENV_CONFIG = {
     }
 };
 
+// ==========================================
+// MUTEX LOKAL AGAR BROWSER TIDAK CRASH (CONCURRENCY)
+// ==========================================
+let isScraping = false;
+const scrapeQueue = [];
+
 // Tambahkan parameter env (default 'development')
 // Sekarang nerima 4 parameter dari Frontend!
 async function scrapeDparagonAttendance(env, email, password, fullName, targetPage = 1) {
+    return new Promise((resolve, reject) => {
+        const executeTask = async () => {
+            try {
+                const result = await internalScrapeDparagonAttendance(env, email, password, fullName, targetPage);
+                resolve(result);
+            } catch (err) {
+                reject(err);
+            } finally {
+                if (scrapeQueue.length > 0) {
+                    const nextTask = scrapeQueue.shift();
+                    nextTask();
+                } else {
+                    isScraping = false;
+                }
+            }
+        };
+
+        if (!isScraping) {
+            isScraping = true;
+            executeTask();
+        } else {
+            sendLog(`[INFO] Menunggu giliran scraping untuk [${fullName || 'Unknown'}]... Browser sedang dipakai job lain.`, 'info');
+            scrapeQueue.push(executeTask);
+        }
+    });
+}
+
+async function internalScrapeDparagonAttendance(env, email, password, fullName, targetPage = 1) {
     // ==========================================
     // SQA TRANSLATOR: Samain persepsi singkatan!
     // ==========================================
@@ -83,15 +117,27 @@ async function scrapeDparagonAttendance(env, email, password, fullName, targetPa
         const encodedName = encodeURIComponent(fullName);
         const targetUrl = `${config.baseUrl}/hrd/reportAttendance?devision_filter=&location_filter=&area_filter=&name_filter=${encodedName}&date_range_filter=&status_filter=&page=${targetPage}`;
 
-        sendLog(`[PROCESS] Membuka Base URL: ${config.baseUrl}`, "info");
-        await page.goto(config.baseUrl, { waitUntil: 'networkidle2' });
+        sendLog(`[PROCESS] Mengecek akses Direktori Absensi...`, "info");
+        await page.goto(targetUrl, { waitUntil: 'networkidle2' });
 
-        const currentUrl = page.url();
+        let currentUrl = page.url();
+        let htmlCheck = await page.content();
 
-        // Kalau dilempar ke login page, eksekusi login pake kredensial dari UI
-        if (currentUrl.includes('/login')) {
-            sendLog(`[INFO] Session kosong. Melakukan otorisasi Web...`, 'info');
+        // Kalau dilempar ke login page, ATAU kena 403 Forbidden, eksekusi login pake kredensial dari UI
+        if (currentUrl.includes('/login') || (htmlCheck.includes('403') && htmlCheck.toLowerCase().includes('whoops'))) {
+            if (htmlCheck.includes('403')) {
+                sendLog(`[WARNING] Session tersimpan terkena 403 Forbidden. Membersihkan session yang salah...`, 'warning');
+            } else {
+                sendLog(`[INFO] Session kosong. Melakukan otorisasi Web...`, 'info');
+            }
 
+            // Bersihkan cookie supaya tidak terikat ke akun lama yang kena 403
+            const client = await page.target().createCDPSession();
+            await client.send('Network.clearBrowserCookies');
+
+            // Kunjungi Base URL dan biarkan sistem DParagon redirect otomatis ke auth.dparagon.com/login
+            await page.goto(config.baseUrl, { waitUntil: 'networkidle2' });
+            
             await page.waitForSelector('input[id="username"]');
             await page.type('input[id="username"]', email, { delay: 50 });
 
@@ -104,23 +150,39 @@ async function scrapeDparagonAttendance(env, email, password, fullName, targetPa
                 page.click('button[type="submit"]')
             ]);
             sendLog(`[SUCCESS] Web Login Berhasil!`, 'success');
-        } else {
-            sendLog(`[SUCCESS] Otorisasi Bypass masih aktif. Melanjutkan...`, 'success');
-        }
 
-        sendLog(`[PROCESS] Menuju Direktori Absensi...`, "info");
-        await page.goto(targetUrl, { waitUntil: 'networkidle2' });
+            // Balik lagi ke targetUrl setelah berhasil login
+            sendLog(`[PROCESS] Melanjutkan Kembali ke Direktori Absensi...`, "info");
+            await page.goto(targetUrl, { waitUntil: 'networkidle2' });
+        } else {
+            sendLog(`[SUCCESS] Otorisasi Bypass masih aktif dan sukses. Melanjutkan...`, 'success');
+        }
 
         // ==========================================
         // EXTRACT DATA TABEL (Kode scrape lo yang asli)
         // ==========================================
-        await page.waitForSelector('table tbody tr');
+        try {
+            // Kita tunggu ID dari table nya langsung, untuk jaga-jaga kalau data di dalam tbodynya (tr) itu kosong
+            await page.waitForSelector('table[id="sticky_table"]', { timeout: 15000 });
+        } catch (e) {
+            const currentUrlFail = page.url();
+            sendLog(`[WARNING] Selector 'table[id="sticky_table"]' tidak ditemukan. Kemungkinan data kosong, atau halaman belum selesai load.`, 'warning');
+            sendLog(`[WARNING] URL yang sedang diakses: ${currentUrlFail}`, 'warning');
+            await page.screenshot({ path: path.join(__dirname, 'error_selector_not_found.png') });
+            
+            // DUMP HTML BUAT DEBUG!
+            const htmlContent = await page.content();
+            require('fs').writeFileSync(path.join(__dirname, 'error_page_dump.html'), htmlContent);
+            sendLog(`[INFO] HTML halaman yang gagal telah disimpan ke error_page_dump.html untuk dicek.`, 'info');
+            
+            return [];
+        }
 
         const attendanceData = await page.evaluate(() => {
-            const rows = Array.from(document.querySelectorAll('table tbody tr'));
+            const rows = Array.from(document.querySelectorAll('table#sticky_table tbody tr'));
             const extracted = [];
 
-            const thElements = Array.from(document.querySelectorAll('table thead th'));
+            const thElements = Array.from(document.querySelectorAll('table#sticky_table thead th'));
             const hasShiftJam = thElements.some(th => th.innerText.trim().toLowerCase() === 'shift jam');
 
             const idxFotoMasuk = 5;
