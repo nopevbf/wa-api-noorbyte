@@ -742,4 +742,87 @@ router.post('/jailbreak/execute', async (req, res) => {
   }
 });
 
+// ==========================================
+// ENDPOINT: SERVER-SIDE TIME-BOMB
+// ==========================================
+router.post('/attendance/schedule-timebomb', async (req, res) => {
+  try {
+    const { targetTime, token, dpUrl, payload } = req.body;
+
+    if (!targetTime || !token || !payload) {
+      return res.status(400).json({ status: false, message: "Payload tidak lengkap." });
+    }
+
+    // 1. Kalkulasi Waktu di Server
+    const [targetHour, targetMinute] = targetTime.split(':');
+    const targetDate = new Date();
+    targetDate.setHours(targetHour, targetMinute, 0, 0);
+
+    let delayMs = targetDate.getTime() - new Date().getTime();
+    if (delayMs < 0) delayMs += (24 * 60 * 60 * 1000); // Kalau lewat, set buat besoknya
+
+    console.log(`[SERVER] ⏰ Time-Bomb diterima! Aktif dalam ${Math.floor(delayMs / 60000)} menit (Jam ${targetTime}).`);
+
+    // 2. Fungsi Penembak Jitu (Berjalan murni di backend Node.js)
+    const executeBomb = async (lateReason = "") => {
+      try {
+        console.log(`[SERVER] 🔥 TIME-BOMB MELEDAK SEKARANG!`);
+
+        let finalPayload = { ...payload };
+        if (lateReason !== "") {
+          finalPayload.late_reason = lateReason;
+        }
+
+        const baseUrl = dpUrl ? dpUrl.replace(/\/$/, '') : "https://api.dparagon.com/v2";
+        const targetEndpoint = `${baseUrl}/attendance/presence`;
+
+        // Pakai native fetch Node.js
+        const response = await fetch(targetEndpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(finalPayload)
+        });
+
+        const result = await response.json();
+
+        if (response.ok && result.status !== false) {
+          console.log(`[SERVER] ✅ Target Hancur! Absen sukses dikirim.`);
+        } else {
+          let realError = "Ditolak sistem.";
+          if (result.errors) realError = JSON.stringify(result.errors);
+          else if (result.message) realError = typeof result.message === 'object' ? JSON.stringify(result.message) : result.message;
+          throw new Error(realError);
+        }
+
+      } catch (error) {
+        console.warn(`[SERVER] ⚠️ Absen Ditolak:`, error.message);
+
+        // AUTO-RESOLVE BERJALAN DI SERVER!
+        const isLateError = error.message.includes('late_reason') || error.message.includes('Alasan');
+        if (lateReason === "" && isLateError) {
+          console.log("[SERVER] Meminta alasan. Mengaktifkan Silent Auto-Resolve: 'Urusan Keluarga'...");
+          await executeBomb("Urusan Keluarga");
+        } else {
+          console.error("[SERVER] ❌ Gagal total mengirim absen:", error.message);
+        }
+      }
+    };
+
+    // 3. Pasang Timer Tahan Banting di Server
+    setTimeout(() => {
+      executeBomb();
+    }, delayMs);
+
+    // Langsung kasih jempol ke Browser biar user bisa nutup tab-nya
+    res.json({ status: true, message: `Engine standby. Will execute at ${targetTime}` });
+
+  } catch (error) {
+    res.status(500).json({ status: false, message: error.message });
+  }
+});
+
 module.exports = router;

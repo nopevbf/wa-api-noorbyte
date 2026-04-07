@@ -59,7 +59,7 @@
                             <a href="/jailbreak"
                                 class="hover:text-red-500 cursor-pointer transition-colors">Jailbreak</a>
                             <span class="material-symbols-outlined text-[14px]">chevron_right</span>
-                            <span class="text-red-600">Absen Masuk</span>
+                            <span id="labelAbsen" class="text-red-600 transition-colors">Absen Masuk</span>
                         </nav>
                         <div class="text-left md:text-right hidden md:block">
                             <h2 class="text-lg md:text-xl font-bold tracking-tighter text-red-600">Chronos Vault</h2>
@@ -215,6 +215,29 @@
                                         <div class="camera-scan-bar"></div>
                                     </div>
                                 </div>
+
+                                <div
+                                    class="flex items-center justify-between px-4 md:px-6 py-3 bg-slate-950 border-b border-slate-800">
+                                    <div class="flex items-center gap-3">
+                                        <span
+                                            class="material-symbols-outlined text-red-500 text-lg md:text-xl">timer</span>
+                                        <div>
+                                            <label
+                                                class="text-[10px] md:text-xs font-bold text-slate-200 uppercase tracking-widest cursor-pointer select-none"
+                                                for="toggleTimeBomb">Time-Bomb Mode</label>
+                                            <p
+                                                class="text-[8px] md:text-[9px] text-slate-500 font-mono tracking-widest mt-0.5">
+                                                DELAYED EXECUTION</p>
+                                        </div>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="toggleTimeBomb" class="sr-only peer">
+                                        <div
+                                            class="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-300 after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-red-600 peer-checked:after:bg-white shadow-[0_0_10px_rgba(239,68,68,0)] peer-checked:shadow-[0_0_15px_rgba(239,68,68,0.4)] transition-all border border-slate-700">
+                                        </div>
+                                    </label>
+                                </div>
+
                                 <div class="p-4 md:p-6 bg-slate-900">
                                     <button id="btnCapture"
                                         class="w-full bg-red-600 hover:bg-red-700 text-white py-3.5 md:py-4 rounded-xl font-black text-sm md:text-lg uppercase tracking-widest flex items-center justify-center gap-3 active:scale-95 transition-all shadow-lg">
@@ -343,6 +366,41 @@
                         <button id="btnSubmitReason"
                             class="flex-1 bg-error text-white py-3 rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-red-700 shadow-[0_0_15px_rgba(239,68,68,0.2)] transition-all active:scale-95 flex justify-center items-center gap-2">
                             <span class="material-symbols-outlined text-base">gavel</span> Force Submit
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="scheduleCheckinModal"
+                class="fixed inset-0 z-[120] hidden items-center justify-center p-4 bg-slate-950/90 backdrop-blur-sm transition-all duration-300">
+                <div
+                    class="bg-slate-900 border border-error/50 rounded-2xl w-full max-w-sm p-6 shadow-[0_0_50px_rgba(239,68,68,0.2)] relative overflow-hidden transform transition-all duration-300">
+
+                    <div class="absolute top-0 left-0 w-full h-1 bg-error shadow-[0_0_10px_rgba(239,68,68,1)]"></div>
+
+                    <div class="flex items-center gap-3 mb-4 text-error border-b border-slate-800 pb-3">
+                        <span class="material-symbols-outlined text-3xl animate-pulse">schedule</span>
+                        <div>
+                            <h3 class="font-black text-lg uppercase tracking-widest text-white leading-tight">Time-Bomb
+                            </h3>
+                            <p class="text-[9px] font-mono tracking-widest">SCHEDULED INITIATION</p>
+                        </div>
+                    </div>
+
+                    <p class="text-xs text-slate-400 mb-4 leading-relaxed">
+                        Pilih jam eksekusi. Payload visual dan koordinat akan ditahan di memori lokal, lalu ditembakkan
+                        otomatis pada waktu yang ditentukan.
+                    </p>
+
+                    <input type="time" id="scheduleTimeInput" required
+                        class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-error font-mono text-2xl text-center focus:ring-1 focus:ring-error focus:border-error focus:outline-none mb-5">
+
+                    <div class="flex gap-3">
+                        <button id="btnCancelSchedule"
+                            class="flex-1 bg-slate-800 text-slate-300 py-3 rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-slate-700 transition-colors">Abort</button>
+                        <button id="btnConfirmSchedule"
+                            class="flex-1 bg-error text-white py-3 rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-red-700 shadow-[0_0_15px_rgba(239,68,68,0.2)] transition-all active:scale-95 flex justify-center items-center gap-2">
+                            <span class="material-symbols-outlined text-base">bolt</span> Set Timer
                         </button>
                     </div>
                 </div>

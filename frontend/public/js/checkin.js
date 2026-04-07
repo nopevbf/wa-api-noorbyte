@@ -2,6 +2,7 @@
 // KONFIGURASI GLOBAL
 // ==========================================
 const API_URL = "/api";
+let NEXT_ACTION = "MASUK"; // <-- Tambahin baris ini buat nyimpen status!
 
 // ==========================================
 // FUNGSI GLOBAL SYSTEM ALERT (PENGGANTI ALERT BROWSER)
@@ -185,25 +186,121 @@ document.addEventListener('DOMContentLoaded', async () => {
                 cameraPreview.classList.remove('hidden');
                 btnRetake.classList.remove('hidden');
 
-                btnCapture.innerHTML = `ABSEN MASUK`;
+                // DYNAMIC BUTTON COLOR & TEXT
+                const btnColor = NEXT_ACTION === 'KELUAR' ? 'bg-amber-500 hover:bg-amber-600' : 'bg-red-600 hover:bg-red-700';
+                btnCapture.className = `w-full ${btnColor} text-white py-3.5 md:py-4 rounded-xl font-black text-sm md:text-lg uppercase tracking-widest flex items-center justify-center gap-3 active:scale-95 transition-all shadow-lg`;
+                btnCapture.innerHTML = `ABSEN ${NEXT_ACTION}`;
+
                 isPreviewMode = true;
 
             } else {
                 // ===================================
-                // 5. MODE: SUBMIT ABSEN MASUK (KE API)
+                // 5. CEK SAKLAR TIME-BOMB / INSTANT
                 // ===================================
-                submitPresence();
+                const toggleTimeBomb = document.getElementById('toggleTimeBomb');
+                const isTimeBombActive = toggleTimeBomb ? toggleTimeBomb.checked : false;
+
+                if (isTimeBombActive) {
+                    // --- MODE TERJADWAL (TIME-BOMB) ---
+                    const scheduleModal = document.getElementById('scheduleCheckinModal');
+                    const timeInput = document.getElementById('scheduleTimeInput');
+
+                    // Isi default input dengan jam sekarang
+                    const now = new Date();
+                    timeInput.value = now.toLocaleTimeString('id-ID', { hour12: false, hour: '2-digit', minute: '2-digit' });
+
+                    // Tampilkan Modal
+                    scheduleModal.classList.remove('hidden');
+                    scheduleModal.classList.add('flex');
+
+                    // Logic Tombol Batal
+                    document.getElementById('btnCancelSchedule').onclick = () => {
+                        scheduleModal.classList.add('hidden');
+                        scheduleModal.classList.remove('flex');
+                    };
+
+                    // Logic Tombol Jadwalkan (KIRIM KE SERVER)
+                    document.getElementById('btnConfirmSchedule').onclick = async () => {
+                        const targetTime = timeInput.value;
+                        if (!targetTime) return;
+
+                        // Tutup modal
+                        scheduleModal.classList.add('hidden');
+                        scheduleModal.classList.remove('flex');
+
+                        // Siapin Koper (Data yang mau dikirim ke server)
+                        const lat = document.getElementById('inputLat').value;
+                        const lng = document.getElementById('inputLng').value;
+                        const token = localStorage.getItem('access_token') || localStorage.getItem('dparagon_token');
+                        const dpApiUrlInput = document.getElementById('dpApiUrl');
+                        const dpUrl = dpApiUrlInput ? dpApiUrlInput.value : defaultDparagonApiUrl;
+
+                        if (!token || !lat || !lng || !finalBase64Photo) {
+                            showSystemAlert('ERROR', 'Payload tidak lengkap. Pastikan lokasi terkunci dan foto diambil.', 'error');
+                            return;
+                        }
+
+                        // Ubah tombol jadi loading upload
+                        btnCapture.innerHTML = `<span class="material-symbols-outlined text-xl animate-spin">cloud_sync</span> UPLOADING KE SERVER...`;
+                        btnCapture.disabled = true;
+                        btnRetake.classList.add('hidden');
+
+                        try {
+                            console.log("[SYSTEM] Memindahkan bom waktu ke server Node.js...");
+
+                            // Lempar koper ke backend
+                            const res = await fetch('/api/attendance/schedule-timebomb', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    targetTime: targetTime,
+                                    token: token,
+                                    dpUrl: dpUrl,
+                                    payload: {
+                                        latitude: parseFloat(lat),
+                                        longitude: parseFloat(lng),
+                                        image: finalBase64Photo
+                                    }
+                                })
+                            });
+
+                            const data = await res.json();
+
+                            if (data.status) {
+                                // JIKA SERVER SUKSES NERIMA, UBAH WARNA TOMBOL JADI HIJAU
+                                btnCapture.innerHTML = `<span class="material-symbols-outlined text-xl">cloud_done</span> STANDBY DI SERVER`;
+                                btnCapture.classList.replace('bg-red-600', 'bg-emerald-600');
+                                btnCapture.classList.replace('hover:bg-red-700', 'hover:bg-emerald-700');
+
+                                // Kasih alert keren ngasih tau user bebas nutup browser
+                                showSystemAlert('SERVER TIMER ACTIVE', `Data dikunci di server pusat. Absen akan ditembakkan jam ${targetTime}.\n\nAnda AMAN untuk menutup browser atau mematikan perangkat ini.`, 'success');
+                            } else {
+                                throw new Error(data.message);
+                            }
+                        } catch (err) {
+                            showSystemAlert('SERVER UPLOAD ERROR', err.message, 'error');
+                            btnCapture.innerHTML = `ABSEN ${NEXT_ACTION}`;
+                            btnCapture.disabled = false;
+                        }
+                    };
+                } else {
+                    // --- MODE INSTANT KILL (EKSEKUSI LANGSUNG) ---
+                    console.log(`[SYSTEM] Mode Instant Triggered. Melakukan eksekusi langsung...`);
+                    submitPresence();
+                }
             }
         });
     }
 
     // ==========================================
     // FUNGSI UTAMA: TEMBAK API ABSENSI
+    // Tambah parameter isTimeBombMode buat ngenalin siapa yang manggil
     // ==========================================
-    async function submitPresence(lateReason = "") {
+    async function submitPresence(lateReason = "", isTimeBombMode = false) {
         try {
             // Ambil Access Token User yang sedang login
             const token = localStorage.getItem('access_token') || localStorage.getItem('dparagon_token');
+            // ... (Kode validasi token, GPS, dan payload di sini TETAP SAMA) ...
 
             if (!token) {
                 showSystemAlert('ACCESS DENIED', "Bearer Token otorisasi tidak ditemukan. Harap re-initiate bypass.", 'error');
@@ -255,45 +352,64 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // 4. Handle Response
             if (response.ok && result.status !== false) {
-                // ABSEN SUKSES
                 showSystemAlert('BYPASS SUCCESS', "Data kehadiran diterima. Memulai sinkronisasi log otomatis...", 'success');
-
-                // Ubah tulisan tombol biar keren
                 btnCapture.innerHTML = `<span class="material-symbols-outlined text-xl">check_circle</span> TERKIRIM`;
-
-                // ==========================================
-                // MAGIC HAPPENS HERE: Panggil widget dengan nilai TRUE
-                // Ini akan memaksa Puppeteer jalan di background!
-                // ==========================================
+                btnRetake.classList.remove('hidden');
                 loadRecentAttendanceWidget(true);
-
             } else {
-                // DITOLAK OLEH SERVER
-                throw new Error(result.message || "Ditolak oleh sistem.");
+                // ==========================================
+                // SQA X-RAY: BEDAH ERROR DARI SERVER
+                // ==========================================
+                let realError = "Ditolak oleh sistem.";
+
+                if (result.errors) {
+                    realError = JSON.stringify(result.errors);
+                } else if (result.message) {
+                    realError = typeof result.message === 'object' ? JSON.stringify(result.message) : result.message;
+                }
+
+                throw new Error(realError); // Lempar error yang udah dibedah ke catch di bawah!
             }
 
         } catch (error) {
             console.warn("Absen Ditolak:", error.message);
 
-            // JIKA BELUM ADA ALASAN, TAMPILKAN POPUP MINTA ALASAN
-            if (lateReason === "") {
-                const modal = document.getElementById('lateReasonModal');
-                if (modal) {
-                    modal.classList.remove('hidden');
-                    modal.classList.add('flex');
-                } else {
-                    showSystemAlert('CRITICAL ERROR', "Modal alasan keterlambatan tidak ditemukan di HTML.", 'error');
-                }
-            } else {
-                // JIKA UDAH MAKSA PAKAI ALASAN TAPI TETAP DITOLAK
-                showSystemAlert('CRITICAL ERROR', error.message, 'error');
-            }
+            // ==========================================
+            // SQA AUTO-RESOLVE LOGIC (SMART DETECTOR)
+            // ==========================================
 
-            // Kembalikan Tombol ke Mode Normal
-            btnCapture.innerHTML = `ABSEN MASUK`;
-            btnCapture.disabled = false;
+            // Ngecek apakah error dari server BENERAN nanyain alasan telat
+            const isLateError = error.message.includes('late_reason') || error.message.includes('Alasan');
+
+            // Cuma aktif kalau emang belum ngirim alasan DAN server minta alasan
+            if (lateReason === "" && isLateError) {
+
+                if (isTimeBombMode) {
+                    console.log("[SYSTEM] Time-Bomb ditolak (butuh alasan). Mengaktifkan Silent Auto-Resolve: 'Urusan Keluarga'...");
+                    submitPresence("Urusan Keluarga", true);
+                } else {
+                    // Jika absen manual biasa, munculin popup minta alasan
+                    const modal = document.getElementById('lateReasonModal');
+                    if (modal) {
+                        modal.classList.remove('hidden');
+                        modal.classList.add('flex');
+                    } else {
+                        showSystemAlert('CRITICAL ERROR', "Modal alasan keterlambatan tidak ditemukan di HTML.", 'error');
+                    }
+                }
+
+            } else {
+                // JIKA ERROR BUKAN KARENA TELAT (Misal: Fake GPS, dll) 
+                // ATAU UDAH MAKSA PAKAI ALASAN TAPI TETAP DITOLAK
+                showSystemAlert('CRITICAL ERROR', error.message, 'error');
+
+                // Kembalikan Tombol ke Mode Normal biar bisa retake
+                btnCapture.innerHTML = `ABSEN ${NEXT_ACTION}`;
+                btnCapture.disabled = false;
+            }
         }
     }
+
 
     // ==========================================
     // LOGIC EVENT LISTENER MODAL LATE REASON
@@ -310,7 +426,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             inputReason.value = ""; // Bersihkan inputan
 
             // Kembalikan teks tombol utama jika dicancel
-            btnCapture.innerHTML = `ABSEN MASUK`;
+            btnCapture.innerHTML = `ABSEN ${NEXT_ACTION}`;
             btnCapture.disabled = false;
         });
     }
@@ -342,6 +458,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             btnRetake.classList.add('hidden');
             cameraPreview.src = '';
 
+            // Reset warna dan teks tombol ke mode awal
+            btnCapture.className = "w-full bg-red-600 hover:bg-red-700 text-white py-3.5 md:py-4 rounded-xl font-black text-sm md:text-lg uppercase tracking-widest flex items-center justify-center gap-3 active:scale-95 transition-all shadow-lg";
             btnCapture.innerHTML = `<span class="material-symbols-outlined text-xl md:text-2xl">photo_camera</span> Ambil & Kirim`;
             btnCapture.disabled = false;
         });
@@ -514,6 +632,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         startCamera();
                     }, 500);
                 }, 1500);
+                loadRecentAttendanceWidget(true);
 
             } else {
                 throw new Error(result.message || "Invalid Credentials");
@@ -833,6 +952,36 @@ async function loadRecentAttendanceWidget(forceSync = false) {
         if (result.status && result.data && result.data.length > 0) {
             container.innerHTML = ''; // Bersihkan container
 
+            // ==========================================
+            // SQA INJECTION: DETEKSI ABSEN KELUAR/MASUK
+            // ==========================================
+            const latestLog = result.data[0];
+            const today = new Date();
+
+            // Format pencocokan tanggal (bisa "07 April" atau "7 April")
+            const d1 = today.toLocaleDateString('id-ID', { day: '2-digit', month: 'long' });
+            const d2 = today.toLocaleDateString('id-ID', { day: 'numeric', month: 'long' });
+
+            const isToday = latestLog.raw_time.includes(d1) || latestLog.raw_time.includes(d2);
+
+            if (isToday && latestLog.status.toLowerCase() === 'checkin') {
+                NEXT_ACTION = "KELUAR";
+            } else {
+                NEXT_ACTION = "MASUK";
+            }
+
+            // Ubah teks breadcrumb UI di atas
+            const labelAbsen = document.getElementById('labelAbsen');
+            if (labelAbsen) {
+                labelAbsen.innerText = `Absen ${NEXT_ACTION}`;
+                if (NEXT_ACTION === 'KELUAR') {
+                    labelAbsen.classList.replace('text-red-600', 'text-amber-500');
+                } else {
+                    labelAbsen.classList.replace('text-amber-500', 'text-red-600');
+                }
+            }
+            // ==========================================
+
             result.data.forEach(item => {
                 // Formatting Teks Waktu
                 let dateText = "Unknown Date";
@@ -904,7 +1053,7 @@ async function loadRecentAttendanceWidget(forceSync = false) {
     }
 }
 
-// Langsung panggil fungsinya pas halaman dashboard beres dimuat
-document.addEventListener('DOMContentLoaded', () => {
-    loadRecentAttendanceWidget();
-});
+// // Langsung panggil fungsinya pas halaman dashboard beres dimuat
+// document.addEventListener('DOMContentLoaded', () => {
+//     loadRecentAttendanceWidget();
+// });
