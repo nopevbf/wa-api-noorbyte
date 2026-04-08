@@ -139,7 +139,8 @@ async function internalScrapeDparagonAttendance(env, email, password, fullName, 
     await page.setExtraHTTPHeaders({ 'Accept-Language': 'id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7' });
 
     try {
-        const encodedName = encodeURIComponent(fullName);
+        // PENTING: nama harus UPPERCASE agar match dengan data di DB DParagon
+        const encodedName = encodeURIComponent(fullName.toUpperCase());
         const targetUrl = `${config.baseUrl}/hrd/reportAttendance?devision_filter=&location_filter=&area_filter=&name_filter=${encodedName}&date_range_filter=&status_filter=&page=${targetPage}`;
 
         sendLog(`[PROCESS] Mengecek akses Direktori Absensi...`, "info");
@@ -172,10 +173,22 @@ async function internalScrapeDparagonAttendance(env, email, password, fullName, 
             await page.type('input[id="userpassword"]', password, { delay: 50 });
 
             sendLog("[PROCESS] Submit Kredensial...", "info");
-            await Promise.all([
-                page.waitForNavigation({ waitUntil: 'networkidle2' }),
-                page.click('button[type="submit"]')
-            ]);
+
+            // Click submit dan tunggu navigasi selesai (toleran terhadap SSO multi-redirect)
+            await page.click('button[type="submit"]');
+
+            // Tunggu sampai URL berubah dari halaman login (max 60 detik)
+            try {
+                await page.waitForFunction(
+                    () => !window.location.href.includes('/login'),
+                    { timeout: 60000 }
+                );
+                // Beri waktu extra setelah redirect selesai
+                await new Promise(r => setTimeout(r, 2000));
+            } catch (navErr) {
+                sendLog(`[WARNING] Timeout menunggu redirect login, lanjut cek URL...`, 'warning');
+            }
+
             sendLog(`[SUCCESS] Web Login Berhasil!`, 'success');
 
             // Balik lagi ke targetUrl setelah berhasil login
