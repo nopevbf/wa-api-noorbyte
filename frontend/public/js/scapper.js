@@ -104,14 +104,29 @@ async function internalScrapeDparagonAttendance(env, email, password, fullName, 
     sendLog(`[SYSTEM] Initiating Master Override untuk [${safeName.toUpperCase()}] di ENV [${safeEnv.toUpperCase()}]...`, 'info');
 
     const sessionDir = `browser_session_${mappedEnv}`;
+
+    // Deteksi OS: di Linux server, gunakan system Chromium jika tersedia
+    const isLinux = process.platform === 'linux';
+    const chromiumPath = isLinux ? (
+        require('fs').existsSync('/usr/bin/chromium-browser') ? '/usr/bin/chromium-browser' :
+        require('fs').existsSync('/usr/bin/chromium') ? '/usr/bin/chromium' :
+        require('fs').existsSync('/snap/bin/chromium') ? '/snap/bin/chromium' : null
+    ) : null;
+
+    if (isLinux && chromiumPath) {
+        sendLog(`[SYSTEM] Menggunakan System Chromium: ${chromiumPath}`, 'info');
+    }
+
     const browser = await puppeteer.launch({
-        headless: "new",
+        headless: true,
         defaultViewport: null,
+        ...(chromiumPath ? { executablePath: chromiumPath } : {}),
         args: [
             '--no-sandbox',
             '--disable-setuid-sandbox',
             '--disable-dev-shm-usage',
             '--disable-gpu',
+            '--disable-software-rasterizer',
             '--start-maximized'
         ],
         userDataDir: path.join(__dirname, sessionDir)
