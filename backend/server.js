@@ -40,6 +40,8 @@ app.get("/groups", (req, res) => res.sendFile(path.join(frontendPath, "groups.ht
 app.get("/tester", (req, res) => res.sendFile(path.join(frontendPath, "tester.html")));
 app.get("/automation", (req, res) => res.sendFile(path.join(frontendPath, "automation.html")));
 app.get("/verify", (req, res) => res.sendFile(path.join(frontendPath, "verify.html")));
+app.get("/jailbreak", (req, res) => res.sendFile(path.join(frontendPath, "jailbreak.html")));
+app.get("/jailbreak/checkin", (req, res) => res.sendFile(path.join(frontendPath, "checkin.html")));
 
 // Redirect sisanya ke login jika bukan request ke API
 app.get("*", (req, res, next) => {

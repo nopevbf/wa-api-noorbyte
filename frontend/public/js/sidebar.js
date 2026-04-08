@@ -102,7 +102,6 @@ async function loadSidebar() {
           const currentToken = localStorage.getItem('noorbyte_session');
 
           if (currentToken === 'admin_master_key_123') {
-            alert('Selamat datang Admin! Anda dialihkan ke area Jailbreak.');
             window.location.href = '/jailbreak';
           } else {
             const isPending = localStorage.getItem('jailbreak_pending');
@@ -140,7 +139,8 @@ async function loadSidebar() {
 
           setTimeout(() => {
             const now = new Date().toISOString().replace('T', ' ').substring(0, 16) + ' UTC';
-            localStorage.removeItem('jailbreak_pending');
+            localStorage.setItem('jailbreak_pending', 'true');
+            localStorage.setItem('jailbreak_timestamp', now);
             document.getElementById('pendingTimestamp').innerText = `Timestamp: ${now}`;
 
             stateRequest.classList.add('scale-95', 'opacity-0');
