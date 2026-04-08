@@ -48,8 +48,8 @@ app.get("*", (req, res, next) => {
 });
 // ---------------------------------------------------------
 
-// 4. Nyalakan Backend Service di Port 3000
-const PORT = 3000;
+// 4. Nyalakan Backend Service (Port dari ENV, fallback ke 4000)
+const PORT = process.env.PORT || 4000;
 const appConfig = require("./src/config/appConfig");
 
 server.listen(PORT, () => {
