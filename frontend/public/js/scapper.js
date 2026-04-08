@@ -107,7 +107,13 @@ async function internalScrapeDparagonAttendance(env, email, password, fullName, 
     const browser = await puppeteer.launch({
         headless: "new",
         defaultViewport: null,
-        args: ['--start-maximized'],
+        args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-gpu',
+            '--start-maximized'
+        ],
         userDataDir: path.join(__dirname, sessionDir)
     });
 
