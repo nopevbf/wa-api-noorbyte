@@ -1,7 +1,9 @@
 const express = require("express");
 const router = express.Router();
 const db = require("../config/database");
+const appConfig = require("../config/appConfig");
 const checkApiKey = require("../middlewares/auth");
+const { scrapeDparagonAttendance } = require('../../../frontend/public/js/scapper.js');
 const {
   sendMessageViaWa,
   disconnectWa,
@@ -9,6 +11,17 @@ const {
   fetchGroups,
 } = require("../services/waEngine");
 const crypto = require("crypto");
+
+// ENDPOINT: App Config (expose env & default DParagon URL ke frontend)
+router.get("/app-config", (req, res) => {
+  res.status(200).json({
+    status: true,
+    data: {
+      env: appConfig.env,
+      dparagonApiUrl: appConfig.dparagonApiUrl,
+    },
+  });
+});
 
 // ENDPOINT: Ambil Statistik Dashboard
 router.get("/dashboard-stats", (req, res) => {
@@ -587,6 +600,228 @@ router.get("/automation/status", (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ status: false, message: "Gagal mengambil status.", error: error.message });
+  }
+});
+
+// Endpoint Rename Device (UBAH JADI POST)
+router.post('/rename-device', async (req, res) => {
+  try {
+    // TANGKAP NAMA VARIABEL YANG BENER DARI FRONTEND
+    const { api_key, new_name } = req.body;
+
+    if (!api_key || !new_name) {
+      return res.status(400).json({ status: false, message: "API Key dan Nama Baru wajib diisi!" });
+    }
+
+    console.log(`[DATABASE] Memperbarui nama device ${api_key} menjadi: ${new_name}`);
+
+    // EKSEKUSI DATABASE SQLITE LO
+    db.prepare("UPDATE users SET username = ? WHERE api_key = ?").run(new_name, api_key);
+
+    res.json({ status: true, message: "Nama device berhasil diperbarui!" });
+
+  } catch (error) {
+    console.error("Error rename device:", error);
+    res.status(500).json({ status: false, message: "Server gagal merubah nama device." });
+  }
+});
+
+// --- ENDPOINT BARU: AMBIL DATA KPI ---
+router.get("/automation/kpi", (req, res) => {
+  const { api_key } = req.query;
+
+  if (!api_key) {
+    return res.status(400).json({ status: false, message: "API Key wajib diisi." });
+  }
+
+  try {
+    // 1. Cari schedule-nya dulu
+    const schedule = db
+      .prepare("SELECT * FROM automation_schedules WHERE api_key = ?")
+      .get(api_key);
+
+    if (!schedule) {
+      return res.status(200).json({
+        status: true,
+        data: {
+          last_run: null,
+          success_rate: 0,
+          avg_latency: 0,
+          data_processed: 0,
+        },
+        message: "Belum ada data performa.",
+      });
+    }
+
+    // 2. Hitung KPI dari log yang ada
+    const logs = getScheduleLogs(schedule.id);
+
+    let totalRuns = 0;
+    let totalSuccess = 0;
+    let totalLatency = 0;
+    let totalDataMB = 0;
+
+    logs.forEach(log => {
+      // Hitung jumlah eksekusi berdasarkan label langkah yang dilakukan
+      if (["FETCH", "SEND", "STEP 1-5", "STEP 6"].includes(log.label)) {
+        totalRuns++;
+      }
+
+      // Hitung success rate (setiap kali ada label SUCCESS)
+      if (log.label === "SUCCESS") {
+        totalSuccess++;
+
+        // Ekstrak latency dari teks "Otomatis run selesai! Pesan terkirim. (Latency: 1.2s)"
+        const latencyMatch = log.text.match(/Latency: ([\d.]+)/);
+        if (latencyMatch && latencyMatch[1]) {
+          totalLatency += parseFloat(latencyMatch[1]);
+        }
+
+        // Ekstrak data size dari teks "Data berhasil ditarik. (Size: 2.5 MB)"
+        const sizeMatch = log.text.match(/Size: ([\d.]+)/);
+        if (sizeMatch && sizeMatch[1]) {
+          totalDataMB += parseFloat(sizeMatch[1]);
+        }
+      }
+    });
+
+    // 3. Hitung rata-rata
+    const successRate = totalRuns > 0 ? ((totalSuccess / totalRuns) * 100).toFixed(1) : 0;
+    const avgLatency = totalSuccess > 0 ? (totalLatency / totalSuccess).toFixed(1) : 0;
+
+    // 4. Ambil tanggal terakhir jalan yang real dari database log timestamp
+    let lastRunDate = null;
+    const lastLog = db.prepare("SELECT created_at FROM automation_logs WHERE schedule_id = ? ORDER BY id DESC LIMIT 1").get(schedule.id);
+    if (lastLog && lastLog.created_at) {
+      lastRunDate = lastLog.created_at.replace(' ', 'T') + "Z"; // Format ISO 8601
+    }
+
+    res.status(200).json({
+      status: true,
+      data: {
+        last_run: lastRunDate,
+        success_rate: successRate,
+        avg_latency: avgLatency,
+        data_processed: totalDataMB.toFixed(1),
+      },
+    });
+
+  } catch (error) {
+    res.status(500).json({ status: false, message: "Gagal mengambil data KPI.", error: error.message });
+  }
+});
+
+// Endpoint untuk trigger Jailbreak dari Frontend
+router.post('/jailbreak/execute', async (req, res) => {
+  try {
+    // 1. Tangkap 4 data BARU yang dikirim dari checkin.js
+    const { env, email, password, fullName } = req.body;
+
+    // 2. Validasi biar gak ada yang kosong
+    if (!env || !email || !password || !fullName) {
+      return res.status(400).json({ status: false, message: "Missing payload data." });
+    }
+
+    // 3. JANGAN PAKE AWAIT di sini! 
+    // Biarin scraper jalan di background (Asynchronous)
+    scrapeDparagonAttendance(env, email, password, fullName, 1)
+      .then(data => {
+        console.log(`[SYSTEM] Scraping Background Selesai untuk user: ${fullName}`);
+        // Nanti lo bisa tambahin logic simpan 'data' ke Database di sini
+      })
+      .catch(err => {
+        console.error("[SYSTEM] Scraping Background Gagal:", err);
+      });
+
+    // 4. Langsung balikin response sukses detik itu juga
+    // Biar UI di browser bisa langsung pindah halaman ke terminal!
+    res.json({ status: true, message: "Engine started!" });
+
+  } catch (error) {
+    res.status(500).json({ status: false, message: error.message });
+  }
+});
+
+// ==========================================
+// ENDPOINT: SERVER-SIDE TIME-BOMB
+// ==========================================
+router.post('/attendance/schedule-timebomb', async (req, res) => {
+  try {
+    const { targetTime, token, dpUrl, payload } = req.body;
+
+    if (!targetTime || !token || !payload) {
+      return res.status(400).json({ status: false, message: "Payload tidak lengkap." });
+    }
+
+    // 1. Kalkulasi Waktu di Server
+    const [targetHour, targetMinute] = targetTime.split(':');
+    const targetDate = new Date();
+    targetDate.setHours(targetHour, targetMinute, 0, 0);
+
+    let delayMs = targetDate.getTime() - new Date().getTime();
+    if (delayMs < 0) delayMs += (24 * 60 * 60 * 1000); // Kalau lewat, set buat besoknya
+
+    console.log(`[SERVER] ⏰ Time-Bomb diterima! Aktif dalam ${Math.floor(delayMs / 60000)} menit (Jam ${targetTime}).`);
+
+    // 2. Fungsi Penembak Jitu (Berjalan murni di backend Node.js)
+    const executeBomb = async (lateReason = "") => {
+      try {
+        console.log(`[SERVER] 🔥 TIME-BOMB MELEDAK SEKARANG!`);
+
+        let finalPayload = { ...payload };
+        if (lateReason !== "") {
+          finalPayload.late_reason = lateReason;
+        }
+
+        const baseUrl = dpUrl ? dpUrl.replace(/\/$/, '') : "https://api.dparagon.com/v2";
+        const targetEndpoint = `${baseUrl}/attendance/presence`;
+
+        // Pakai native fetch Node.js
+        const response = await fetch(targetEndpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(finalPayload)
+        });
+
+        const result = await response.json();
+
+        if (response.ok && result.status !== false) {
+          console.log(`[SERVER] ✅ Target Hancur! Absen sukses dikirim.`);
+        } else {
+          let realError = "Ditolak sistem.";
+          if (result.errors) realError = JSON.stringify(result.errors);
+          else if (result.message) realError = typeof result.message === 'object' ? JSON.stringify(result.message) : result.message;
+          throw new Error(realError);
+        }
+
+      } catch (error) {
+        console.warn(`[SERVER] ⚠️ Absen Ditolak:`, error.message);
+
+        // AUTO-RESOLVE BERJALAN DI SERVER!
+        const isLateError = error.message.includes('late_reason') || error.message.includes('Alasan');
+        if (lateReason === "" && isLateError) {
+          console.log("[SERVER] Meminta alasan. Mengaktifkan Silent Auto-Resolve: 'Urusan Keluarga'...");
+          await executeBomb("Urusan Keluarga");
+        } else {
+          console.error("[SERVER] ❌ Gagal total mengirim absen:", error.message);
+        }
+      }
+    };
+
+    // 3. Pasang Timer Tahan Banting di Server
+    setTimeout(() => {
+      executeBomb();
+    }, delayMs);
+
+    // Langsung kasih jempol ke Browser biar user bisa nutup tab-nya
+    res.json({ status: true, message: `Engine standby. Will execute at ${targetTime}` });
+
+  } catch (error) {
+    res.status(500).json({ status: false, message: error.message });
   }
 });
 

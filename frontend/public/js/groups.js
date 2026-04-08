@@ -5,29 +5,44 @@ const API_URL = "/api";
 async function loadDevicesForDropdown() {
     const selector = document.getElementById('deviceSelector');
     selector.innerHTML = '<option value="">Memuat device...</option>';
-    
+
     try {
         const isAdmin = localStorage.getItem('connectApi_loggedIn') === 'true';
         const guestApiKey = localStorage.getItem('noorbyte_session');
         const query = isAdmin ? '?role=admin' : (guestApiKey ? `?api_key=${guestApiKey}` : '');
         const response = await fetch(`${API_URL}/get-devices${query}`);
         const result = await response.json();
-        
+
         if (result.status && result.data.length > 0) {
             selector.innerHTML = '<option value="">-- Pilih Device Anda --</option>';
             result.data.forEach(device => {
                 // Kasih tanda kalau device lagi offline
                 const isOnline = device.status === 'Connected';
                 const label = `${device.username} (${device.phone || 'No Number'}) - ${isOnline ? '🟢 Online' : '🔴 Offline'}`;
-                
+
                 const option = document.createElement('option');
                 option.value = device.api_key;
                 option.textContent = label;
                 // Disable pilihan jika offline
                 if (!isOnline) option.disabled = true;
-                
+
                 selector.appendChild(option);
             });
+
+            // Restore previously selected device from localStorage
+            const savedDevice = localStorage.getItem("automationSelectedDevice");
+            if (savedDevice) {
+                const matchOption = Array.from(selector.options).find(o => o.value === savedDevice);
+                if (matchOption && !matchOption.disabled) {
+                    selector.value = savedDevice;
+
+                    // ==========================================
+                    // TRIGGER EVENTNYA DI SINI BOS!
+                    // Karena di detik ini, opsi-opsinya udah 100% jadi.
+                    // ==========================================
+                    selector.dispatchEvent(new Event("change"));
+                }
+            }
         } else {
             selector.innerHTML = '<option value="">Belum ada device terdaftar.</option>';
         }
@@ -41,7 +56,7 @@ async function fetchGroups() {
     const apiKey = document.getElementById('deviceSelector').value;
     const btnText = document.getElementById('btnText');
     const btnIcon = document.getElementById('btnIcon');
-    
+
     if (!apiKey) {
         showModal('Pilih Device', 'Silakan pilih device yang berstatus Online terlebih dahulu.');
         return;
@@ -55,7 +70,7 @@ async function fetchGroups() {
     try {
         const response = await fetch(`${API_URL}/groups/${apiKey}`);
         const result = await response.json();
-        
+
         if (result.status) {
             renderGroupTable(result.data);
         } else {
@@ -76,7 +91,7 @@ function renderGroupTable(groups) {
     const emptyState = document.getElementById('emptyState');
     const tableState = document.getElementById('tableState');
     const tableBody = document.getElementById('groupTableBody');
-    
+
     emptyState.classList.add('hidden');
     tableState.classList.remove('hidden');
     tableBody.innerHTML = '';

@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Jailbreak Mode - Attendance</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+        rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet" />
+
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "error": "#ef4444",
+                    },
+                    fontFamily: {
+                        "body": ["Inter", "sans-serif"],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #ef4444;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-950 font-body text-slate-200 overflow-hidden">
+
+    <div class="flex h-screen w-full">
+
+        <div id="sidebar-container" class="z-50 md:w-64 flex-shrink-0"></div>
+
+        <main class="flex-1 relative flex flex-col overflow-y-auto">
+
+            <div
+                class="md:hidden w-full flex items-center justify-between p-4 border-b border-slate-800 bg-slate-950/90 backdrop-blur-md z-40 sticky top-0">
+                <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-error text-xl"
+                        style="font-variation-settings: 'FILL' 1;">security</span>
+                    <span class="font-bold text-white tracking-tight uppercase">Jailbreak</span>
+                </div>
+                <button id="toggleSidebarBtn" class="text-slate-400 hover:text-white p-1 transition-colors">
+                    <span class="material-symbols-outlined text-2xl">menu</span>
+                </button>
+            </div>
+
+            <div class="w-full p-4 md:p-8 flex flex-col items-center relative min-h-full">
+
+                <div
+                    class="absolute top-0 left-1/2 -translate-x-1/2 w-[300px] md:w-[800px] h-[300px] md:h-[800px] bg-error/5 rounded-full blur-[80px] md:blur-[120px] pointer-events-none">
+                </div>
+
+                <div class="relative z-10 flex flex-col items-center mt-2 md:mt-4 mb-8 md:mb-12">
+                    <div class="relative w-24 h-24 md:w-32 md:h-32 flex items-center justify-center mb-4">
+                        <div class="absolute inset-0 bg-error/20 rounded-full animate-pulse blur-xl md:blur-2xl"></div>
+                        <div
+                            class="relative z-20 w-16 h-16 md:w-24 md:h-24 flex items-center justify-center bg-slate-900 border-2 border-error rounded-full shadow-[0_0_40px_rgba(239,68,68,0.3)]">
+                            <span class="material-symbols-outlined text-error text-4xl md:text-6xl"
+                                style="font-variation-settings: 'FILL' 1;">skull</span>
+                        </div>
+                        <div class="absolute inset-0 border-2 border-error/20 rounded-full scale-110"></div>
+                        <div class="absolute inset-0 border border-error/10 rounded-full scale-125"></div>
+                    </div>
+                    <div class="text-center">
+                        <h2 class="text-2xl md:text-3xl font-black text-white tracking-tight uppercase">Jailbreak</h2>
+                        <p
+                            class="text-slate-500 font-medium uppercase tracking-[0.1em] md:tracking-[0.2em] text-[10px] md:text-xs mt-1">
+                            Authorized Guest Only</p>
+                    </div>
+                </div>
+
+                <div
+                    class="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 w-full max-w-4xl mx-auto mb-10 md:mb-16">
+
+                    <div
+                        class="group relative overflow-hidden bg-slate-900/50 backdrop-blur-md border border-slate-800 p-6 md:p-8 rounded-xl shadow-sm hover:border-error/50 transition-all duration-300">
+                        <div
+                            class="absolute top-0 right-0 w-24 h-24 md:w-32 md:h-32 -mr-8 -mt-8 md:-mr-12 md:-mt-12 bg-error/10 rounded-full blur-2xl pointer-events-none">
+                        </div>
+                        <div class="relative z-10 flex flex-col h-full">
+                            <div
+                                class="bg-error/10 border border-error/20 text-error w-12 h-12 md:w-14 md:h-14 rounded-lg flex items-center justify-center mb-4 md:mb-6 shadow-lg">
+                                <span class="material-symbols-outlined text-2xl md:text-3xl">fingerprint</span>
+                            </div>
+                            <h3 class="text-xl md:text-2xl font-bold text-white mb-2">Absen</h3>
+                            <p class="text-slate-400 text-xs md:text-sm mb-6 md:mb-8 leading-relaxed">Secure facial
+                                biometrics verification required.</p>
+                            <div class="mt-auto">
+                                <button onclick="window.location.href='/jailbreak/checkin'"
+                                    class="w-full bg-error text-white font-bold py-3 md:py-3.5 rounded-lg hover:bg-red-500 transition-colors shadow-[0_0_15px_rgba(239,68,68,0.2)] text-xs md:text-sm tracking-wide">
+                                    BYPASS ABSEN
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div
+                        class="group relative overflow-hidden bg-slate-900/30 backdrop-blur-md border border-slate-800/80 p-6 md:p-8 rounded-xl shadow-sm hover:border-error/40 transition-all duration-300">
+                        <div
+                            class="absolute bottom-0 right-0 w-32 h-32 md:w-40 md:h-40 -mb-12 -mr-12 md:-mb-16 md:-mr-16 bg-error/5 rounded-full blur-3xl pointer-events-none">
+                        </div>
+                        <div class="relative z-10 flex flex-col h-full">
+                            <div
+                                class="bg-slate-800 border border-slate-700 text-error w-12 h-12 md:w-14 md:h-14 rounded-lg flex items-center justify-center mb-4 md:mb-6 shadow-lg">
+                                <span class="material-symbols-outlined text-2xl md:text-3xl">timer</span>
+                            </div>
+                            <h3 class="text-xl md:text-2xl font-bold text-white mb-2">Pengajuan Lembur</h3>
+                            <p class="text-slate-400 text-xs md:text-sm mb-6 md:mb-8 leading-relaxed">Request
+                                high-velocity overtime clearance.</p>
+                            <div class="mt-auto">
+                                <button
+                                    class="w-full bg-slate-800/80 border border-error/30 text-error font-bold py-3 md:py-3.5 rounded-lg hover:bg-error/10 hover:border-error/50 transition-all shadow-lg text-xs md:text-sm tracking-widest uppercase">Request
+                                    Clearance</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="relative z-10 w-full max-w-4xl mx-auto">
+                    <div class="flex items-center justify-between mb-3 px-1 md:px-2">
+                        <h4 class="text-[10px] md:text-[11px] font-black uppercase tracking-widest text-slate-500">Live
+                            Security Logs</h4>
+                        <span class="flex items-center gap-2">
+                            <span class="h-1.5 w-1.5 md:h-2 md:w-2 rounded-full bg-error animate-pulse"></span>
+                            <span class="text-[9px] md:text-[10px] font-bold text-error uppercase tracking-wider">Live
+                                Stream</span>
+                        </span>
+                    </div>
+
+                    <div
+                        class="bg-slate-900/50 backdrop-blur-md rounded-xl border border-slate-800 p-4 md:p-6 overflow-hidden">
+
+                        <div id="jailbreakLogContainer"
+                            class="space-y-3 md:space-y-4 font-mono text-[10px] md:text-[11px] h-64 overflow-y-auto pr-2">
+
+                            <div
+                                class="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4 border-b border-slate-800/50 pb-2 md:pb-3">
+                                <span class="text-error shrink-0">[SYSTEM]</span>
+                                <span class="text-slate-500 font-bold uppercase tracking-widest animate-pulse">Listening
+                                    for secure transmissions...</span>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+                <script src="/socket.io/socket.io.js"></script>
+            </div>
+        </main>
+    </div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/js/jailbreak.js"></script>
+    <script src="/js/sidebar.js"></script>
+</body>
+
+</html>

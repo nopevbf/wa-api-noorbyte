@@ -1,6 +1,41 @@
 const API_URL = "/api";
 
+// Variabel global untuk menyimpan default DParagon URL dari backend config
+let defaultDparagonApiUrl = "";
+
 document.addEventListener("DOMContentLoaded", async () => {
+  // ==========================================
+  // 0a. FETCH APP CONFIG (ENV-BASED DEFAULT URL)
+  // ==========================================
+  try {
+    const configRes = await fetch(`${API_URL}/app-config`);
+    const configData = await configRes.json();
+    if (configData.status && configData.data) {
+      defaultDparagonApiUrl = configData.data.dparagonApiUrl || "";
+
+      // Tampilkan badge environment
+      const envBadge = document.getElementById("envBadge");
+      if (envBadge) {
+        const env = configData.data.env || "development";
+        const isDev = env !== "production";
+        envBadge.textContent = isDev ? "DEV" : "PROD";
+        envBadge.classList.remove("hidden");
+        if (isDev) {
+          envBadge.classList.add("bg-amber-100", "text-amber-700");
+        } else {
+          envBadge.classList.add("bg-emerald-100", "text-emerald-700");
+        }
+      }
+
+      // Set default value kalau belum ada input dari localStorage
+      const dpApiUrlInput = document.getElementById("dpApiUrl");
+      if (dpApiUrlInput && !dpApiUrlInput.value) {
+        dpApiUrlInput.value = defaultDparagonApiUrl;
+      }
+    }
+  } catch (e) {
+    console.warn("Gagal memuat app config:", e.message);
+  }
   // ==========================================
   // 0. FITUR SHOW/HIDE PASSWORD
   // ==========================================
@@ -49,6 +84,12 @@ document.addEventListener("DOMContentLoaded", async () => {
           const matchOption = Array.from(selector.options).find(o => o.value === savedDevice);
           if (matchOption && !matchOption.disabled) {
             selector.value = savedDevice;
+
+            // ==========================================
+            // TRIGGER EVENTNYA DI SINI BOS!
+            // Karena di detik ini, opsi-opsinya udah 100% jadi.
+            // ==========================================
+            selector.dispatchEvent(new Event("change"));
           }
         }
       }
@@ -100,7 +141,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!text) return "";
     const lines = text.split('\n');
     if (lines.length <= 15) return text;
-    
+
     const topLines = lines.slice(0, 8).join('\n');
     const bottomLines = lines.slice(-5).join('\n');
     return `${topLines}\n\n....\n...\n\n${bottomLines}`;
@@ -234,8 +275,40 @@ document.addEventListener("DOMContentLoaded", async () => {
     try {
       const res = await fetch(`${API_URL}/automation/status?api_key=${apiKey}`);
       const result = await res.json();
+      
+      let kpiData = null;
+      try {
+        const kpiRes = await fetch(`${API_URL}/automation/kpi?api_key=${apiKey}`);
+        const kpiResult = await kpiRes.json();
+        if (kpiResult.status && kpiResult.data) {
+            kpiData = kpiResult.data;
+        }
+      } catch (err) {
+        console.warn("Gagal fetch KPI:", err);
+      }
+
       if (result.status && result.data) {
         const data = result.data;
+        data.kpi = kpiData;
+
+        // --- SUNTIKAN PENANGKAP REAL DATA KPI ---
+        if (data.kpi) {
+          // 1. Tangkap waktu terakhir jalan
+          if (data.kpi.last_run) {
+            lastRunDate = new Date(data.kpi.last_run);
+            updateLastRunTimer(); // Langsung eksekusi ngitung ago
+          }
+          // 2. Tangkap Data Lainnya
+          if (data.kpi.success_rate !== undefined) {
+            document.getElementById('metricSuccessRate').innerText = `${data.kpi.success_rate}%`;
+          }
+          if (data.kpi.avg_latency !== undefined) {
+            document.getElementById('metricLatency').innerText = `${data.kpi.avg_latency}s`;
+          }
+          if (data.kpi.data_processed !== undefined) {
+            document.getElementById('metricData').innerText = `${data.kpi.data_processed} MB`;
+          }
+        }
 
         // Render backend logs into terminal (always, even on page reload)
         if (data.logs && data.logs.length > 0) {
@@ -383,8 +456,8 @@ Occupancy Rate: 0%
   function loadSavedSettings() {
     const savedSettings = JSON.parse(localStorage.getItem("connectApiSettings"));
     if (savedSettings) {
-      if (document.getElementById("dpApiUrl"))
-        document.getElementById("dpApiUrl").value = savedSettings.dpApiUrl || "";
+      if (document.getElementById("dpApiUrl") && savedSettings.dpApiUrl)
+        document.getElementById("dpApiUrl").value = savedSettings.dpApiUrl;
       if (document.getElementById("dpEmail"))
         document.getElementById("dpEmail").value = savedSettings.dpEmail || "";
       if (document.getElementById("accountPassword"))
@@ -510,6 +583,41 @@ Occupancy Rate: 0%
       startStatusPolling();
     }
   }, 1000);
+
+  // ==========================================
+  // 9. AUTO-LOAD DEVICE ON PAGE LOAD
+  // ==========================================
+  const savedDevice = localStorage.getItem("automationSelectedDevice");
+  if (savedDevice && selector) {
+    selector.value = savedDevice;
+    // Trigger change event to update UI and start polling
+    selector.dispatchEvent(new Event("change"));
+  }
+
+  // ==========================================
+  // 10. KPI WIDGET LOGIC (REAL DATA)
+  // ==========================================
+  let lastRunDate = null; // Akan diisi otomatis dari Backend
+
+  // Fungsi ini cuma buat ngitung selisih waktu aja ("X mins ago")
+  function updateLastRunTimer() {
+    if (!lastRunDate) return;
+
+    const now = new Date();
+    const diffMs = now - lastRunDate;
+    const diffMins = Math.floor(diffMs / 60000);
+
+    const metricLastRun = document.getElementById('metricLastRun');
+    if (metricLastRun) {
+      if (diffMins === 0) metricLastRun.innerText = 'Just now';
+      else if (diffMins >= 60) metricLastRun.innerText = `${Math.floor(diffMins / 60)}h ${diffMins % 60}m ago`;
+      else metricLastRun.innerText = `${diffMins}m ago`;
+    }
+  }
+
+  // Update tulisan waktu setiap 1 menit
+  setInterval(updateLastRunTimer, 60000);
+
 });
 
 function showModal(title, message) {

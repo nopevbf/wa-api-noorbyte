@@ -10,8 +10,8 @@ app.use(express.static(path.join(__dirname, "public")));
 // =========================================
 const { createProxyMiddleware } = require('http-proxy-middleware');
 
-const backendProxy = createProxyMiddleware({ 
-  target: 'http://localhost:3000', 
+const backendProxy = createProxyMiddleware({
+  target: 'http://localhost:3000',
   changeOrigin: true,
   ws: true
 });
@@ -50,6 +50,16 @@ app.get("/tester", (req, res) => {
 // ROUTE BARU UNTUK DAILY REPORTS
 app.get("/automation", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "automation.html"));
+});
+
+// ROUTE UNTUK HALAMAN JAILBREAK
+app.get('/jailbreak', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'jailbreak.html'));
+});
+
+// ROUTE UNTUK HALAMAN CHECK-IN (BARU)
+app.get('/jailbreak/checkin', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'checkin.html'));
 });
 
 // ROUTE UNTUK PROSES VERIFIKASI MAGIC LINK
