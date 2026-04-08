@@ -119,7 +119,7 @@ async function internalScrapeDparagonAttendance(env, email, password, fullName, 
 
     const browser = await puppeteer.launch({
         headless: true,
-        defaultViewport: null,
+        defaultViewport: { width: 1920, height: 1080 },
         ...(chromiumPath ? { executablePath: chromiumPath } : {}),
         args: [
             '--no-sandbox',
@@ -127,19 +127,25 @@ async function internalScrapeDparagonAttendance(env, email, password, fullName, 
             '--disable-dev-shm-usage',
             '--disable-gpu',
             '--disable-software-rasterizer',
-            '--start-maximized'
+            '--window-size=1920,1080'
         ],
         userDataDir: path.join(__dirname, sessionDir)
     });
 
     const page = await browser.newPage();
 
+    // Spoof User-Agent ke Chrome desktop agar server tidak serve versi berbeda
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+    await page.setExtraHTTPHeaders({ 'Accept-Language': 'id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7' });
+
     try {
         const encodedName = encodeURIComponent(fullName);
         const targetUrl = `${config.baseUrl}/hrd/reportAttendance?devision_filter=&location_filter=&area_filter=&name_filter=${encodedName}&date_range_filter=&status_filter=&page=${targetPage}`;
 
         sendLog(`[PROCESS] Mengecek akses Direktori Absensi...`, "info");
-        await page.goto(targetUrl, { waitUntil: 'networkidle2' });
+        await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+        // Tunggu ekstra agar DataTables / JS selesai render
+        await new Promise(r => setTimeout(r, 3000));
 
         let currentUrl = page.url();
         let htmlCheck = await page.content();
@@ -174,7 +180,8 @@ async function internalScrapeDparagonAttendance(env, email, password, fullName, 
 
             // Balik lagi ke targetUrl setelah berhasil login
             sendLog(`[PROCESS] Melanjutkan Kembali ke Direktori Absensi...`, "info");
-            await page.goto(targetUrl, { waitUntil: 'networkidle2' });
+            await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+            await new Promise(r => setTimeout(r, 3000));
         } else {
             sendLog(`[SUCCESS] Otorisasi Bypass masih aktif dan sukses. Melanjutkan...`, 'success');
         }
