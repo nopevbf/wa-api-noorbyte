@@ -4,7 +4,7 @@ const { HttpsProxyAgent } = require("https-proxy-agent"); // <--- [TAMBAHAN 1] P
 // <--- [TAMBAHAN 2] Masukin Link Pinggy dari Termux HP lu (buang tulisan tcp://)
 // Contoh jadinya: "http://firman:rahasia123@rnq-12-34-56.a.pinggy.link:43210"
 const proxyUrl =
-  "http://firman:rahasia123@bkzkp-182-8-226-99.run.pinggy-free.link:39047";
+  "http://firman:rahasia123@ezwxi-182-8-226-99.run.pinggy-free.link:46427";
 const proxyAgent = new HttpsProxyAgent(proxyUrl);
 
 /**
