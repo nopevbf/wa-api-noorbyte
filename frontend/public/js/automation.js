@@ -267,12 +267,6 @@ document.addEventListener("DOMContentLoaded", async () => {
           }
         } catch (err) {
           await addLog("text-red-500", "ERROR", err.message);
-          await addLog(
-            "text-red-500",
-            "ERROR",
-            "Detail Error 500:",
-            err.response.data,
-          );
           showModal("Gagal", err.message);
         }
 
