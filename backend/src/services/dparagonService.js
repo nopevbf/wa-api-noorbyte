@@ -1,14 +1,22 @@
 const axios = require("axios");
+const { HttpsProxyAgent } = require("https-proxy-agent"); // <--- [TAMBAHAN 1] Panggil library
+
+// <--- [TAMBAHAN 2] Masukin Link Pinggy dari Termux HP lu (buang tulisan tcp://)
+// Contoh jadinya: "http://firman:rahasia123@rnq-12-34-56.a.pinggy.link:43210"
+const proxyUrl =
+  "http://firman:rahasia123@bkzkp-182-8-226-99.run.pinggy-free.link:39047";
+const proxyAgent = new HttpsProxyAgent(proxyUrl);
 
 /**
  * STEP 1 & 2: Login ke DParagon dan ambil on-progress task.
  */
 async function executeStep1And2(dpApiUrl, dpEmail, dpPassword) {
   // [STEP 1] LOGIN
-  const authRes = await axios.post(`${dpApiUrl}/login`, {
-    email: dpEmail,
-    password: dpPassword,
-  });
+  const authRes = await axios.post(
+    `${dpApiUrl}/login`,
+    { email: dpEmail, password: dpPassword },
+    { httpsAgent: proxyAgent }, // <--- [TAMBAHAN 3] Suntik Proxy ke Login
+  );
 
   const authData = authRes.data;
   const dpToken =
@@ -27,7 +35,8 @@ async function executeStep1And2(dpApiUrl, dpEmail, dpPassword) {
         Authorization: `Bearer ${dpToken}`,
         "Content-Type": "application/json",
       },
-    }
+      httpsAgent: proxyAgent, // <--- [TAMBAHAN 4] Suntik Proxy
+    },
   );
 
   const payloadData = taskRes.data.payload || [];
@@ -58,7 +67,8 @@ async function executeStep3To5(dpApiUrl, dpToken, tasksList) {
         Authorization: `Bearer ${dpToken}`,
         "Content-Type": "application/json",
       },
-    }
+      httpsAgent: proxyAgent, // <--- [TAMBAHAN 5] Suntik Proxy
+    },
   );
 
   // [STEP 4] GET REPORT CODE
@@ -69,7 +79,8 @@ async function executeStep3To5(dpApiUrl, dpToken, tasksList) {
         Authorization: `Bearer ${dpToken}`,
         "Content-Type": "application/json",
       },
-    }
+      httpsAgent: proxyAgent, // <--- [TAMBAHAN 6] Suntik Proxy
+    },
   );
 
   const group = listRes.data.payload?.group || {};
@@ -89,7 +100,8 @@ async function executeStep3To5(dpApiUrl, dpToken, tasksList) {
         Authorization: `Bearer ${dpToken}`,
         "Content-Type": "application/json",
       },
-    }
+      httpsAgent: proxyAgent, // <--- [TAMBAHAN 7] Suntik Proxy
+    },
   );
 
   const summaryData = summaryRes.data;
@@ -114,7 +126,7 @@ async function fetchDparagonReport(dpApiUrl, dpEmail, dpPassword) {
   const { dpToken, tasksList } = await executeStep1And2(
     dpApiUrl,
     dpEmail,
-    dpPassword
+    dpPassword,
   );
   const message = await executeStep3To5(dpApiUrl, dpToken, tasksList);
   return message;
