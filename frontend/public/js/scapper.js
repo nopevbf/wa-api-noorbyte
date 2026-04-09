@@ -204,7 +204,7 @@ async function internalScrapeDparagonAttendance(env, email, password, fullName, 
         // ==========================================
         try {
             // Kita tunggu ID dari table nya langsung, untuk jaga-jaga kalau data di dalam tbodynya (tr) itu kosong
-            await page.waitForSelector('table[id="sticky_table"]', { timeout: 15000 });
+            await page.waitForSelector('table[id="sticky_table"]', { timeout: 30000 });
         } catch (e) {
             const currentUrlFail = page.url();
             sendLog(`[WARNING] Selector 'table[id="sticky_table"]' tidak ditemukan. Kemungkinan data kosong, atau halaman belum selesai load.`, 'warning');
