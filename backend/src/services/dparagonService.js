@@ -1,11 +1,10 @@
 const axios = require("axios");
-const { HttpsProxyAgent } = require("https-proxy-agent"); // <--- [TAMBAHAN 1] Panggil library
+const { SocksProxyAgent } = require("socks-proxy-agent"); // Ganti library-nya
 
 // <--- [TAMBAHAN 2] Masukin Link Pinggy dari Termux HP lu (buang tulisan tcp://)
 // Contoh jadinya: "http://firman:rahasia123@rnq-12-34-56.a.pinggy.link:43210"
-const proxyUrl =
-  "http://firman:rahasia123@ezwxi-182-8-226-99.run.pinggy-free.link:46427";
-const proxyAgent = new HttpsProxyAgent(proxyUrl);
+const proxyUrl = "socks5://didhv-182-8-226-99.run.pinggy-free.link:35777";
+const proxyAgent = new SocksProxyAgent(proxyUrl);
 
 /**
  * STEP 1 & 2: Login ke DParagon dan ambil on-progress task.
