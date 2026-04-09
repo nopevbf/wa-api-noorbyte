@@ -249,8 +249,7 @@ async function runDailyReportViaBrowser(dpApiUrl, dpEmail, dpPassword) {
     args: [
       "--no-sandbox",
       "--disable-setuid-sandbox",
-      "--disable-dev-shm-usage",
-      "--disable-gpu",
+      "--disable-blink-features=AutomationControlled", // <--- WAJIB: Hapus jejak navigator.webdriver
       "--window-size=1366,768",
     ],
   });
@@ -529,21 +528,24 @@ async function executeStep3To5(dpApiUrl, dpToken, tasksList) {
 async function fetchDparagonReport(dpApiUrl, dpEmail, dpPassword) {
   const baseApiUrl = normalizeDpApiUrl(dpApiUrl);
 
-  try {
-    const { dpToken, tasksList } = await executeStep1And2(
-      baseApiUrl,
-      dpEmail,
-      dpPassword,
-    );
-    const message = await executeStep3To5(baseApiUrl, dpToken, tasksList);
-    return message;
-  } catch (err) {
-    if (!isCloudflareChallengeError(err)) {
-      throw err;
-    }
-
-    return runDailyReportViaBrowser(baseApiUrl, dpEmail, dpPassword);
-  }
+  // try {
+  //   const { dpToken, tasksList } = await executeStep1And2(
+  //     baseApiUrl,
+  //     dpEmail,
+  //     dpPassword,
+  //   );
+  //   const message = await executeStep3To5(baseApiUrl, dpToken, tasksList);
+  //   return message;
+  // } catch (err) {
+  //   if (!isCloudflareChallengeError(err)) {
+  //     throw err;
+  //   }
+  // LANGSUNG HAJAR PAKE BROWSER (PUPPETEER)
+  // Karena jalur direct (Axios) sudah fix diblokir Cloudflare
+  console.log(
+    "[SQA] Jalur Axios diblokir, memicu engine Puppeteer secara langsung...",
+  );
+  return runDailyReportViaBrowser(baseApiUrl, dpEmail, dpPassword);
 }
 
 module.exports = {
