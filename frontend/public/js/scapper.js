@@ -145,7 +145,7 @@ async function internalScrapeDparagonAttendance(env, email, password, fullName, 
         const targetUrl = `${config.baseUrl}/hrd/reportAttendance?devision_filter=&location_filter=&area_filter=&name_filter=${encodedName}&date_range_filter=&status_filter=&page=${targetPage}`;
 
         sendLog(`[PROCESS] Mengecek akses Direktori Absensi...`, "info");
-        await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+        await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
         // Tunggu ekstra agar DataTables / JS selesai render
         await new Promise(r => setTimeout(r, 3000));
 
@@ -194,7 +194,7 @@ async function internalScrapeDparagonAttendance(env, email, password, fullName, 
 
             // Balik lagi ke targetUrl setelah berhasil login
             sendLog(`[PROCESS] Melanjutkan Kembali ke Direktori Absensi...`, "info");
-            await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+            await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
             await new Promise(r => setTimeout(r, 3000));
         } else {
             sendLog(`[SUCCESS] Otorisasi Bypass masih aktif dan sukses. Melanjutkan...`, 'success');
