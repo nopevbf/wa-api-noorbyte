@@ -1047,7 +1047,7 @@ async function loadRecentAttendanceWidget(forceSync = false) {
         console.error("Widget Error:", error);
         container.innerHTML = `
             <div class="flex items-center justify-center py-4 bg-error/10 border border-error/20 rounded-lg">
-                <p class="text-[10px] font-bold text-error uppercase tracking-widest">Failed to sync node.</p>
+                <p class="text-[10px] font-bold text-error uppercase tracking-widest">Refresh Halaman ya 😃</p>
             </div>
         `;
     }
