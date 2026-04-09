@@ -32,10 +32,32 @@ function normalizeDpApiUrl(rawUrl) {
   return `${parsed.origin}${parsed.pathname}`.replace(/\/+$/, "");
 }
 
-function buildHeaders(token) {
+function getManagementOriginFromApiUrl(baseApiUrl) {
+  try {
+    const parsed = new URL(baseApiUrl);
+    if (parsed.hostname.startsWith("api.")) {
+      parsed.hostname = parsed.hostname.replace("api.", "management.");
+    }
+    parsed.pathname = "/";
+    parsed.search = "";
+    parsed.hash = "";
+    return parsed.origin;
+  } catch {
+    return "https://management.dparagon.com";
+  }
+}
+
+function buildHeaders(token, opts = {}) {
+  const { baseApiUrl } = opts;
+  const managementOrigin = getManagementOriginFromApiUrl(baseApiUrl || "");
+
   const headers = {
     Accept: "application/json",
     "Content-Type": "application/json",
+    "User-Agent":
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    Origin: managementOrigin,
+    Referer: `${managementOrigin}/`,
   };
 
   if (token) {
@@ -98,19 +120,60 @@ async function requestWithContext(config, stepLabel) {
 async function executeStep1And2(dpApiUrl, dpEmail, dpPassword) {
   const baseApiUrl = normalizeDpApiUrl(dpApiUrl);
 
-  // [STEP 1] LOGIN
-  const authRes = await requestWithContext(
+  const loginAttempts = [
     {
-      method: "post",
+      label: "login(email,password)",
       url: `${baseApiUrl}/login`,
-      headers: buildHeaders(),
-      data: {
-        email: dpEmail,
-        password: dpPassword,
-      },
+      data: { email: dpEmail, password: dpPassword },
     },
-    "STEP 1 LOGIN",
-  );
+    {
+      label: "login(username,password)",
+      url: `${baseApiUrl}/login`,
+      data: { username: dpEmail, password: dpPassword },
+    },
+    {
+      label: "auth/login(email,password)",
+      url: `${baseApiUrl}/auth/login`,
+      data: { email: dpEmail, password: dpPassword },
+    },
+    {
+      label: "auth/login(username,password)",
+      url: `${baseApiUrl}/auth/login`,
+      data: { username: dpEmail, password: dpPassword },
+    },
+  ];
+
+  let authRes = null;
+  const loginErrors = [];
+
+  for (const attempt of loginAttempts) {
+    try {
+      authRes = await axios({
+        method: "post",
+        url: attempt.url,
+        data: attempt.data,
+        headers: buildHeaders(null, { baseApiUrl }),
+        timeout: DEFAULT_TIMEOUT_MS,
+      });
+      break;
+    } catch (err) {
+      if (err.response) {
+        const payload = stringifyErrorPayload(err.response.data);
+        loginErrors.push(
+          `${attempt.label} -> HTTP ${err.response.status} (${payload})`,
+        );
+        continue;
+      }
+
+      loginErrors.push(`${attempt.label} -> ${err.message}`);
+    }
+  }
+
+  if (!authRes) {
+    throw new Error(
+      `[STEP 1 LOGIN] Semua percobaan login gagal. URL dasar: ${baseApiUrl}. Detail: ${loginErrors.join(" | ")}`,
+    );
+  }
 
   const authData = authRes.data;
   const dpToken =
@@ -126,7 +189,7 @@ async function executeStep1And2(dpApiUrl, dpEmail, dpPassword) {
     {
       method: "get",
       url: `${baseApiUrl}/daily-reports/on-progress-task`,
-      headers: buildHeaders(dpToken),
+      headers: buildHeaders(dpToken, { baseApiUrl }),
     },
     "STEP 2 ON PROGRESS TASK",
   );
@@ -158,7 +221,7 @@ async function executeStep3To5(dpApiUrl, dpToken, tasksList) {
       method: "post",
       url: `${baseApiUrl}/daily-reports/new-task`,
       data: { daily_date: todayDate, tasks: tasksList },
-      headers: buildHeaders(dpToken),
+      headers: buildHeaders(dpToken, { baseApiUrl }),
     },
     "STEP 3 NEW TASK",
   );
@@ -168,7 +231,7 @@ async function executeStep3To5(dpApiUrl, dpToken, tasksList) {
     {
       method: "get",
       url: `${baseApiUrl}/daily-reports/list?dates=&employee_position_id=`,
-      headers: buildHeaders(dpToken),
+      headers: buildHeaders(dpToken, { baseApiUrl }),
     },
     "STEP 4 GET REPORT CODE",
   );
@@ -187,7 +250,7 @@ async function executeStep3To5(dpApiUrl, dpToken, tasksList) {
     {
       method: "get",
       url: `${baseApiUrl}/daily-reports/summary-daily-report?code=${reportCode}`,
-      headers: buildHeaders(dpToken),
+      headers: buildHeaders(dpToken, { baseApiUrl }),
     },
     "STEP 5 SUMMARY REPORT",
   );
