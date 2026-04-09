@@ -321,24 +321,21 @@ const { executeLCR, getLcrStatus } = require('./src/services/lcrEngine');
 app.post('/api/pulse/execute-manual', (req, res) => {
     const { identity, payload } = req.body;
 
-    if (!identity || !payload || !payload.links) {
-        return res.status(400).json({ status: false, message: 'Data tidak lengkap. Isi Identity dan Link.' });
-    }
+    console.log(`😈 Menerima perintah penaklukan untuk: ${identity.name}`);
 
-    console.log(`[PULSE] 🚀 Menerima misi LCR untuk: ${identity.name || 'Unknown'}`);
-    console.log(`[PULSE] 📎 Links: ${(payload.links || '').split('\n').length} link`);
+    // 1. BALAS INSTAN! Jangan biarkan Frontend nunggu dan Proxy Timeout!
+    res.json({ 
+        status: 'success', 
+        message: 'Misi telah disuntikkan ke latar belakang! Pantau Terminal!' 
+    });
 
-    // Jalankan di background (non-blocking, seperti pola scrapeDparagonAttendance)
-    executeLCR(identity, payload)
-        .then(result => {
-            console.log(`[PULSE] ✅ LCR selesai: ${result.results?.length || 0} link diproses.`);
-        })
-        .catch(err => {
-            console.error(`[PULSE] ❌ LCR gagal:`, err.message);
-        });
-
-    // Langsung balikin response biar UI gak nunggu
-    res.json({ status: true, message: 'LCR Engine started in background. Pantau progress di terminal.' });
+    // 2. EKSEKUSI SILUMAN (Tanpa 'await')
+    // Bot akan berjalan sendiri di background, melapor via Socket.io
+    executeLCR(identity, payload).then(result => {
+        console.log("Misi LCR Selesai di latar belakang!");
+    }).catch(err => {
+        console.error("LCR Background Error:", err.message);
+    });
 });
 
 // STATUS LCR — Polling dari frontend

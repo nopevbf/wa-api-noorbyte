@@ -42,21 +42,18 @@ function getLcrStatus() {
 
 // ==========================================
 // HELPER: INJECT PRO UTILITIES (React Fiber Bypass)
-// Diambil dari saran user ("Pro Logic" IG & TT)
 // ==========================================
 async function injectLcrUtilities(page) {
     await page.evaluate(() => {
         window.__LCR_UTILS__ = {
             sleep: ms => new Promise(r => setTimeout(r, ms)),
 
-            // Find clickable parent
             findClickable: (svgSelector) => {
                 const svg = document.querySelector(svgSelector);
                 if (!svg) return null;
                 return svg.closest('[role="button"], button, a') || svg.parentElement;
             },
 
-            // React Fiber Bypass: Panggil onClick handler langsung dari React tree
             reactClick: (el) => {
                 const fiberKey = Object.keys(el).find(k => k.startsWith('__reactFiber'));
                 if (!fiberKey) return false;
@@ -77,13 +74,10 @@ async function injectLcrUtilities(page) {
                 return false;
             },
 
-            // Trigger click dengan fallback
             triggerClick: (el) => {
                 if (!el) return;
                 el.scrollIntoView({ block: 'center' });
-                // Coba bypass React dulu
                 if (!window.__LCR_UTILS__.reactClick(el)) {
-                    // Fallback mouse events
                     const opts = { bubbles: true, cancelable: true, view: window };
                     el.dispatchEvent(new MouseEvent('mousedown', opts));
                     el.dispatchEvent(new MouseEvent('mouseup', opts));
@@ -91,7 +85,6 @@ async function injectLcrUtilities(page) {
                 }
             },
 
-            // Simulate typing via execCommand
             simulateTyping: (el, text) => {
                 el.focus();
                 document.execCommand('selectAll', false, null);
@@ -101,7 +94,6 @@ async function injectLcrUtilities(page) {
                 el.dispatchEvent(new Event('change', { bubbles: true }));
             },
 
-            // Simulate paste event (khusus DraftEditor TikTok)
             simulatePaste: (el, text) => {
                 el.focus();
                 const dt = new DataTransfer();
@@ -113,7 +105,6 @@ async function injectLcrUtilities(page) {
                 }));
             },
 
-            // Wait for element to become enabled
             waitForEnabled: (selector, timeoutMs = 5000) => {
                 return new Promise((resolve, reject) => {
                     const check = () => {
@@ -147,7 +138,49 @@ function detectPlatform(url) {
 }
 
 // ==========================================
-// LAUNCH BROWSER (Stealth)
+// GATEKEEPER: Penjaga Halaman Postingan (X-Ray Vision)
+// ==========================================
+async function waitForPostReady(page, platform) {
+    for (let w = 0; w < 60; w++) { // Maksimal 5 Menit
+        
+        const isBlocked = await page.evaluate((plat) => {
+            const isVisible = (el) => el && el.offsetWidth > 0 && el.offsetHeight > 0;
+            
+            if (plat === 'instagram') {
+                const loginInput = document.querySelector('input[name="username"]');
+                const loginModalBtn = document.querySelector('[data-testid="royal_login_button"], a[href*="/accounts/login/"]');
+                const isChallenge = window.location.href.includes('challenge') || window.location.href.includes('checkpoint');
+                return isVisible(loginInput) || isVisible(loginModalBtn) || isChallenge;
+            } else if (plat === 'tiktok') {
+                const loginModal = document.querySelector('[data-e2e="login-modal"]');
+                const isCaptcha = window.location.href.includes('captcha') || window.location.href.includes('verification');
+                return isVisible(loginModal) || isCaptcha;
+            }
+            return false;
+        }, platform);
+
+        if (!isBlocked) {
+            if (w > 0) {
+                sendPulseLog(`✅ Halangan teratasi oleh Master! Melanjutkan eksekusi detik ini juga...`, 'success');
+            } else {
+                sendPulseLog(`✅ Jalur aman (Tidak ada Login Wall). Langsung eksekusi!`, 'success');
+            }
+            return true; 
+        }
+
+        if (w === 0) {
+            sendPulseLog(`🚨 [GATEKEEPER] Tembok Login menghalangi Postingan! Silakan login di browser...`, 'warning');
+        } else if (w % 6 === 0) {
+            sendPulseLog(`⏳ [GATEKEEPER] Menunggu Bos login... (Sisa waktu: ${(5 - (w / 12)).toFixed(1)} menit)`, 'warning');
+        }
+        
+        await sleep(5000);
+    }
+    return false;
+}
+
+// ==========================================
+// LAUNCH BROWSER (Stealth - DESKTOP MODE AWAL)
 // ==========================================
 async function launchBrowser(sessionName) {
     const sessionDir = path.join(__dirname, `lcr_session_${sessionName}`);
@@ -160,15 +193,15 @@ async function launchBrowser(sessionName) {
     ) : null;
 
     return puppeteer.launch({
-        headless: 'new',
-        defaultViewport: { width: 1280, height: 900 },
+        headless: false, // 😈 Biarkan terlihat agar bisa bantu login
+        defaultViewport: { width: 1280, height: 900 }, // Desktop Default
         ...(chromiumPath ? { executablePath: chromiumPath } : {}),
         args: [
             '--no-sandbox',
             '--disable-setuid-sandbox',
             '--disable-dev-shm-usage',
             '--disable-gpu',
-            '--disable-software-rasterizer',
+            '--disable-notifications',
             '--window-size=1280,900',
             '--disable-blink-features=AutomationControlled'
         ],
@@ -181,72 +214,69 @@ async function launchBrowser(sessionName) {
 // ==========================================
 async function instagramLogin(page, username, password) {
     sendPulseLog('🔐 Mengecek status login Instagram...', 'info');
-
     await page.goto('https://www.instagram.com/', { waitUntil: 'networkidle2', timeout: 30000 });
     await sleep(3000);
 
-    const currentUrl = page.url();
     const html = await page.content();
-
-    const isLoggedIn = !currentUrl.includes('/accounts/login')
-        && !html.includes('loginForm')
-        && !html.includes('Log in')
-        && !html.includes('Masuk')
-        && !html.includes('log_in')
-        && !html.includes('desktop_dynamic_landing_dialog');
+    const url = page.url();
+    const isLoggedIn = !url.includes('/login') && !html.includes('loginForm') && !html.includes('desktop_dynamic_landing_dialog');
 
     if (isLoggedIn) {
-        // Cek lebih dalam apakah ada modal "Sign up for Instagram" (Login Wall)
-        const hasLoginWall = await page.evaluate(() => {
-            return !!document.querySelector('a[href*="desktop_dynamic_landing_dialog"]') || 
-                   !!document.querySelector('[data-testid="royal_login_button"]') ||
-                   (document.body.innerText.includes('Sign up for Instagram') && document.body.innerText.includes('Log in'));
-        });
-
-        if (!hasLoginWall) {
-            sendPulseLog('✅ Instagram session masih aktif.', 'success');
-            return true;
-        }
-        sendPulseLog('⚠️ Terdeteksi Login Wall (Interstitial modal).', 'warning');
+        sendPulseLog('✅ Instagram session masih aktif.', 'success');
+        return true;
     }
 
     if (!username || !password) {
-        sendPulseLog('⚠️ Membutuhkan login tapi kredensial kosong!', 'warning');
-        return false;
-    }
-
-    sendPulseLog('🔑 Belum login atau terdeteksi Login Wall, memulai proses login Instagram...', 'info');
-
-    // Jika kita di landing dialog, navigasi ke login page
-    if (html.includes('desktop_dynamic_landing_dialog') || currentUrl.includes('source=desktop_dynamic_landing_dialog')) {
-        await page.goto('https://www.instagram.com/accounts/login/', { waitUntil: 'networkidle2', timeout: 30000 });
+        sendPulseLog('⚠️ Kredensial kosong. Menunggu campur tangan Master...', 'warning');
     } else {
+        sendPulseLog('🔑 Mulai proses login otomatis IG...', 'info');
         await page.goto('https://www.instagram.com/accounts/login/', { waitUntil: 'networkidle2', timeout: 30000 });
+        await sleep(2000);
+
+        try {
+            await page.waitForSelector('input[name="username"]', { timeout: 10000 });
+            await page.evaluate((u, p) => {
+                const userInp = document.querySelector('input[name="username"]');
+                const passInp = document.querySelector('input[name="password"]');
+                window.__LCR_UTILS__.simulateTyping(userInp, u);
+                window.__LCR_UTILS__.simulateTyping(passInp, p);
+            }, username, password);
+
+            await sleep(1500);
+            await page.evaluate(() => {
+                const btn = document.querySelector('button[type="submit"]');
+                if (btn) window.__LCR_UTILS__.triggerClick(btn);
+            });
+            await sleep(5000);
+        } catch (err) {
+            sendPulseLog('⚠️ Auto-fill gagal, langsung masuk ke mode manual.', 'warning');
+        }
     }
-    await sleep(2000);
 
-    try {
-        await page.waitForSelector('input[name="username"]');
-        await page.evaluate((u, p) => {
-            const userInp = document.querySelector('input[name="username"]');
-            const passInp = document.querySelector('input[name="password"]');
-            window.__LCR_UTILS__.simulateTyping(userInp, u);
-            window.__LCR_UTILS__.simulateTyping(passInp, p);
-        }, username, password);
+    sendPulseLog(`🚨 [HOLD] Sistem menahan progress! Silakan isi kredensial / 2FA di browser. (Waktu: 5 Menit)`, 'warning');
+    let isSafe = false;
+    for(let w = 0; w < 60; w++) { 
+        await sleep(5000);
+        const currentUrl = page.url();
+        const currentHtml = await page.content();
+        
+        const isLogin = currentUrl.includes('/login') || currentHtml.includes('loginForm') || currentHtml.includes('desktop_dynamic_landing_dialog');
+        const isChallenge = currentUrl.includes('/challenge') || currentUrl.includes('two_factor');
+        const isSaveInfo = currentUrl.includes('/onetap') || currentHtml.includes('Save Your Login Info') || currentHtml.includes('Simpan Info Login');
+        
+        if (!isLogin && !isChallenge && !isSaveInfo) {
+            isSafe = true;
+            break;
+        }
+        if (w % 6 === 0 && w > 0) sendPulseLog(`⏳ [HOLD] Masih menunggu bos selesai login... JANGAN TERBURU-BURU.`, 'warning');
+    }
 
-        await sleep(1000);
-        await page.evaluate(() => {
-            const btn = document.querySelector('button[type="submit"]');
-            window.__LCR_UTILS__.triggerClick(btn);
-        });
-
-        await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 }).catch(() => {});
+    if (isSafe) {
+        sendPulseLog('✅ Deteksi layar bersih! Sesi diamankan, melanjutkan ke target LCR...', 'success');
         await sleep(3000);
-
-        sendPulseLog('✅ Login Instagram berhasil!', 'success');
         return true;
-    } catch (err) {
-        sendPulseLog(`❌ Login Instagram gagal: ${err.message}`, 'error');
+    } else {
+        sendPulseLog('❌ Waktu manual (5 Menit) habis dan layar masih tersangkut.', 'error');
         return false;
     }
 }
@@ -256,58 +286,73 @@ async function instagramLogin(page, username, password) {
 // ==========================================
 async function tiktokLogin(page, username, password) {
     sendPulseLog('🔐 Mengecek status login TikTok...', 'info');
-
     await page.goto('https://www.tiktok.com/', { waitUntil: 'networkidle2', timeout: 30000 });
     await sleep(3000);
 
     const html = await page.content();
     const isLoggedIn = (html.includes('Upload') || html.includes('profile-icon') || html.includes('avatar'))
         && !html.includes('login-button')
-        && !html.includes('Log in')
-        && !html.includes('Masuk');
+        && !html.includes('Log in');
 
     if (isLoggedIn) {
         sendPulseLog('✅ TikTok session masih aktif.', 'success');
         return true;
     }
 
-    if (!username || !password) {
-        sendPulseLog('⚠️ Membutuhkan login tapi kredensial kosong!', 'warning');
-        return false;
-    }
-
-    sendPulseLog('🔑 Memulai proses login TikTok...', 'info');
+    sendPulseLog('🔑 Mulai proses login TikTok...', 'info');
     await page.goto('https://www.tiktok.com/login/phone-or-email/email', { waitUntil: 'networkidle2', timeout: 30000 });
     await sleep(2000);
 
-    try {
-        await page.waitForSelector('input[type="password"]');
-        await page.evaluate((u, p) => {
-            const userInp = document.querySelector('input[name="username"], input[placeholder*="email" i], input[type="text"]');
-            const passInp = document.querySelector('input[type="password"]');
-            window.__LCR_UTILS__.simulateTyping(userInp, u);
-            window.__LCR_UTILS__.simulateTyping(passInp, p);
-        }, username, password);
+    if (username && password) {
+        try {
+            await page.waitForSelector('input[type="password"]', { timeout: 10000 });
+            await page.evaluate((u, p) => {
+                const userInp = document.querySelector('input[name="username"], input[placeholder*="email" i], input[type="text"]');
+                const passInp = document.querySelector('input[type="password"]');
+                window.__LCR_UTILS__.simulateTyping(userInp, u);
+                window.__LCR_UTILS__.simulateTyping(passInp, p);
+            }, username, password);
 
-        await sleep(1000);
-        await page.evaluate(() => {
-            const btn = document.querySelector('button[type="submit"], button[data-e2e="login-button"]');
-            window.__LCR_UTILS__.triggerClick(btn);
-        });
+            await sleep(1500);
+            await page.evaluate(() => {
+                const btn = document.querySelector('button[type="submit"], button[data-e2e="login-button"]');
+                if (btn) window.__LCR_UTILS__.triggerClick(btn);
+            });
+            await sleep(5000);
+        } catch (err) {
+            sendPulseLog('⚠️ Auto-fill gagal, masuk ke mode manual.', 'warning');
+        }
+    }
 
-        await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 }).catch(() => {});
+    sendPulseLog(`🚨 [HOLD] Sistem menahan progress! Silakan selesaikan login / Captcha di browser. (Waktu: 5 Menit)`, 'warning');
+    let isSafe = false;
+    for(let w = 0; w < 60; w++) { 
+        await sleep(5000);
+        const currentUrl = page.url();
+        const currentHtml = await page.content();
+        
+        const isLogin = currentUrl.includes('/login') || currentHtml.includes('login-modal');
+        const isCaptcha = currentUrl.includes('/verification') || currentUrl.includes('captcha');
+        
+        if (!isLogin && !isCaptcha && (currentHtml.includes('Upload') || currentHtml.includes('profile-icon'))) {
+            isSafe = true;
+            break;
+        }
+        if (w % 6 === 0 && w > 0) sendPulseLog(`⏳ [HOLD] Masih menunggu bos menyelesaikan Captcha/Login TikTok...`, 'warning');
+    }
+
+    if (isSafe) {
+        sendPulseLog('✅ Deteksi layar bersih! Sesi diamankan, melanjutkan ke target LCR...', 'success');
         await sleep(3000);
-
-        sendPulseLog('✅ Login TikTok berhasil!', 'success');
         return true;
-    } catch (err) {
-        sendPulseLog(`❌ Login TikTok gagal: ${err.message}`, 'error');
+    } else {
+        sendPulseLog('❌ Waktu manual (5 Menit) habis dan layar masih tersangkut.', 'error');
         return false;
     }
 }
 
 // ==========================================
-// INSTAGRAM: ACTIONS (Pro version synced)
+// INSTAGRAM: ACTIONS
 // ==========================================
 async function instagramActions(page, commentText) {
     return await page.evaluate(async (cmt) => {
@@ -384,7 +429,6 @@ async function instagramActions(page, commentText) {
                     results.push({ action: 'repost', skipped: false });
                 }
             } else {
-                // Fallback to Save
                 const saveSvg = document.querySelector('svg[aria-label="Save"], svg[aria-label="Simpan"]');
                 if (saveSvg) {
                     const isSaved = !!document.querySelector('svg[aria-label="Remove"], svg[aria-label="Hapus"]');
@@ -394,7 +438,7 @@ async function instagramActions(page, commentText) {
                         const btn = saveSvg.closest('[role="button"], button') || saveSvg.parentElement;
                         utils.triggerClick(btn);
                         await utils.sleep(1000);
-                        results.push({ action: 'repost', skipped: false, note: 'Saved as fallback for repost' });
+                        results.push({ action: 'repost', skipped: false, note: 'Saved as fallback' });
                     }
                 } else {
                     results.push({ action: 'repost', skipped: true, error: 'Repost/Save button not found' });
@@ -407,7 +451,7 @@ async function instagramActions(page, commentText) {
 }
 
 // ==========================================
-// TIKTOK: ACTIONS (Pro version synced)
+// TIKTOK: ACTIONS
 // ==========================================
 async function tiktokActions(page, commentText) {
     return await page.evaluate(async (cmt) => {
@@ -453,18 +497,15 @@ async function tiktokActions(page, commentText) {
                 
                 input = document.querySelector(SELS.commentInput);
                 if (input) {
-                    // Gunakan paste bypass untuk TikTok DraftEditor
                     utils.simulatePaste(input, cmt);
                     await utils.sleep(800);
-                    
-                    // Tunggu button Post jadi enabled
                     try {
                         const post = await utils.waitForEnabled(SELS.commentPost, 5000);
                         utils.triggerClick(post);
                         await utils.sleep(2000);
                         results.push({ action: 'comment', skipped: false });
                     } catch (err) {
-                        results.push({ action: 'comment', error: 'Post button never enabled or not found' });
+                        results.push({ action: 'comment', error: 'Post btn never enabled' });
                     }
                 } else {
                     results.push({ action: 'comment', error: 'Input not found' });
@@ -486,7 +527,6 @@ async function tiktokActions(page, commentText) {
                 if (repost) {
                     const label = repost.querySelector('p')?.textContent?.trim() ?? '';
                     if (/remove|hapus/i.test(label)) {
-                        // Close popup
                         document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
                         results.push({ action: 'repost', skipped: true });
                     } else {
@@ -540,10 +580,11 @@ async function executeLCR(identity, payload) {
 
     let browser;
     try {
-        sendPulseLog('🌐 Meluncurkan browser stealth...', 'info');
+        sendPulseLog('🌐 Meluncurkan browser stealth (Mode Desktop)...', 'info');
         browser = await launchBrowser(sessionName);
         const page = await browser.newPage();
 
+        // 😈 SET USER-AGENT DESKTOP di awal
         await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
         
         await page.evaluateOnNewDocument(() => {
@@ -562,6 +603,7 @@ async function executeLCR(identity, payload) {
 
             await injectLcrUtilities(page);
 
+            // ================== PROSES LOGIN AWAL ==================
             if (!loginDone[platform]) {
                 if (platform === 'instagram' && identity.ig_email && identity.ig_password) {
                     loginDone['instagram'] = await instagramLogin(page, identity.ig_email, identity.ig_password);
@@ -573,6 +615,7 @@ async function executeLCR(identity, payload) {
                 }
             }
 
+            // ================== NAVIGASI POST ==================
             sendPulseLog('📡 Navigasi ke post...', 'info');
             try {
                 await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
@@ -581,6 +624,17 @@ async function executeLCR(identity, payload) {
             }
             await sleep(4000);
 
+            // ================== THE GATEKEEPER ==================
+            sendPulseLog('🛡️ Memeriksa status layar di halaman post...', 'info');
+            const isReady = await waitForPostReady(page, platform);
+            
+            if (!isReady) {
+                sendPulseLog(`❌ Waktu tunggu habis (5 Menit)! Halaman post masih terblokir. Melewati target ini...`, 'error');
+                currentResults.push({ url, platform, error: 'Blocked by Login/Captcha Wall' });
+                continue; 
+            }
+
+            // ================== EKSEKUSI LCR (DESKTOP MODE) ==================
             await injectLcrUtilities(page);
 
             let actionResults;
@@ -602,14 +656,66 @@ async function executeLCR(identity, payload) {
                 else sendPulseLog(`   ✅ ${icon} ${r.action}: Success!`, 'success');
             });
 
+            // ==========================================================
+            // 📸 PROTOKOL FOTO BUKTI (DYNAMIC MOBILE MORPHING)
+            // ==========================================================
+            sendPulseLog('📸 Menyusutkan browser ke ukuran HP (Mobile View) untuk screenshot...', 'info');
+            
+            // 1. Ubah dimensi instan jadi iPhone X
+            await page.setViewport({ width: 375, height: 812, isMobile: true, hasTouch: true });
+            
+            // 2. Ubah User-Agent jadi Mobile
+            await page.setUserAgent('Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1');
+
+            // 3. Jeda reflow CSS
+            await sleep(2000);
+
+            // 4. Kamera Cerdas: Lacak posisi tombol LCR dan geser layar ke sana!
+            await page.evaluate((plat) => {
+                let actionTarget = null;
+                
+                if (plat === 'instagram') {
+                    // Cari area tombol aksi IG (Like / Unlike)
+                    actionTarget = document.querySelector('svg[aria-label="Unlike"], svg[aria-label="Tidak Suka"], svg[aria-label="Like"], svg[aria-label="Suka"]');
+                } else if (plat === 'tiktok') {
+                    // Cari area tombol aksi TikTok
+                    actionTarget = document.querySelector('[data-e2e="like-icon"], [data-e2e="comment-icon"]');
+                }
+                
+                if (actionTarget) {
+                    // Posisikan elemen target tersebut agar berada tepat di tengah layar kamera!
+                    actionTarget.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                } else {
+                    // Fallback brutal: Jika tombol tak terlihat, paksa scroll turun 300 pixel
+                    window.scrollTo({ top: 0 }); // Reset dulu
+                    window.scrollBy({ top: 300, behavior: 'smooth' });
+                }
+            }, platform);
+            
+            await sleep(1500); // Tunggu 1.5 detik agar animasi geser layar selesai sebelum difoto
+
+            // 5. Jepret!
             let screenshotPath = null;
             try {
                 const ssDir = path.join(__dirname, '../../../frontend/public/screenshots');
                 if (!fs.existsSync(ssDir)) fs.mkdirSync(ssDir, { recursive: true });
                 screenshotPath = path.join(ssDir, `lcr_pro_${i + 1}_${Date.now()}.png`);
+                
                 await page.screenshot({ path: screenshotPath });
-            } catch (e) {}
+                sendPulseLog(`📸 Bukti LCR Mobile tersimpan!`, 'success');
+            } catch (e) {
+                sendPulseLog(`❌ Gagal mengambil screenshot: ${e.message}`, 'error');
+            }
 
+            // ==========================================================
+            // 🖥️ KEMBALIKAN KE MODE DESKTOP 
+            // ==========================================================
+            sendPulseLog('🖥️ Mengembalikan browser ke ukuran Desktop...', 'info');
+            await page.setViewport({ width: 1280, height: 900, isMobile: false, hasTouch: false });
+            await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+            await sleep(1000); // Jeda bernapas sebelum pindah loop
+
+            // ================== SIMPAN HASIL ==================
             const finalResult = {
                 url, platform,
                 like: actionResults.find(r => r.action === 'like'),
