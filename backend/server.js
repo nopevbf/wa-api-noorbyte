@@ -319,19 +319,15 @@ const { executeLCR, getLcrStatus } = require('./src/services/lcrEngine');
 
 // EXECUTE MANUAL LCR — Jalankan Like/Comment/Repost di background
 app.post('/api/pulse/execute-manual', (req, res) => {
-    const { identity, payload } = req.body;
+    // 😈 Tangkap 'options' yang berisi stealthMode
+    const { identity, payload, options } = req.body; 
 
-    console.log(`😈 Menerima perintah penaklukan untuk: ${identity.name}`);
+    console.log(`😈 Menerima perintah LCR untuk: ${identity.name} | Phantom: ${options?.stealthMode}`);
 
-    // 1. BALAS INSTAN! Jangan biarkan Frontend nunggu dan Proxy Timeout!
-    res.json({ 
-        status: 'success', 
-        message: 'Misi telah disuntikkan ke latar belakang! Pantau Terminal!' 
-    });
+    res.json({ status: 'success', message: 'Misi disuntikkan! Pantau Terminal.' });
 
-    // 2. EKSEKUSI SILUMAN (Tanpa 'await')
-    // Bot akan berjalan sendiri di background, melapor via Socket.io
-    executeLCR(identity, payload).then(result => {
+    // 😈 Teruskan 'options' ke mesin eksekusi
+    executeLCR(identity, payload, options).then(result => {
         console.log("Misi LCR Selesai di latar belakang!");
     }).catch(err => {
         console.error("LCR Background Error:", err.message);

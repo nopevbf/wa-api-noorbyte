@@ -2,6 +2,7 @@ document.addEventListener('alpine:init', () => {
     Alpine.data('pulseController', () => ({
         mode: 'manual', // 'manual' atau 'automatic'
         isWaiting: true,
+        stealthMode: false, // 😈 DEFAULT: Browser Terlihat (VISIBLE)
         
         // Memori Penyimpanan Input
         config: {
@@ -169,20 +170,14 @@ document.addEventListener('alpine:init', () => {
 
             try {
                 // Kirim data ke Backend API
+                // Di dalam fungsi startManual()
                 const response = await fetch('/api/pulse/execute-manual', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        identity: {
-                            name: this.config.name,
-                            ig: this.config.ig,
-                            ig_email: this.config.ig_email,
-                            ig_password: this.config.ig_password,
-                            tt: this.config.tt,
-                            tt_email: this.config.tt_email,
-                            tt_password: this.config.tt_password
-                        },
-                        payload: this.manual
+                        identity: this.config,
+                        payload: this.manual,
+                        options: { stealthMode: this.stealthMode } // 😈 Kirim status saklar ke Backend!
                     })
                 });
 
