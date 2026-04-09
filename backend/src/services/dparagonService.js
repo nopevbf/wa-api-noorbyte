@@ -248,7 +248,7 @@ async function runDailyReportViaBrowser(dpApiUrl, dpEmail, dpPassword) {
     headless: true, // stealth sudah handle ini
     userDataDir,
     args: [
-      "--no-sandbox",
+      "--no-sandbox", // "--disable-setuid-sandbox",
       "--disable-setuid-sandbox",
       "--disable-dev-shm-usage",
       "--disable-gpu",
