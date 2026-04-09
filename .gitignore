@@ -10,3 +10,38 @@ backend/sessions/**
 
 # Ignore database files
 **/database.db
+**/database.sqlite
+**/db/*
+
+# Ignore API keys and tokens
+**/api_keys.json
+**/api_tokens.json
+
+# Ignore log files
+**/logs/*.log
+
+# Ignore temporary files
+**/temp/*.tmp
+
+# Ignore backup files
+**/backup/*.bak
+
+# Ignore compiled files
+**/dist/
+**/build/
+
+# Ignore IDE files
+**/.idea/
+**/.vscode/
+
+# Ignore deployment files
+**/deploy/
+**/deployments/
+
+# Ignore generated files
+**/generated/
+**/generated_files/
+
+# Ignore cache files
+**/cache/
+**/cache_files/
