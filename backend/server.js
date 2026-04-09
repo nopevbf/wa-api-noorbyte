@@ -42,6 +42,7 @@ app.get("/automation", (req, res) => res.sendFile(path.join(frontendPath, "autom
 app.get("/verify", (req, res) => res.sendFile(path.join(frontendPath, "verify.html")));
 app.get("/jailbreak", (req, res) => res.sendFile(path.join(frontendPath, "jailbreak.html")));
 app.get("/jailbreak/checkin", (req, res) => res.sendFile(path.join(frontendPath, "checkin.html")));
+app.get("/pulse", (req, res) => res.sendFile(path.join(frontendPath, "pulse.html")));
 
 // Redirect sisanya ke login jika bukan request ke API
 app.get("*", (req, res, next) => {
@@ -54,15 +55,71 @@ app.get("*", (req, res, next) => {
 const PORT = process.env.PORT || 4000;
 const appConfig = require("./src/config/appConfig");
 
-server.listen(PORT, () => {
-  console.log(`⚙️  [BACKEND] Service API & WA Engine berjalan di http://localhost:${PORT}`);
-  console.log(`🌍 [ENV] Mode: ${appConfig.env.toUpperCase()} | DParagon API: ${appConfig.dparagonApiUrl}`);
-  initAllSessions(global.io);
+function startServer(port) {
+  server.listen(port, () => {
+    console.log(`⚙️  [BACKEND] Service API & WA Engine berjalan di http://localhost:${port}`);
+    console.log(`🌍 [ENV] Mode: ${appConfig.env.toUpperCase()} | DParagon API: ${appConfig.dparagonApiUrl}`);
+    initAllSessions(global.io);
 
-  // 5. Start Automation Engine (background scheduler)
-  const { startAutomationEngine } = require("./src/services/automationEngine");
-  startAutomationEngine();
-});
+    // 5. Start Automation Engine (background scheduler)
+    const { startAutomationEngine } = require("./src/services/automationEngine");
+    startAutomationEngine();
+  });
+
+  server.on("error", (err) => {
+    if (err.code === "EADDRINUSE") {
+      console.warn(`⚠️  [BACKEND] Port ${port} sedang dipakai! Mencoba kill proses lama...`);
+
+      const { exec } = require("child_process");
+      const isWin = process.platform === "win32";
+
+      // Cari PID yang nempel di port tersebut
+      const findCmd = isWin
+        ? `netstat -ano | findstr :${port} | findstr LISTENING`
+        : `lsof -ti :${port}`;
+
+      exec(findCmd, (findErr, stdout) => {
+        if (findErr || !stdout.trim()) {
+          console.error(`❌ [BACKEND] Gagal menemukan proses di port ${port}. Matikan manual lalu coba lagi.`);
+          process.exit(1);
+        }
+
+        // Extract PID
+        let pid;
+        if (isWin) {
+          // Format netstat Windows: "  TCP    0.0.0.0:4000    0.0.0.0:0    LISTENING    12345"
+          const parts = stdout.trim().split(/\s+/);
+          pid = parts[parts.length - 1];
+        } else {
+          pid = stdout.trim().split("\n")[0];
+        }
+
+        if (!pid || isNaN(pid)) {
+          console.error(`❌ [BACKEND] PID tidak valid. Matikan proses di port ${port} secara manual.`);
+          process.exit(1);
+        }
+
+        console.log(`🔪 [BACKEND] Killing PID ${pid} yang menguasai port ${port}...`);
+        const killCmd = isWin ? `taskkill /PID ${pid} /F` : `kill -9 ${pid}`;
+
+        exec(killCmd, (killErr) => {
+          if (killErr) {
+            console.error(`❌ [BACKEND] Gagal kill PID ${pid}:`, killErr.message);
+            process.exit(1);
+          }
+
+          console.log(`✅ [BACKEND] PID ${pid} berhasil dimatikan. Restart server dalam 1 detik...`);
+          setTimeout(() => startServer(port), 1000);
+        });
+      });
+    } else {
+      console.error("❌ [BACKEND] Server error:", err);
+      process.exit(1);
+    }
+  });
+}
+
+startServer(PORT);
 
 const { scrapeDparagonAttendance } = require('../frontend/public/js/scapper.js');
 
@@ -253,6 +310,47 @@ app.post('/api/jailbreak/execute', async (req, res) => {
     console.error("Execute Route Error:", error);
     res.status(500).json({ status: false, message: "Server error" });
   }
+});
+
+// ==========================================
+// PULSE LCR ENGINE ENDPOINTS
+// ==========================================
+const { executeLCR, getLcrStatus } = require('./src/services/lcrEngine');
+
+// EXECUTE MANUAL LCR — Jalankan Like/Comment/Repost di background
+app.post('/api/pulse/execute-manual', (req, res) => {
+    const { identity, payload } = req.body;
+
+    if (!identity || !payload || !payload.links) {
+        return res.status(400).json({ status: false, message: 'Data tidak lengkap. Isi Identity dan Link.' });
+    }
+
+    console.log(`[PULSE] 🚀 Menerima misi LCR untuk: ${identity.name || 'Unknown'}`);
+    console.log(`[PULSE] 📎 Links: ${(payload.links || '').split('\n').length} link`);
+
+    // Jalankan di background (non-blocking, seperti pola scrapeDparagonAttendance)
+    executeLCR(identity, payload)
+        .then(result => {
+            console.log(`[PULSE] ✅ LCR selesai: ${result.results?.length || 0} link diproses.`);
+        })
+        .catch(err => {
+            console.error(`[PULSE] ❌ LCR gagal:`, err.message);
+        });
+
+    // Langsung balikin response biar UI gak nunggu
+    res.json({ status: true, message: 'LCR Engine started in background. Pantau progress di terminal.' });
+});
+
+// STATUS LCR — Polling dari frontend
+app.get('/api/pulse/status', (req, res) => {
+    const status = getLcrStatus();
+    res.json({ status: true, data: status });
+});
+
+// ACTIVATE WATCHER (Placeholder untuk Auto-Parse mode)
+app.post('/api/pulse/activate-watcher', (req, res) => {
+    console.log("[PULSE] Watcher mode requested:", req.body);
+    res.json({ status: true, message: 'Watcher mode belum diimplementasikan. Gunakan Manual Mode.' });
 });
 
 // ==========================================

@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Pulse Automation - API Provider</title>
+    
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    <script id="tailwind-config">
+        tailwind.config = { 
+            darkMode: "class", 
+            theme: { 
+                extend: { 
+                    colors: { 
+                        "primary": "#136dec", 
+                        "background-light": "#f6f7f8", 
+                        "background-dark": "#101822" 
+                    }, 
+                    fontFamily: { 
+                        "display": ["Inter"] 
+                    } 
+                } 
+            } 
+        }
+    </script>
+    <style> 
+        body { font-family: 'Inter', sans-serif; } 
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; } 
+        /* Pulse Terminal Scrollbar */
+        .terminal-scroll::-webkit-scrollbar { width: 4px; }
+        .terminal-scroll::-webkit-scrollbar-track { background: transparent; }
+        .terminal-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        [x-cloak] { display: none !important; }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 font-display" x-data="pulseController()">
+<div class="flex min-h-screen">
+    
+    <div id="sidebar-container"></div>
+    
+    <main class="flex-1 flex flex-col min-w-0">
+        
+        <header class="h-16 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 sm:px-8 sticky top-0 z-10">
+            <div class="flex items-center gap-4">
+                <button id="toggleSidebarBtn" class="lg:hidden p-2 -ml-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">
+                    <span class="material-symbols-outlined">menu</span>
+                </button>
+                <div class="flex items-center gap-2">
+                    <span class="text-slate-400 hidden sm:inline">Pages</span> 
+                    <span class="text-slate-400 hidden sm:inline">/</span> 
+                    <span class="text-slate-900 dark:text-slate-100 font-medium">Pulse Automation</span>
+                </div>
+            </div>
+        </header>
+
+        <div class="p-4 sm:p-8 space-y-8 max-w-[1400px] mx-auto w-full">
+            
+            <header class="flex flex-col md:flex-row md:items-end justify-between gap-6">
+                <div>
+                    <h2 class="text-3xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">Pulse Center</h2>
+                    <p class="text-slate-500 text-lg mt-1">Orchestrate your automated LCR monitoring workflows.</p>
+                </div>
+
+                <div class="inline-flex p-1 bg-slate-200 dark:bg-slate-800 rounded-xl">
+              <button :class="mode === 'manual' ? 'bg-white dark:bg-slate-900 shadow-sm text-primary' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'" @click="mode = 'manual'" class="px-6 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2">
+                <span class="material-symbols-outlined text-lg">touch_app</span> Manual
+              </button>
+              <button :class="mode === 'automatic' ? 'bg-white dark:bg-slate-900 shadow-sm text-primary' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'" @click="mode = 'automatic'" class="px-6 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2">
+                <span class="material-symbols-outlined text-lg">autorenew</span> Auto-Parse
+              </button>
+            </div>
+            </header>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                
+                <div class="lg:col-span-4 space-y-6">
+                    <section class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-sm">
+                        <div class="flex items-center gap-2 mb-6">
+                            <span class="material-symbols-outlined text-primary">fingerprint</span>
+                            <h3 class="text-sm font-bold uppercase tracking-wider text-slate-500">Identity Config</h3>
+                        </div>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-400 uppercase mb-1.5 ml-1">Full Name</label>
+                                <input x-model="config.name" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg px-4 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none" placeholder="e.g. Firman Aji Prasetyo" type="text"/>
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-400 uppercase mb-1.5 ml-1">Instagram (@)</label>
+                                <input x-model="config.ig" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg px-4 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none" placeholder="@username" type="text"/>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">IG Email</label>
+                                    <input x-model="config.ig_email" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2 text-xs focus:border-primary focus:ring-1 focus:ring-primary outline-none" placeholder="email@..." type="email"/>
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">IG Password</label>
+                                    <input x-model="config.ig_password" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2 text-xs focus:border-primary focus:ring-1 focus:ring-primary outline-none" placeholder="********" type="password"/>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-400 uppercase mb-1.5 ml-1">TikTok (@)</label>
+                                <input x-model="config.tt" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg px-4 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none" placeholder="@username" type="text"/>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">TT Email</label>
+                                    <input x-model="config.tt_email" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2 text-xs focus:border-primary focus:ring-1 focus:ring-primary outline-none" placeholder="email@..." type="email"/>
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">TT Password</label>
+                                    <input x-model="config.tt_password" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2 text-xs focus:border-primary focus:ring-1 focus:ring-primary outline-none" placeholder="********" type="password"/>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <template x-if="mode === 'manual'">
+                        <section class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-sm">
+                            <div class="flex items-center gap-2 mb-6">
+                                <span class="material-symbols-outlined text-purple-500">database</span>
+                                <h3 class="text-sm font-bold uppercase tracking-wider text-slate-500">Resource Pool</h3>
+                            </div>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-[11px] font-bold text-slate-400 uppercase mb-1.5 ml-1">Pool Tanggal (One per line)</label>
+                                    <textarea x-model="manual.dates" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg px-4 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none font-mono min-h-[80px] text-slate-900 dark:text-white" placeholder="2 April 2026"></textarea>
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-bold text-slate-400 uppercase mb-1.5 ml-1">Pool Link (One per line)</label>
+                                    <textarea x-model="manual.links" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg px-4 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none font-mono min-h-[100px] text-slate-900 dark:text-white" placeholder="https://instagram.com/p/..."></textarea>
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-bold text-slate-400 uppercase mb-1.5 ml-1">Pool Komen (One per line)</label>
+                                    <textarea x-model="manual.comments" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg px-4 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none font-mono min-h-[100px] text-slate-900 dark:text-white" placeholder="Awesome post! 🔥"></textarea>
+                                </div>
+                                <div class="pt-3 border-t border-slate-100 dark:border-slate-800 mt-2">
+                                    <p class="text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed italic">
+                                        <span class="font-bold text-primary not-italic uppercase mr-1">Pro Tip:</span>
+                                        Gunakan koma (,) untuk memisahkan antar periode tanggal, link, atau komen. Setiap koma menandakan transisi ke periode data berikutnya.
+                                    </p>
+                                </div>
+                            </div>
+                        </section>
+                    </template>
+
+                    <template x-if="mode === 'automatic'">
+                        <section class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-sm">
+                            <div class="flex items-center gap-2 mb-6">
+                                <span class="material-symbols-outlined text-emerald-500">forum</span>
+                                <h3 class="text-sm font-bold uppercase tracking-wider text-slate-500">WA Automation</h3>
+                            </div>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-[11px] font-bold text-slate-400 uppercase mb-1.5 ml-1">Monitor Group ID</label>
+                                    <input x-model="auto.monitorId" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg px-4 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none font-mono text-slate-900 dark:text-white" placeholder="12036302839485726@g.us" type="text"/>
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-bold text-slate-400 uppercase mb-1.5 ml-1">Target Destination ID</label>
+                                    <input x-model="auto.targetId" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg px-4 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none font-mono text-slate-900 dark:text-white" placeholder="628123456789@c.us" type="text"/>
+                                </div>
+                            </div>
+                        </section>
+                    </template>
+
+                    <button @click="mode === 'manual' ? startManual() : startAuto()" class="w-full bg-primary hover:bg-primary/90 text-white py-4 rounded-xl font-bold flex items-center justify-center gap-3 shadow-lg shadow-primary/20 active:scale-95 transition-all">
+    <span class="material-symbols-outlined text-xl" style="font-variation-settings: 'FILL' 1;" x-text="mode === 'manual' ? 'play_arrow' : 'sensors'"></span>
+    <span x-text="mode === 'manual' ? 'Start Manual Execution' : 'Activate Auto-Monitor'"></span>
+</button>
+                </div>
+
+                <div class="lg:col-span-5 space-y-6">
+                    <section class="bg-[#0f172a] border border-slate-800 rounded-xl overflow-hidden shadow-xl flex flex-col h-[380px]">
+                        <div class="bg-[#0b1120] px-4 py-3 border-b border-slate-800 flex justify-between items-center">
+                            <div class="flex items-center gap-2">
+                                <span class="material-symbols-outlined text-emerald-500 text-sm">terminal</span>
+                                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Real-time Activity Log</span>
+                            </div>
+                            <div class="flex gap-1.5">
+                                <div class="w-2.5 h-2.5 rounded-full bg-slate-700"></div>
+                                <div class="w-2.5 h-2.5 rounded-full bg-slate-700"></div>
+                                <div class="w-2.5 h-2.5 rounded-full bg-slate-700"></div>
+                            </div>
+                        </div>
+                        <div id="terminal-scroll" class="p-4 font-mono text-xs leading-relaxed terminal-scroll overflow-y-auto flex-1 space-y-1.5">
+                            <template x-for="(log, index) in logs" :key="index">
+                                <div class="flex gap-2">
+                                    <span class="text-slate-600" x-text="`[${log.time}]`"></span>
+                                    <span :class="log.color" x-text="`${log.type}:`" class="font-bold"></span>
+                                    <span class="text-slate-300" x-text="log.message"></span>
+                                </div>
+                            </template>
+                            <div class="flex gap-2 animate-pulse mt-2" x-show="isWaiting">
+                                <span class="text-slate-600" x-text="`[${new Date().toLocaleTimeString('id-ID')}]`"></span>
+                                <span class="w-2 h-4 bg-emerald-500"></span>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm">
+                        <div class="flex items-center gap-2 mb-4">
+                            <span class="material-symbols-outlined text-primary text-sm">description</span>
+                            <h3 class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Caption Preview</h3>
+                        </div>
+                        <div class="bg-slate-50 dark:bg-slate-950 rounded-lg p-5 font-mono text-slate-700 dark:text-blue-100 border border-slate-200 dark:border-slate-800 leading-relaxed">
+                            <p class="text-sm">Firman Aji Prasetyo / 5 / 2 April 2026</p>
+                            <p class="text-[10px] mt-4 text-slate-500 italic">// Dynamic parser output</p>
+                        </div>
+                    </section>
+                </div>
+
+                <div class="lg:col-span-3">
+                    <section class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm flex flex-col h-full min-h-[400px]">
+                        <div class="px-4 py-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50 rounded-t-xl">
+                            <h3 class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Execution Results</h3>
+                            <span class="text-[9px] font-bold px-2 py-0.5 rounded-full" :class="lcrStatus === 'running' ? 'bg-amber-100 text-amber-600 animate-pulse' : lcrStatus === 'done' ? 'bg-green-100 text-green-600' : 'bg-slate-100 text-slate-500'" x-text="lcrStatus === 'running' ? 'RUNNING' : lcrStatus === 'done' ? 'DONE' : 'IDLE'"></span>
+                        </div>
+                        <div class="flex-1 overflow-y-auto">
+                            <template x-if="lcrResults.length === 0">
+                                <div class="flex flex-col items-center justify-center h-full text-slate-400 px-4 py-8">
+                                    <span class="material-symbols-outlined text-3xl mb-2">hourglass_empty</span>
+                                    <p class="text-xs text-center">Belum ada hasil. Jalankan Manual Execution untuk memulai.</p>
+                                </div>
+                            </template>
+                            <table class="w-full text-left border-collapse" x-show="lcrResults.length > 0">
+                                <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                                    <template x-for="(res, idx) in lcrResults" :key="idx">
+                                        <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                                            <td class="px-4 py-3">
+                                                <div class="text-[10px] font-bold text-slate-900 dark:text-white truncate max-w-[120px]" x-text="(res.platform || '').toUpperCase() + ' #' + (idx+1)"></div>
+                                                <div class="flex gap-1.5 mt-1">
+                                                    <span class="text-[9px] px-1.5 py-0.5 rounded-full font-bold" :class="res.like && !res.like.skipped ? 'bg-red-50 text-red-500' : 'bg-slate-100 text-slate-400'" x-text="res.like && !res.like.skipped ? '❤️' : '♡'"></span>
+                                                    <span class="text-[9px] px-1.5 py-0.5 rounded-full font-bold" :class="res.comment && !res.comment.skipped ? 'bg-blue-50 text-blue-500' : 'bg-slate-100 text-slate-400'" x-text="res.comment && !res.comment.skipped ? '💬' : '○'"></span>
+                                                    <span class="text-[9px] px-1.5 py-0.5 rounded-full font-bold" :class="res.repost && !res.repost.skipped ? 'bg-green-50 text-green-500' : 'bg-slate-100 text-slate-400'" x-text="res.repost && !res.repost.skipped ? '🔁' : '○'"></span>
+                                                </div>
+                                            </td>
+                                            <td class="px-4 py-3 text-right">
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold" :class="res.error ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'" x-text="res.error ? 'ERR' : 'OK'"></span>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                </div>
+
+            </div>
+        </div>
+    </main>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="/js/sidebar.js?v=2"></script>
+
+<script src="/js/pulse.js?v=1"></script> 
+</body>
+</html>

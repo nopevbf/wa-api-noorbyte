@@ -11,3 +11,6 @@ backend/sessions/**
 # Ignore database files
 **/database.db
 backend/database.db
+# Ignore Puppeteer LCR sessions
+**/lcr_session_*/
+backend/src/services/lcr_session_*/
