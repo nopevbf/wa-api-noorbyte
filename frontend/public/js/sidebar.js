@@ -25,6 +25,10 @@ async function loadSidebar() {
     // 1. TEMA KHUSUS: HALAMAN JAILBREAK
     // ==========================================
     if (isJailbreakPage) {
+      // Clear pending state karena user sudah berhasil masuk ke halaman Jailbreak
+      localStorage.removeItem('jailbreak_pending');
+      localStorage.removeItem('jailbreak_timestamp');
+
       // A. Gelapkan background aside khas Jailbreak
       const aside = sidebarContainer.querySelector('aside');
       if (aside) {
