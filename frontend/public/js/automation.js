@@ -188,11 +188,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     btnRun.addEventListener("click", () => {
       const now = new Date();
       if (runTimeInput) {
-        runTimeInput.value = now.toLocaleTimeString("en-US", {
-          hour12: false,
-          hour: "2-digit",
-          minute: "2-digit",
-        });
+        const hh = String(now.getHours()).padStart(2, '0');
+        const mm = String(now.getMinutes()).padStart(2, '0');
+        runTimeInput.value = `${hh}:${mm}`;
       }
       runModal.classList.remove("hidden");
     });

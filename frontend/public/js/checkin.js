@@ -205,9 +205,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const scheduleModal = document.getElementById('scheduleCheckinModal');
                     const timeInput = document.getElementById('scheduleTimeInput');
 
-                    // Isi default input dengan jam sekarang
+                    // Isi default input dengan jam sekarang (format 24 jam: HH:MM)
                     const now = new Date();
-                    timeInput.value = now.toLocaleTimeString('id-ID', { hour12: false, hour: '2-digit', minute: '2-digit' });
+                    const hh = String(now.getHours()).padStart(2, '0');
+                    const mm = String(now.getMinutes()).padStart(2, '0');
+                    timeInput.value = `${hh}:${mm}`;
 
                     // Tampilkan Modal
                     scheduleModal.classList.remove('hidden');
