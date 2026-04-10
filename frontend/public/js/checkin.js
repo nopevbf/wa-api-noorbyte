@@ -272,6 +272,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 btnCapture.classList.replace('bg-red-600', 'bg-emerald-600');
                                 btnCapture.classList.replace('hover:bg-red-700', 'hover:bg-emerald-700');
 
+                                // Tampilkan tombol Batalkan Time-Bomb
+                                const cancelBtn = document.getElementById('btnCancelTimebomb');
+                                if (cancelBtn) cancelBtn.classList.remove('hidden');
+
                                 // Kasih alert keren ngasih tau user bebas nutup browser
                                 showSystemAlert('SERVER TIMER ACTIVE', `Data dikunci di server pusat. Absen akan ditembakkan jam ${targetTime}.\n\nAnda AMAN untuk menutup browser atau mematikan perangkat ini.`, 'success');
                             } else {
@@ -288,6 +292,44 @@ document.addEventListener('DOMContentLoaded', async () => {
                     console.log(`[SYSTEM] Mode Instant Triggered. Melakukan eksekusi langsung...`);
                     submitPresence();
                 }
+            }
+        });
+    }
+
+    // ==========================================
+    // LOGIC TOMBOL CANCEL TIME-BOMB
+    // ==========================================
+    const btnCancelTimebomb = document.getElementById('btnCancelTimebomb');
+    if (btnCancelTimebomb) {
+        btnCancelTimebomb.addEventListener('click', async () => {
+            btnCancelTimebomb.disabled = true;
+            btnCancelTimebomb.innerHTML = `<span class="material-symbols-outlined text-base animate-spin">autorenew</span> Membatalkan...`;
+
+            try {
+                const apiKey = localStorage.getItem('noorbyte_session') || '';
+                const res = await fetch('/api/attendance/cancel-timebomb', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ api_key: apiKey })
+                });
+                const data = await res.json();
+
+                if (data.status) {
+                    // Reset tombol capture ke mode awal
+                    btnCapture.innerHTML = `<span class="material-symbols-outlined text-xl md:text-2xl">photo_camera</span> Ambil & Kirim`;
+                    btnCapture.className = "w-full bg-red-600 hover:bg-red-700 text-white py-3.5 md:py-4 rounded-xl font-black text-sm md:text-lg uppercase tracking-widest flex items-center justify-center gap-3 active:scale-95 transition-all shadow-lg";
+                    btnCapture.disabled = false;
+                    btnCancelTimebomb.classList.add('hidden');
+                    showSystemAlert('TIMER CANCELLED', data.message, 'success');
+                } else {
+                    showSystemAlert('CANCEL GAGAL', data.message, 'error');
+                    btnCancelTimebomb.disabled = false;
+                    btnCancelTimebomb.innerHTML = `<span class="material-symbols-outlined text-base">timer_off</span> Batalkan Jadwal Absen`;
+                }
+            } catch (err) {
+                showSystemAlert('ERROR', err.message, 'error');
+                btnCancelTimebomb.disabled = false;
+                btnCancelTimebomb.innerHTML = `<span class="material-symbols-outlined text-base">timer_off</span> Batalkan Jadwal Absen`;
             }
         });
     }

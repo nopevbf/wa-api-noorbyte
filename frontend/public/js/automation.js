@@ -277,6 +277,51 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   // ==========================================
+  // TOMBOL BATALKAN JADWAL AUTOMATION
+  // ==========================================
+  const btnCancelAutomation = document.getElementById("btnCancelAutomation");
+  if (btnCancelAutomation) {
+    btnCancelAutomation.addEventListener("click", async () => {
+      const apiKey = (selector ? selector.value : "") || localStorage.getItem("automationSelectedDevice") || "";
+      if (!apiKey) {
+        showModal("Peringatan", "Pilih device terlebih dahulu sebelum membatalkan jadwal.");
+        return;
+      }
+
+      btnCancelAutomation.disabled = true;
+      btnCancelAutomation.innerHTML = `<span class="material-symbols-outlined animate-spin text-sm">autorenew</span> Membatalkan...`;
+
+      try {
+        const res = await fetch(`${API_URL}/automation/cancel-manual`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ api_key: apiKey }),
+        });
+        const result = await res.json();
+
+        if (result.status) {
+          // Reset btnRun ke mode normal
+          if (btnRun) {
+            btnRun.disabled = false;
+            btnRun.innerHTML = `<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">bolt</span> Run Automation Now`;
+          }
+          btnCancelAutomation.classList.add("hidden");
+          await addLog("text-amber-400", "CANCELLED", result.message);
+          showModal("Jadwal Dibatalkan ✅", result.message);
+        } else {
+          showModal("Gagal Batalkan", result.message);
+          btnCancelAutomation.disabled = false;
+          btnCancelAutomation.innerHTML = `<span class="material-symbols-outlined text-sm">cancel_schedule_send</span> Batalkan Jadwal`;
+        }
+      } catch (err) {
+        showModal("Error", err.message);
+        btnCancelAutomation.disabled = false;
+        btnCancelAutomation.innerHTML = `<span class="material-symbols-outlined text-sm">cancel_schedule_send</span> Batalkan Jadwal`;
+      }
+    });
+  }
+
+  // ==========================================
   // 5. POLLING STATUS DARI BACKEND
   // ==========================================
   let statusPollInterval = null;
@@ -367,16 +412,20 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
 
         // Update button based on manual_run_status
+        const btnCancelAutomation = document.getElementById("btnCancelAutomation");
         if (btnRun) {
           if (data.manual_run_status === "waiting") {
             btnRun.disabled = true;
             btnRun.innerHTML = `<span class="material-symbols-outlined animate-spin">autorenew</span> Menunggu ${data.manual_run_time || "..."}`;
+            if (btnCancelAutomation) btnCancelAutomation.classList.remove("hidden");
           } else if (data.manual_run_status === "running") {
             btnRun.disabled = true;
             btnRun.innerHTML = `<span class="material-symbols-outlined animate-spin">autorenew</span> Executing...`;
+            if (btnCancelAutomation) btnCancelAutomation.classList.add("hidden");
           } else {
             btnRun.disabled = false;
             btnRun.innerHTML = `<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">bolt</span> Run Automation Now`;
+            if (btnCancelAutomation) btnCancelAutomation.classList.add("hidden");
           }
         }
       }
