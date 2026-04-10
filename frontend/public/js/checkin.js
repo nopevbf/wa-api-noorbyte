@@ -256,6 +256,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                     targetTime: targetTime,
                                     token: token,
                                     dpUrl: dpUrl,
+                                    api_key: localStorage.getItem('noorbyte_session') || '',
                                     payload: {
                                         latitude: parseFloat(lat),
                                         longitude: parseFloat(lng),

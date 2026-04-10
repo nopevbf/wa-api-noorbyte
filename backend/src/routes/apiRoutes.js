@@ -830,7 +830,8 @@ router.post('/attendance/schedule-timebomb', async (req, res) => {
     };
 
     // 3. Pasang Timer Tahan Banting di Server & simpan ID-nya ke registry
-    const apiKey = payload?.api_key || token.slice(-8); // pakai tail token sebagai fallback key
+    // Pakai api_key dari NoorByte (dikirim frontend) sebagai key registry
+    const apiKey = req.body.api_key || token.slice(-8);
     const timerId = setTimeout(() => {
       timebombRegistry.delete(apiKey); // Hapus dari registry setelah meledak
       executeBomb();
