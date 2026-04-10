@@ -758,12 +758,19 @@ router.post('/attendance/schedule-timebomb', async (req, res) => {
       return res.status(400).json({ status: false, message: "Payload tidak lengkap." });
     }
 
-    // 1. Kalkulasi Waktu di Server
+    // 1. Kalkulasi Waktu di Server (TIMEZONE: WIB / UTC+7)
     const [targetHour, targetMinute] = targetTime.split(':');
-    const targetDate = new Date();
-    targetDate.setHours(targetHour, targetMinute, 0, 0);
+    const WIB_OFFSET = 7 * 60; // menit
 
-    let delayMs = targetDate.getTime() - new Date().getTime();
+    // Waktu sekarang dalam WIB
+    const nowUtc = new Date();
+    const nowWib = new Date(nowUtc.getTime() + WIB_OFFSET * 60 * 1000);
+
+    // Buat target date dalam WIB (same date as nowWib)
+    const targetWib = new Date(nowWib);
+    targetWib.setUTCHours(parseInt(targetHour), parseInt(targetMinute), 0, 0);
+
+    let delayMs = targetWib.getTime() - nowWib.getTime();
     if (delayMs < 0) delayMs += (24 * 60 * 60 * 1000); // Kalau lewat, set buat besoknya
 
     console.log(`[SERVER] ⏰ Time-Bomb diterima! Aktif dalam ${Math.floor(delayMs / 60000)} menit (Jam ${targetTime}).`);
