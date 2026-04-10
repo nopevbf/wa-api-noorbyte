@@ -1,8 +1,7 @@
 const axios = require("axios");
 const { SocksProxyAgent } = require("socks-proxy-agent"); // Ganti library-nya
 
-// <--- [TAMBAHAN 2] Masukin Link Pinggy dari Termux HP lu (buang tulisan tcp://)
-// Contoh jadinya: "http://firman:rahasia123@rnq-12-34-56.a.pinggy.link:43210"
+//Socks5 Ngrok
 const proxyUrl = "socks5://0.tcp.ap.ngrok.io:11861"; // <--- Ganti dengan URL proxy SOCKS5 yang benar
 const proxyAgent = new SocksProxyAgent(proxyUrl);
 

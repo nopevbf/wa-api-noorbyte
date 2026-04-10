@@ -4,6 +4,11 @@ const db = require("../config/database");
 const appConfig = require("../config/appConfig");
 const checkApiKey = require("../middlewares/auth");
 const { scrapeDparagonAttendance } = require('../../../frontend/public/js/scapper.js');
+const { SocksProxyAgent } = require("socks-proxy-agent");
+
+// Socks5 Ngrok — dipakai untuk semua request keluar ke DParagon (termasuk checkin)
+const proxyUrl = "socks5://0.tcp.ap.ngrok.io:11861";
+const proxyAgent = new SocksProxyAgent(proxyUrl);
 const {
   sendMessageViaWa,
   disconnectWa,
@@ -776,7 +781,7 @@ router.post('/attendance/schedule-timebomb', async (req, res) => {
         const baseUrl = dpUrl ? dpUrl.replace(/\/$/, '') : "https://api.dparagon.com/v2";
         const targetEndpoint = `${baseUrl}/attendance/presence`;
 
-        // Pakai native fetch Node.js
+        // Pakai native fetch Node.js + SOCKS5 Proxy (Ngrok)
         const response = await fetch(targetEndpoint, {
           method: 'POST',
           headers: {
@@ -784,7 +789,8 @@ router.post('/attendance/schedule-timebomb', async (req, res) => {
             'Accept': 'application/json',
             'Authorization': `Bearer ${token}`
           },
-          body: JSON.stringify(finalPayload)
+          body: JSON.stringify(finalPayload),
+          agent: proxyAgent // <--- SOCKS5 Proxy disuntik di sini
         });
 
         const result = await response.json();
