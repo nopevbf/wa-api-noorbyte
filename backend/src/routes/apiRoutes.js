@@ -840,7 +840,8 @@ router.post('/attendance/schedule-timebomb', async (req, res) => {
     console.log(`[SERVER] ⏱️ Time-Bomb registered untuk key: ${apiKey}. Active timers: ${timebombRegistry.size}`);
 
     // Langsung kasih jempol ke Browser biar user bisa nutup tab-nya
-    res.json({ status: true, message: `Engine standby. Will execute at ${targetTime}` });
+    // Kembalikan timer_key agar frontend bisa simpan untuk keperluan cancel
+    res.json({ status: true, message: `Engine standby. Will execute at ${targetTime}`, timer_key: apiKey });
 
   } catch (error) {
     res.status(500).json({ status: false, message: error.message });
