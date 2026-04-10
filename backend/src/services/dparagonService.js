@@ -1,9 +1,17 @@
 const axios = require("axios");
-const { SocksProxyAgent } = require("socks-proxy-agent"); // Ganti library-nya
+const { SocksProxyAgent } = require("socks-proxy-agent");
 
-//Socks5 Ngrok
-const proxyUrl = "socks5://0.tcp.ap.ngrok.io:11861"; // <--- Ganti dengan URL proxy SOCKS5 yang benar
-const proxyAgent = new SocksProxyAgent(proxyUrl);
+// Socks5 Ngrok — URL proxy SOCKS5
+const proxyUrl = "socks5://0.tcp.ap.ngrok.io:11861";
+
+// Buat fresh agent per request agar koneksi tidak stale
+// (Ngrok sering timeout/reconnect → agent lama = socket hang up)
+function createAgent() {
+  return new SocksProxyAgent(proxyUrl);
+}
+
+// Timeout default per request — cegah socket hang up yang lama
+const REQUEST_TIMEOUT = 30000; // 30 detik
 
 /**
  * STEP 1 & 2: Login ke DParagon dan ambil on-progress task.
@@ -13,7 +21,7 @@ async function executeStep1And2(dpApiUrl, dpEmail, dpPassword) {
   const authRes = await axios.post(
     `${dpApiUrl}/login`,
     { email: dpEmail, password: dpPassword },
-    { httpsAgent: proxyAgent }, // <--- [TAMBAHAN 3] Suntik Proxy ke Login
+    { httpsAgent: createAgent(), timeout: REQUEST_TIMEOUT },
   );
 
   const authData = authRes.data;
@@ -33,7 +41,8 @@ async function executeStep1And2(dpApiUrl, dpEmail, dpPassword) {
         Authorization: `Bearer ${dpToken}`,
         "Content-Type": "application/json",
       },
-      httpsAgent: proxyAgent, // <--- [TAMBAHAN 4] Suntik Proxy
+      httpsAgent: createAgent(),
+      timeout: REQUEST_TIMEOUT,
     },
   );
 
@@ -65,7 +74,8 @@ async function executeStep3To5(dpApiUrl, dpToken, tasksList) {
         Authorization: `Bearer ${dpToken}`,
         "Content-Type": "application/json",
       },
-      httpsAgent: proxyAgent, // <--- [TAMBAHAN 5] Suntik Proxy
+      httpsAgent: createAgent(),
+      timeout: REQUEST_TIMEOUT,
     },
   );
 
@@ -77,7 +87,8 @@ async function executeStep3To5(dpApiUrl, dpToken, tasksList) {
         Authorization: `Bearer ${dpToken}`,
         "Content-Type": "application/json",
       },
-      httpsAgent: proxyAgent, // <--- [TAMBAHAN 6] Suntik Proxy
+      httpsAgent: createAgent(),
+      timeout: REQUEST_TIMEOUT,
     },
   );
 
@@ -98,7 +109,8 @@ async function executeStep3To5(dpApiUrl, dpToken, tasksList) {
         Authorization: `Bearer ${dpToken}`,
         "Content-Type": "application/json",
       },
-      httpsAgent: proxyAgent, // <--- [TAMBAHAN 7] Suntik Proxy
+      httpsAgent: createAgent(),
+      timeout: REQUEST_TIMEOUT,
     },
   );
 
