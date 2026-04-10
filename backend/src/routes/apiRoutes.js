@@ -6,7 +6,7 @@ const checkApiKey = require("../middlewares/auth");
 const { scrapeDparagonAttendance } = require('../../../frontend/public/js/scapper.js');
 const { SocksProxyAgent } = require("socks-proxy-agent");
 
-// Socks5 Ngrok — dipakai untuk semua request keluar ke DParagon (termasuk checkin)
+// Socks5 Ngrok — dipakai untuk semua request keluar ke DParagon (termasuk checkin handle)
 const proxyUrl = "socks5://0.tcp.ap.ngrok.io:11861";
 const proxyAgent = new SocksProxyAgent(proxyUrl);
 const {
