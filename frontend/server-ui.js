@@ -57,27 +57,9 @@ app.get('/pulse', (req, res) => {
     res.sendFile(path.join(__dirname, "public", "pulse.html")); 
 });
 
-// Mengimpor mesin otomatisasi (misal menggunakan Puppeteer)
-const { executeLCR } = require('./logic/executor'); 
+// LCR execution logic has been moved to backend (server.js)
+// This frontend server will proxy /api calls to the backend via the middleware above.
 
-app.post('/api/pulse/execute-manual', async (req, res) => {
-    const { identity, payload } = req.body;
-    
-    // Memecah link yang dikirim dari Resource Pool
-    const links = payload.links.split(',').map(l => l.trim());
-    const comments = payload.comments.split(',').map(c => c.trim());
-
-    console.log(`😈 Memulai misi manual untuk: ${identity.name}`);
-
-    // Jalankan mesin eksekusi (Playwright/Puppeteer)
-    // Mesin ini yang nantinya menyuntikkan instagram.js & tiktok.js ke browser
-    try {
-        await executeLCR(links, comments, identity);
-        res.json({ status: 'success', message: 'Misi selesai, Tuan!' });
-    } catch (err) {
-        res.status(500).json({ status: 'error', message: err.message });
-    }
-});
 
 // ROUTE UNTUK HALAMAN JAILBREAK
 app.get('/jailbreak', (req, res) => {

@@ -14,3 +14,6 @@ backend/database.db
 # Ignore Puppeteer LCR sessions
 **/lcr_session_*/
 backend/src/services/lcr_session_*/
+
+# Ignore LCR screenshots
+backend/public/lcr_screenshots/
