@@ -61,9 +61,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   const selector = document.getElementById("deviceSelector");
   if (selector) {
     try {
-      const isAdmin = localStorage.getItem('connectApi_loggedIn') === 'true';
-      const guestApiKey = localStorage.getItem('noorbyte_session');
-      const query = isAdmin ? '?role=admin' : (guestApiKey ? `?api_key=${guestApiKey}` : '');
+      const isAdmin = localStorage.getItem("connectApi_loggedIn") === "true";
+      const guestApiKey = localStorage.getItem("noorbyte_session");
+      const query = isAdmin
+        ? "?role=admin"
+        : guestApiKey
+          ? `?api_key=${guestApiKey}`
+          : "";
       const response = await fetch(`${API_URL}/get-devices${query}`);
       const result = await response.json();
       if (result.status && result.data.length > 0) {
@@ -81,7 +85,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         // Restore previously selected device from localStorage
         const savedDevice = localStorage.getItem("automationSelectedDevice");
         if (savedDevice) {
-          const matchOption = Array.from(selector.options).find(o => o.value === savedDevice);
+          const matchOption = Array.from(selector.options).find(
+            (o) => o.value === savedDevice,
+          );
           if (matchOption && !matchOption.disabled) {
             selector.value = savedDevice;
 
@@ -139,11 +145,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function formatPreviewText(text) {
     if (!text) return "";
-    const lines = text.split('\n');
+    const lines = text.split("\n");
     if (lines.length <= 15) return text;
 
-    const topLines = lines.slice(0, 8).join('\n');
-    const bottomLines = lines.slice(-5).join('\n');
+    const topLines = lines.slice(0, 8).join("\n");
+    const bottomLines = lines.slice(-5).join("\n");
     return `${topLines}\n\n....\n...\n\n${bottomLines}`;
   }
 
@@ -153,13 +159,18 @@ document.addEventListener("DOMContentLoaded", async () => {
   function getFormData() {
     return {
       api_key: selector ? selector.value : "",
-      dp_api_url: (document.getElementById("dpApiUrl")?.value || "").replace(/\/$/, ""),
+      dp_api_url: (document.getElementById("dpApiUrl")?.value || "").replace(
+        /\/$/,
+        "",
+      ),
       dp_email: document.getElementById("dpEmail")?.value || "",
       dp_password: document.getElementById("accountPassword")?.value || "",
       target_number: document.getElementById("targetNumber")?.value || "",
       fetch_time: document.getElementById("fetchTime")?.value || "08:00",
       send_wa_time: document.getElementById("sendWaTime")?.value || "09:00",
-      frequency: document.querySelector('input[name="frequency"]:checked')?.value || "daily",
+      frequency:
+        document.querySelector('input[name="frequency"]:checked')?.value ||
+        "daily",
       is_active: document.getElementById("scheduleToggle")?.checked || false,
     };
   }
@@ -177,7 +188,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     btnRun.addEventListener("click", () => {
       const now = new Date();
       if (runTimeInput) {
-        runTimeInput.value = now.toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit" });
+        const hh = String(now.getHours()).padStart(2, '0');
+        const mm = String(now.getMinutes()).padStart(2, '0');
+        runTimeInput.value = `${hh}:${mm}`;
       }
       runModal.classList.remove("hidden");
     });
@@ -192,13 +205,24 @@ document.addEventListener("DOMContentLoaded", async () => {
       confirmRunBtn.addEventListener("click", async () => {
         const selectedTime = runTimeInput.value;
         if (!selectedTime) {
-          showModal("Peringatan", "Silakan pilih jam eksekusi terlebih dahulu.");
+          showModal(
+            "Peringatan",
+            "Silakan pilih jam eksekusi terlebih dahulu.",
+          );
           return;
         }
 
         const formData = getFormData();
-        if (!formData.api_key || !formData.dp_api_url || !formData.dp_email || !formData.dp_password) {
-          showModal("Peringatan", "Lengkapi semua kredensial dan pilih device terlebih dahulu.");
+        if (
+          !formData.api_key ||
+          !formData.dp_api_url ||
+          !formData.dp_email ||
+          !formData.dp_password
+        ) {
+          showModal(
+            "Peringatan",
+            "Lengkapi semua kredensial dan pilih device terlebih dahulu.",
+          );
           return;
         }
 
@@ -228,7 +252,11 @@ document.addEventListener("DOMContentLoaded", async () => {
           const result = await res.json();
           if (result.status) {
             await addLog("text-emerald-400", "SERVER", result.message);
-            await addLog("text-purple-400", "INFO", "Eksekusi akan berjalan di server. Anda bisa menutup browser.");
+            await addLog(
+              "text-purple-400",
+              "INFO",
+              "Eksekusi akan berjalan di server. Anda bisa menutup browser.",
+            );
             showModal("Terjadwal ✅", result.message);
             // Start polling for status updates
             startStatusPolling();
@@ -244,6 +272,51 @@ document.addEventListener("DOMContentLoaded", async () => {
         btnRun.innerHTML = `<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">bolt</span> Run Automation Now`;
       });
     }
+  }
+
+  // ==========================================
+  // TOMBOL BATALKAN JADWAL AUTOMATION
+  // ==========================================
+  const btnCancelAutomation = document.getElementById("btnCancelAutomation");
+  if (btnCancelAutomation) {
+    btnCancelAutomation.addEventListener("click", async () => {
+      const apiKey = (selector ? selector.value : "") || localStorage.getItem("automationSelectedDevice") || "";
+      if (!apiKey) {
+        showModal("Peringatan", "Pilih device terlebih dahulu sebelum membatalkan jadwal.");
+        return;
+      }
+
+      btnCancelAutomation.disabled = true;
+      btnCancelAutomation.innerHTML = `<span class="material-symbols-outlined animate-spin text-sm">autorenew</span> Membatalkan...`;
+
+      try {
+        const res = await fetch(`${API_URL}/automation/cancel-manual`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ api_key: apiKey }),
+        });
+        const result = await res.json();
+
+        if (result.status) {
+          // Reset btnRun ke mode normal
+          if (btnRun) {
+            btnRun.disabled = false;
+            btnRun.innerHTML = `<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">bolt</span> Run Automation Now`;
+          }
+          btnCancelAutomation.classList.add("hidden");
+          await addLog("text-amber-400", "CANCELLED", result.message);
+          showModal("Jadwal Dibatalkan ✅", result.message);
+        } else {
+          showModal("Gagal Batalkan", result.message);
+          btnCancelAutomation.disabled = false;
+          btnCancelAutomation.innerHTML = `<span class="material-symbols-outlined text-sm">cancel_schedule_send</span> Batalkan Jadwal`;
+        }
+      } catch (err) {
+        showModal("Error", err.message);
+        btnCancelAutomation.disabled = false;
+        btnCancelAutomation.innerHTML = `<span class="material-symbols-outlined text-sm">cancel_schedule_send</span> Batalkan Jadwal`;
+      }
+    });
   }
 
   // ==========================================
@@ -275,13 +348,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     try {
       const res = await fetch(`${API_URL}/automation/status?api_key=${apiKey}`);
       const result = await res.json();
-      
+
       let kpiData = null;
       try {
-        const kpiRes = await fetch(`${API_URL}/automation/kpi?api_key=${apiKey}`);
+        const kpiRes = await fetch(
+          `${API_URL}/automation/kpi?api_key=${apiKey}`,
+        );
         const kpiResult = await kpiRes.json();
         if (kpiResult.status && kpiResult.data) {
-            kpiData = kpiResult.data;
+          kpiData = kpiResult.data;
         }
       } catch (err) {
         console.warn("Gagal fetch KPI:", err);
@@ -300,13 +375,16 @@ document.addEventListener("DOMContentLoaded", async () => {
           }
           // 2. Tangkap Data Lainnya
           if (data.kpi.success_rate !== undefined) {
-            document.getElementById('metricSuccessRate').innerText = `${data.kpi.success_rate}%`;
+            document.getElementById("metricSuccessRate").innerText =
+              `${data.kpi.success_rate}%`;
           }
           if (data.kpi.avg_latency !== undefined) {
-            document.getElementById('metricLatency').innerText = `${data.kpi.avg_latency}s`;
+            document.getElementById("metricLatency").innerText =
+              `${data.kpi.avg_latency}s`;
           }
           if (data.kpi.data_processed !== undefined) {
-            document.getElementById('metricData').innerText = `${data.kpi.data_processed} MB`;
+            document.getElementById("metricData").innerText =
+              `${data.kpi.data_processed} MB`;
           }
         }
 
@@ -332,16 +410,20 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
 
         // Update button based on manual_run_status
+        const btnCancelAutomation = document.getElementById("btnCancelAutomation");
         if (btnRun) {
           if (data.manual_run_status === "waiting") {
             btnRun.disabled = true;
             btnRun.innerHTML = `<span class="material-symbols-outlined animate-spin">autorenew</span> Menunggu ${data.manual_run_time || "..."}`;
+            if (btnCancelAutomation) btnCancelAutomation.classList.remove("hidden");
           } else if (data.manual_run_status === "running") {
             btnRun.disabled = true;
             btnRun.innerHTML = `<span class="material-symbols-outlined animate-spin">autorenew</span> Executing...`;
+            if (btnCancelAutomation) btnCancelAutomation.classList.add("hidden");
           } else {
             btnRun.disabled = false;
             btnRun.innerHTML = `<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">bolt</span> Run Automation Now`;
+            if (btnCancelAutomation) btnCancelAutomation.classList.add("hidden");
           }
         }
       }
@@ -388,7 +470,9 @@ Occupancy Rate: 0%
 
 (Sistem otomatisasi MATI. Klik Run Automation Now untuk manual)`;
 
-      msgPreview.innerText = cachedMessage ? formatPreviewText(cachedMessage) : fallbackText;
+      msgPreview.innerText = cachedMessage
+        ? formatPreviewText(cachedMessage)
+        : fallbackText;
       msgPreview.classList.remove("text-primary", "font-bold");
       msgPreview.classList.add("text-slate-700");
     }
@@ -426,53 +510,75 @@ Occupancy Rate: 0%
     if (isEnabled && fetchT === sendT) {
       scheduleWarningMsg.classList.remove("hidden");
       fetchTimeInput.classList.add(
-        "border-red-500", "bg-red-50/50", "text-red-600",
-        "focus:border-red-500", "focus:ring-red-500/20",
+        "border-red-500",
+        "bg-red-50/50",
+        "text-red-600",
+        "focus:border-red-500",
+        "focus:ring-red-500/20",
       );
       sendWaTimeInput.classList.add(
-        "border-red-500", "bg-red-50/50", "text-red-600",
-        "focus:border-red-500", "focus:ring-red-500/20",
+        "border-red-500",
+        "bg-red-50/50",
+        "text-red-600",
+        "focus:border-red-500",
+        "focus:ring-red-500/20",
       );
       return false;
     } else {
       scheduleWarningMsg.classList.add("hidden");
       fetchTimeInput.classList.remove(
-        "border-red-500", "bg-red-50/50", "text-red-600",
-        "focus:border-red-500", "focus:ring-red-500/20",
+        "border-red-500",
+        "bg-red-50/50",
+        "text-red-600",
+        "focus:border-red-500",
+        "focus:ring-red-500/20",
       );
       sendWaTimeInput.classList.remove(
-        "border-red-500", "bg-red-50/50", "text-red-600",
-        "focus:border-red-500", "focus:ring-red-500/20",
+        "border-red-500",
+        "bg-red-50/50",
+        "text-red-600",
+        "focus:border-red-500",
+        "focus:ring-red-500/20",
       );
       return true;
     }
   }
 
-  if (fetchTimeInput) fetchTimeInput.addEventListener("input", validateScheduleTimes);
-  if (sendWaTimeInput) sendWaTimeInput.addEventListener("input", validateScheduleTimes);
-  if (toggleScheduleInput) toggleScheduleInput.addEventListener("change", validateScheduleTimes);
+  if (fetchTimeInput)
+    fetchTimeInput.addEventListener("input", validateScheduleTimes);
+  if (sendWaTimeInput)
+    sendWaTimeInput.addEventListener("input", validateScheduleTimes);
+  if (toggleScheduleInput)
+    toggleScheduleInput.addEventListener("change", validateScheduleTimes);
 
   // Load saved settings from localStorage
   function loadSavedSettings() {
-    const savedSettings = JSON.parse(localStorage.getItem("connectApiSettings"));
+    const savedSettings = JSON.parse(
+      localStorage.getItem("connectApiSettings"),
+    );
     if (savedSettings) {
       if (document.getElementById("dpApiUrl") && savedSettings.dpApiUrl)
         document.getElementById("dpApiUrl").value = savedSettings.dpApiUrl;
       if (document.getElementById("dpEmail"))
         document.getElementById("dpEmail").value = savedSettings.dpEmail || "";
       if (document.getElementById("accountPassword"))
-        document.getElementById("accountPassword").value = savedSettings.dpPassword || "";
+        document.getElementById("accountPassword").value =
+          savedSettings.dpPassword || "";
       if (document.getElementById("scheduleToggle"))
-        document.getElementById("scheduleToggle").checked = savedSettings.scheduleEnabled || false;
+        document.getElementById("scheduleToggle").checked =
+          savedSettings.scheduleEnabled || false;
       if (document.getElementById("fetchTime"))
-        document.getElementById("fetchTime").value = savedSettings.fetchTime || "08:00";
+        document.getElementById("fetchTime").value =
+          savedSettings.fetchTime || "08:00";
       if (document.getElementById("sendWaTime"))
-        document.getElementById("sendWaTime").value = savedSettings.sendWaTime || "09:00";
+        document.getElementById("sendWaTime").value =
+          savedSettings.sendWaTime || "09:00";
       if (savedSettings.frequency === "weekdays")
         document.getElementById("freqWeekdays").checked = true;
       else document.getElementById("freqDaily").checked = true;
       if (document.getElementById("targetNumber"))
-        document.getElementById("targetNumber").value = savedSettings.targetNumber || "";
+        document.getElementById("targetNumber").value =
+          savedSettings.targetNumber || "";
       if (savedSettings.scheduleEnabled) {
         updatePreviewUI(true);
       }
@@ -495,7 +601,10 @@ Occupancy Rate: 0%
       const formData = getFormData();
 
       if (!formData.api_key) {
-        return showModal("Peringatan", "Pilih device pengirim terlebih dahulu.");
+        return showModal(
+          "Peringatan",
+          "Pilih device pengirim terlebih dahulu.",
+        );
       }
 
       // Save selected device
@@ -536,9 +645,9 @@ Occupancy Rate: 0%
             showModal(
               "Pengaturan Disimpan ✅",
               "Konfigurasi berhasil disimpan di server. Jadwal otomasi " +
-              (formData.is_active
-                ? "AKTIF dan akan berjalan di background meskipun browser ditutup."
-                : "NONAKTIF."),
+                (formData.is_active
+                  ? "AKTIF dan akan berjalan di background meskipun browser ditutup."
+                  : "NONAKTIF."),
             );
             updatePreviewUI(formData.is_active);
 
@@ -548,7 +657,10 @@ Occupancy Rate: 0%
               stopStatusPolling();
             }
           } else {
-            showModal("Gagal Simpan", result.message || "Gagal menyimpan ke server.");
+            showModal(
+              "Gagal Simpan",
+              result.message || "Gagal menyimpan ke server.",
+            );
           }
         }, 800);
       } catch (err) {
@@ -607,17 +719,17 @@ Occupancy Rate: 0%
     const diffMs = now - lastRunDate;
     const diffMins = Math.floor(diffMs / 60000);
 
-    const metricLastRun = document.getElementById('metricLastRun');
+    const metricLastRun = document.getElementById("metricLastRun");
     if (metricLastRun) {
-      if (diffMins === 0) metricLastRun.innerText = 'Just now';
-      else if (diffMins >= 60) metricLastRun.innerText = `${Math.floor(diffMins / 60)}h ${diffMins % 60}m ago`;
+      if (diffMins === 0) metricLastRun.innerText = "Just now";
+      else if (diffMins >= 60)
+        metricLastRun.innerText = `${Math.floor(diffMins / 60)}h ${diffMins % 60}m ago`;
       else metricLastRun.innerText = `${diffMins}m ago`;
     }
   }
 
   // Update tulisan waktu setiap 1 menit
   setInterval(updateLastRunTimer, 60000);
-
 });
 
 function showModal(title, message) {

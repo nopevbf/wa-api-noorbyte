@@ -1,5 +1,9 @@
+# Ignore node_modules and environment files
 node_modules/
+**/node_modules/**
+*/node_modules/**
 .env
+.env.local
 
 # Ignore session data files (keep the folder structure)
 backend/sessions/**
@@ -11,9 +15,45 @@ backend/sessions/**
 # Ignore database files
 **/database.db
 backend/database.db
+**/database.sqlite
+**/db/*
+
 # Ignore Puppeteer LCR sessions
 **/lcr_session_*/
 backend/src/services/lcr_session_*/
 
 # Ignore LCR screenshots
 backend/public/lcr_screenshots/
+
+# Ignore API keys and tokens
+**/api_keys.json
+**/api_tokens.json
+
+# Ignore log files
+**/logs/*.log
+
+# Ignore temporary files
+**/temp/*.tmp
+
+# Ignore backup files
+**/backup/*.bak
+
+# Ignore compiled files
+**/dist/
+**/build/
+
+# Ignore IDE files
+**/.idea/
+**/.vscode/
+
+# Ignore deployment files
+**/deploy/
+**/deployments/
+
+# Ignore generated files
+**/generated/
+**/generated_files/
+
+# Ignore cache files
+**/cache/
+**/cache_files/
