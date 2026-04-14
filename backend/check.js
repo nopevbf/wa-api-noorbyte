@@ -1,0 +1,1 @@
+const fs = require('fs'); const html = fs.readFileSync('ig_test.html', 'utf8'); console.log('Has form?', html.includes('form')); console.log('Title:', html.match(/<title>(.*?)<\/title>/)?.[1]); console.log('Has Home?', html.includes('Home') || html.includes('Beranda')); console.log('Has Login?', html.toLowerCase().includes('login')); console.log('Length:', html.length);

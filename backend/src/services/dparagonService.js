@@ -139,9 +139,9 @@ async function requestWithContext(config, stepLabel) {
         }
         throw new Error(
           `[${stepLabel}] Request ditolak (403 Forbidden). ` +
-            `Pastikan Base API URL mengarah ke domain API (bukan management), ` +
-            `akun punya akses endpoint daily reports, dan kredensial benar. ` +
-            `URL: ${config.url}`,
+          `Pastikan Base API URL mengarah ke domain API (bukan management), ` +
+          `akun punya akses endpoint daily reports, dan kredensial benar. ` +
+          `URL: ${config.url}`,
         );
       }
 
@@ -224,7 +224,7 @@ async function executeStep1And2(dpApiUrl, dpEmail, dpPassword) {
   if (!authRes) {
     throw new Error(
       `[STEP 1 LOGIN] Semua percobaan login gagal. URL dasar: ${baseApiUrl}. ` +
-        `Detail: ${loginErrors.join(" | ")}`,
+      `Detail: ${loginErrors.join(" | ")}`,
     );
   }
 
@@ -324,300 +324,301 @@ async function runDailyReportViaBrowser(dpApiUrl, dpEmail, dpPassword) {
     "../../sessions",
     `dparagon_cf_${profileSuffix}`,
   );
-/**
- * Full pipeline: Step 1-5 (fetch all data and return the message)
- */
-async function fetchDparagonReport(dpApiUrl, dpEmail, dpPassword) {
-  const { dpToken, tasksList } = await executeStep1And2(
-    dpApiUrl,
-    dpEmail,
-    dpPassword,
-  );
-
-  const browser = await puppeteer.launch({
-    headless: true,
-    userDataDir,
-    args: [
-      "--no-sandbox",
-      "--disable-setuid-sandbox",
-      "--disable-dev-shm-usage",
-      "--disable-gpu",
-      "--window-size=1366,768",
-      "--disable-blink-features=AutomationControlled",
-    ],
-  });
-
-  const page = await browser.newPage();
-
-  try {
-    await page.setViewport({ width: 1366, height: 768 });
-    await page.setUserAgent(
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
-        "(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-    );
-    await page.setExtraHTTPHeaders({
-      "Accept-Language": "id-ID,id;q=0.9,en-US;q=0.8",
-    });
-
-    // Warmup: buka management origin supaya CF set clearance cookie
-    await page.goto(managementOrigin, {
-      waitUntil: "networkidle2",
-      timeout: 60000,
-    });
-
-    // Kalau masih challenge page, tunggu dan reload sekali
-    const titleAfterWarmup = await page.title();
-    if (titleAfterWarmup.toLowerCase().includes("just a moment")) {
-      console.warn("[BROWSER] CF challenge aktif, menunggu 5 detik...");
-      await new Promise((r) => setTimeout(r, 5000));
-      await page.reload({ waitUntil: "networkidle2", timeout: 60000 });
-    }
-
-    // Jalankan semua step via fetch() di dalam konteks browser
-    // (sudah punya CF clearance cookie dari warmup di atas)
-    const result = await page.evaluate(
-      async ({ baseApiUrl, managementOrigin, dpEmail, dpPassword }) => {
-        const toJsonSafe = async (res) => {
-          const text = await res.text();
-          try {
-            return {
-              ok: res.ok,
-              status: res.status,
-              parsed: JSON.parse(text),
-              raw: text,
-            };
-          } catch {
-            return { ok: res.ok, status: res.status, parsed: null, raw: text };
-          }
-        };
-
-        const extractToken = (d) =>
-          d?.access_token ||
-          d?.data?.access_token ||
-          d?.payload?.access_token ||
-          d?.token ||
-          d?.payload?.token ||
-          "";
-
-        // --- Login ---
-        const loginAttempts = [
-          {
-            label: "login/email",
-            url: `${baseApiUrl}/login`,
-            body: { email: dpEmail, password: dpPassword },
-          },
-          {
-            label: "login/username",
-            url: `${baseApiUrl}/login`,
-            body: { username: dpEmail, password: dpPassword },
-          },
-          {
-            label: "auth/email",
-            url: `${baseApiUrl}/auth/login`,
-            body: { email: dpEmail, password: dpPassword },
-          },
-          {
-            label: "auth/username",
-            url: `${baseApiUrl}/auth/login`,
-            body: { username: dpEmail, password: dpPassword },
-          },
-        ];
-
-        let dpToken = "";
-        const loginErrors = [];
-
-        for (const attempt of loginAttempts) {
-          const res = await toJsonSafe(
-            await fetch(attempt.url, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Accept: "application/json",
-              },
-              credentials: "include",
-              body: JSON.stringify(attempt.body),
-            }),
-          );
-
-          if (res.ok) {
-            dpToken = extractToken(res.parsed || {});
-            if (dpToken) break;
-          }
-
-          loginErrors.push(
-            `${attempt.label} -> HTTP ${res.status} (${(res.raw || "").slice(0, 120)})`,
-          );
-        }
-
-        if (!dpToken) {
-          throw new Error(
-            `[BROWSER LOGIN] Gagal token. ${loginErrors.join(" | ")}`,
-          );
-        }
-
-        // --- Fetch helper ---
-        const apiFetch = async (url, options, label) => {
-          const res = await toJsonSafe(
-            await fetch(url, {
-              ...options,
-              credentials: "include",
-              headers: {
-                Accept: "application/json",
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${dpToken}`,
-                Origin: managementOrigin,
-                Referer: `${managementOrigin}/`,
-                ...(options.headers || {}),
-              },
-            }),
-          );
-
-          if (!res.ok) {
-            throw new Error(
-              `[${label}] HTTP ${res.status}: ${(res.raw || "").slice(0, 240)}`,
-            );
-          }
-
-          return res.parsed || {};
-        };
-
-        // --- Step 2: on-progress task ---
-        const taskData = await apiFetch(
-          `${baseApiUrl}/daily-reports/on-progress-task`,
-          { method: "GET" },
-          "BROWSER STEP 2",
-        );
-
-        const payloadData = taskData.payload || [];
-        if (!Array.isArray(payloadData) || payloadData.length === 0) {
-          throw new Error("[BROWSER STEP 2] Data payload kosong.");
-        }
-
-        const tasksList = payloadData.map((t) => ({
-          dates: `${t.start_date || ""} - ${t.end_date || ""}`,
-          task_description: t.task_description || "",
-        }));
-
-        // --- Step 3: post new task ---
-        const now = new Date();
-        const todayDate = [
-          now.getFullYear(),
-          String(now.getMonth() + 1).padStart(2, "0"),
-          String(now.getDate()).padStart(2, "0"),
-        ].join("-");
-
-        await apiFetch(
-          `${baseApiUrl}/daily-reports/new-task`,
-          {
-            method: "POST",
-            body: JSON.stringify({ daily_date: todayDate, tasks: tasksList }),
-          },
-          "BROWSER STEP 3",
-        );
-
-        // --- Step 4: get report code ---
-        const listData = await apiFetch(
-          `${baseApiUrl}/daily-reports/list?dates=&employee_position_id=`,
-          { method: "GET" },
-          "BROWSER STEP 4",
-        );
-
-        const group = listData?.payload?.group || {};
-        const keys = Object.keys(group);
-        if (keys.length === 0)
-          throw new Error("[BROWSER STEP 4] Keys length 0.");
-
-        const reportCode = group[keys[keys.length - 1]]?.daily_report_code;
-        if (!reportCode)
-          throw new Error(
-            "[BROWSER STEP 4] daily_report_code tidak ditemukan.",
-          );
-
-        // --- Step 5: summary ---
-        const summaryData = await apiFetch(
-          `${baseApiUrl}/daily-reports/summary-daily-report?code=${reportCode}`,
-          { method: "GET" },
-          "BROWSER STEP 5",
-        );
-
-        const msg =
-          summaryData.payload?.message ||
-          (typeof summaryData.payload === "string"
-            ? summaryData.payload
-            : null) ||
-          summaryData.data?.message ||
-          (summaryData.message?.length > 50 ? summaryData.message : null);
-
-        if (!msg)
-          throw new Error("[BROWSER STEP 5] Message laporan tidak ditemukan.");
-
-        return msg;
-      },
-      { baseApiUrl, managementOrigin, dpEmail, dpPassword },
-    );
-
-    return result;
-  } finally {
-    await page.close().catch(() => {});
-    await browser.close().catch(() => {});
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Shared helper
-// ---------------------------------------------------------------------------
-
-function extractMessage(summaryData, stepLabel) {
-  const msg =
-    summaryData.payload?.message ||
-    (typeof summaryData.payload === "string" ? summaryData.payload : null) ||
-    summaryData.data?.message ||
-    (summaryData.message?.length > 50 ? summaryData.message : null);
-
-  if (!msg)
-    throw new Error(
-      `[${stepLabel}] Message laporan tidak ditemukan atau kosong!`,
-    );
-  return msg;
-}
-
-// ---------------------------------------------------------------------------
-// Full pipeline
-// ---------------------------------------------------------------------------
-
-async function fetchDparagonReport(dpApiUrl, dpEmail, dpPassword) {
-  const baseApiUrl = normalizeDpApiUrl(dpApiUrl);
-
-  try {
+  /**
+   * Full pipeline: Step 1-5 (fetch all data and return the message)
+   */
+  async function fetchDparagonReport(dpApiUrl, dpEmail, dpPassword) {
     const { dpToken, tasksList } = await executeStep1And2(
-      baseApiUrl,
+      dpApiUrl,
       dpEmail,
       dpPassword,
     );
-    return await executeStep3To5(baseApiUrl, dpToken, tasksList);
-  } catch (err) {
-    const isCF =
-      err.isCloudflareChallengeError || isCloudflareChallengeError(err);
-    if (!isCF) throw err;
 
-    console.warn(
-      "[fetchDparagonReport] Cloudflare challenge detected, switching to browser fallback...",
-    );
+    const browser = await puppeteer.launch({
+      headless: true,
+      userDataDir,
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-gpu",
+        "--window-size=1366,768",
+        "--disable-blink-features=AutomationControlled",
+      ],
+    });
+
+    const page = await browser.newPage();
 
     try {
-      return await runDailyReportViaBrowser(baseApiUrl, dpEmail, dpPassword);
-    } catch (browserErr) {
-      throw new Error(
-        `[fetchDparagonReport] Browser fallback juga gagal.\n` +
-          `  Original  : ${err.message}\n` +
-          `  Browser   : ${browserErr.message}`,
+      await page.setViewport({ width: 1366, height: 768 });
+      await page.setUserAgent(
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
+        "(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
       );
+      await page.setExtraHTTPHeaders({
+        "Accept-Language": "id-ID,id;q=0.9,en-US;q=0.8",
+      });
+
+      // Warmup: buka management origin supaya CF set clearance cookie
+      await page.goto(managementOrigin, {
+        waitUntil: "networkidle2",
+        timeout: 60000,
+      });
+
+      // Kalau masih challenge page, tunggu dan reload sekali
+      const titleAfterWarmup = await page.title();
+      if (titleAfterWarmup.toLowerCase().includes("just a moment")) {
+        console.warn("[BROWSER] CF challenge aktif, menunggu 5 detik...");
+        await new Promise((r) => setTimeout(r, 5000));
+        await page.reload({ waitUntil: "networkidle2", timeout: 60000 });
+      }
+
+      // Jalankan semua step via fetch() di dalam konteks browser
+      // (sudah punya CF clearance cookie dari warmup di atas)
+      const result = await page.evaluate(
+        async ({ baseApiUrl, managementOrigin, dpEmail, dpPassword }) => {
+          const toJsonSafe = async (res) => {
+            const text = await res.text();
+            try {
+              return {
+                ok: res.ok,
+                status: res.status,
+                parsed: JSON.parse(text),
+                raw: text,
+              };
+            } catch {
+              return { ok: res.ok, status: res.status, parsed: null, raw: text };
+            }
+          };
+
+          const extractToken = (d) =>
+            d?.access_token ||
+            d?.data?.access_token ||
+            d?.payload?.access_token ||
+            d?.token ||
+            d?.payload?.token ||
+            "";
+
+          // --- Login ---
+          const loginAttempts = [
+            {
+              label: "login/email",
+              url: `${baseApiUrl}/login`,
+              body: { email: dpEmail, password: dpPassword },
+            },
+            {
+              label: "login/username",
+              url: `${baseApiUrl}/login`,
+              body: { username: dpEmail, password: dpPassword },
+            },
+            {
+              label: "auth/email",
+              url: `${baseApiUrl}/auth/login`,
+              body: { email: dpEmail, password: dpPassword },
+            },
+            {
+              label: "auth/username",
+              url: `${baseApiUrl}/auth/login`,
+              body: { username: dpEmail, password: dpPassword },
+            },
+          ];
+
+          let dpToken = "";
+          const loginErrors = [];
+
+          for (const attempt of loginAttempts) {
+            const res = await toJsonSafe(
+              await fetch(attempt.url, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Accept: "application/json",
+                },
+                credentials: "include",
+                body: JSON.stringify(attempt.body),
+              }),
+            );
+
+            if (res.ok) {
+              dpToken = extractToken(res.parsed || {});
+              if (dpToken) break;
+            }
+
+            loginErrors.push(
+              `${attempt.label} -> HTTP ${res.status} (${(res.raw || "").slice(0, 120)})`,
+            );
+          }
+
+          if (!dpToken) {
+            throw new Error(
+              `[BROWSER LOGIN] Gagal token. ${loginErrors.join(" | ")}`,
+            );
+          }
+
+          // --- Fetch helper ---
+          const apiFetch = async (url, options, label) => {
+            const res = await toJsonSafe(
+              await fetch(url, {
+                ...options,
+                credentials: "include",
+                headers: {
+                  Accept: "application/json",
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${dpToken}`,
+                  Origin: managementOrigin,
+                  Referer: `${managementOrigin}/`,
+                  ...(options.headers || {}),
+                },
+              }),
+            );
+
+            if (!res.ok) {
+              throw new Error(
+                `[${label}] HTTP ${res.status}: ${(res.raw || "").slice(0, 240)}`,
+              );
+            }
+
+            return res.parsed || {};
+          };
+
+          // --- Step 2: on-progress task ---
+          const taskData = await apiFetch(
+            `${baseApiUrl}/daily-reports/on-progress-task`,
+            { method: "GET" },
+            "BROWSER STEP 2",
+          );
+
+          const payloadData = taskData.payload || [];
+          if (!Array.isArray(payloadData) || payloadData.length === 0) {
+            throw new Error("[BROWSER STEP 2] Data payload kosong.");
+          }
+
+          const tasksList = payloadData.map((t) => ({
+            dates: `${t.start_date || ""} - ${t.end_date || ""}`,
+            task_description: t.task_description || "",
+          }));
+
+          // --- Step 3: post new task ---
+          const now = new Date();
+          const todayDate = [
+            now.getFullYear(),
+            String(now.getMonth() + 1).padStart(2, "0"),
+            String(now.getDate()).padStart(2, "0"),
+          ].join("-");
+
+          await apiFetch(
+            `${baseApiUrl}/daily-reports/new-task`,
+            {
+              method: "POST",
+              body: JSON.stringify({ daily_date: todayDate, tasks: tasksList }),
+            },
+            "BROWSER STEP 3",
+          );
+
+          // --- Step 4: get report code ---
+          const listData = await apiFetch(
+            `${baseApiUrl}/daily-reports/list?dates=&employee_position_id=`,
+            { method: "GET" },
+            "BROWSER STEP 4",
+          );
+
+          const group = listData?.payload?.group || {};
+          const keys = Object.keys(group);
+          if (keys.length === 0)
+            throw new Error("[BROWSER STEP 4] Keys length 0.");
+
+          const reportCode = group[keys[keys.length - 1]]?.daily_report_code;
+          if (!reportCode)
+            throw new Error(
+              "[BROWSER STEP 4] daily_report_code tidak ditemukan.",
+            );
+
+          // --- Step 5: summary ---
+          const summaryData = await apiFetch(
+            `${baseApiUrl}/daily-reports/summary-daily-report?code=${reportCode}`,
+            { method: "GET" },
+            "BROWSER STEP 5",
+          );
+
+          const msg =
+            summaryData.payload?.message ||
+            (typeof summaryData.payload === "string"
+              ? summaryData.payload
+              : null) ||
+            summaryData.data?.message ||
+            (summaryData.message?.length > 50 ? summaryData.message : null);
+
+          if (!msg)
+            throw new Error("[BROWSER STEP 5] Message laporan tidak ditemukan.");
+
+          return msg;
+        },
+        { baseApiUrl, managementOrigin, dpEmail, dpPassword },
+      );
+
+      return result;
+    } finally {
+      await page.close().catch(() => { });
+      await browser.close().catch(() => { });
     }
   }
-}
 
-module.exports = {
-  executeStep1And2,
-  executeStep3To5,
-  fetchDparagonReport,
-};
+  // ---------------------------------------------------------------------------
+  // Shared helper
+  // ---------------------------------------------------------------------------
+
+  function extractMessage(summaryData, stepLabel) {
+    const msg =
+      summaryData.payload?.message ||
+      (typeof summaryData.payload === "string" ? summaryData.payload : null) ||
+      summaryData.data?.message ||
+      (summaryData.message?.length > 50 ? summaryData.message : null);
+
+    if (!msg)
+      throw new Error(
+        `[${stepLabel}] Message laporan tidak ditemukan atau kosong!`,
+      );
+    return msg;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Full pipeline
+  // ---------------------------------------------------------------------------
+
+  async function fetchDparagonReport(dpApiUrl, dpEmail, dpPassword) {
+    const baseApiUrl = normalizeDpApiUrl(dpApiUrl);
+
+    try {
+      const { dpToken, tasksList } = await executeStep1And2(
+        baseApiUrl,
+        dpEmail,
+        dpPassword,
+      );
+      return await executeStep3To5(baseApiUrl, dpToken, tasksList);
+    } catch (err) {
+      const isCF =
+        err.isCloudflareChallengeError || isCloudflareChallengeError(err);
+      if (!isCF) throw err;
+
+      console.warn(
+        "[fetchDparagonReport] Cloudflare challenge detected, switching to browser fallback...",
+      );
+
+      try {
+        return await runDailyReportViaBrowser(baseApiUrl, dpEmail, dpPassword);
+      } catch (browserErr) {
+        throw new Error(
+          `[fetchDparagonReport] Browser fallback juga gagal.\n` +
+          `  Original  : ${err.message}\n` +
+          `  Browser   : ${browserErr.message}`,
+        );
+      }
+    }
+  }
+
+  module.exports = {
+    executeStep1And2,
+    executeStep3To5,
+    fetchDparagonReport,
+  };
+}

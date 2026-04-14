@@ -8,11 +8,7 @@ document.addEventListener('alpine:init', () => {
         config: {
             name: '',
             ig: '',
-            ig_email: '',
-            ig_password: '',
-            tt: '',
-            tt_email: '',
-            tt_password: ''
+            tt: ''
         },
         manual: {
             dates: '',
@@ -101,11 +97,7 @@ document.addEventListener('alpine:init', () => {
             localStorage.setItem('pulse_config', JSON.stringify({
                 name: this.config.name,
                 ig: this.config.ig,
-                ig_email: this.config.ig_email,
-                ig_password: this.config.ig_password,
-                tt: this.config.tt,
-                tt_email: this.config.tt_email,
-                tt_password: this.config.tt_password
+                tt: this.config.tt
             }));
         },
 

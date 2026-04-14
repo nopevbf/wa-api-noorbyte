@@ -29,7 +29,7 @@ function sendPulseLog(message, type = 'info') {
 // ==========================================
 let isRunning = false;
 let currentResults = [];
-let currentStatus = 'idle'; 
+let currentStatus = 'idle';
 let currentError = null;
 
 function getLcrStatus() {
@@ -60,7 +60,7 @@ async function injectLcrUtilities(page) {
                         props.onClick({
                             type: 'click', target: el, currentTarget: el,
                             bubbles: true, cancelable: true,
-                            preventDefault: () => {}, stopPropagation: () => {},
+                            preventDefault: () => { }, stopPropagation: () => { },
                             nativeEvent: new MouseEvent('click'),
                         });
                         return true;
@@ -97,21 +97,47 @@ async function injectLcrUtilities(page) {
                 el.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
             },
 
-            waitForEnabled: (selector, timeoutMs = 5000) => {
+            waitForEl: (selector, timeoutMs = 5000) => {
                 return new Promise((resolve, reject) => {
-                    const check = () => {
-                        const el = document.querySelector(selector);
-                        return el && !el.disabled ? el : null;
-                    };
-                    const found = check();
-                    if (found) return resolve(found);
-                    const obs = new MutationObserver(() => {
-                        const el = check();
-                        if (el) { obs.disconnect(); resolve(el); }
+                    const el = document.querySelector(selector);
+                    if (el) return resolve(el);
+                    const observer = new MutationObserver(() => {
+                        const target = document.querySelector(selector);
+                        if (target) {
+                            observer.disconnect();
+                            resolve(target);
+                        }
                     });
-                    obs.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['disabled'] });
-                    setTimeout(() => { obs.disconnect(); reject(new Error('Timed out')); }, timeoutMs);
+                    observer.observe(document.body, { childList: true, subtree: true });
+                    setTimeout(() => {
+                        observer.disconnect();
+                        reject(new Error(`Timeout waiting for ${selector}`));
+                    }, timeoutMs);
                 });
+            },
+
+            killPopups: async () => {
+                // 1. Press Escape
+                document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+                await window.__LCR_UTILS__.sleep(400);
+
+                // 2. Agresive Button Hunt (X Buttons & Text Buttons)
+                const buttons = [...document.querySelectorAll('button, [role="button"], a')];
+                for (const btn of buttons) {
+                    try {
+                        const txt = (btn.innerText || btn.textContent || '').toLowerCase();
+                        const aria = (btn.getAttribute('aria-label') || '').toLowerCase();
+                        
+                        // Deteksi Tombol Silang (X) atau Teks Penolakan
+                        const isClose = aria.includes('close') || aria.includes('tutup') || aria.includes('dismiss');
+                        const isNotNow = /not now|lain kali|maybe later|cancel|nanti saja|close|tutup|ignore|no thanks|bukan sekarang/i.test(txt);
+
+                        if ((isClose || isNotNow) && btn.offsetWidth > 0 && btn.offsetHeight > 0) {
+                            window.__LCR_UTILS__.triggerClick(btn);
+                            await window.__LCR_UTILS__.sleep(300);
+                        }
+                    } catch (e) { }
+                }
             }
         };
     });
@@ -149,12 +175,19 @@ async function waitForPostReady(page, platform) {
         if (!isBlocked) {
             if (w > 0) sendPulseLog(`✅ Halangan teratasi oleh Master! Melanjutkan eksekusi detik ini juga...`, 'success');
             else sendPulseLog(`✅ Jalur aman (Tidak ada Login Wall). Langsung eksekusi!`, 'success');
-            return true; 
+            return true;
+        }
+
+        // AUTO-ESC attempt for non-critical walls
+        if (w % 2 === 0) {
+            await page.keyboard.press('Escape');
+            await page.evaluate(() => window.__LCR_UTILS__?.killPopups?.()).catch(() => {});
+            await sleep(1000);
         }
 
         if (w === 0) sendPulseLog(`🚨 [GATEKEEPER] Tembok Login menghalangi Postingan! Silakan login di browser...`, 'warning');
         else if (w % 6 === 0) sendPulseLog(`⏳ [GATEKEEPER] Menunggu Bos login... (Sisa waktu: ${(5 - (w / 12)).toFixed(1)} menit)`, 'warning');
-        
+
         await sleep(5000);
     }
     return false;
@@ -164,20 +197,20 @@ async function waitForPostReady(page, platform) {
 // LAUNCH BROWSER (DYNAMIC MODE: VISIBLE/PHANTOM)
 // ==========================================
 // 😈 Tambahkan parameter "isStealth" untuk menerima perintah dari UI
-async function launchBrowser(sessionName, isStealth) { 
+async function launchBrowser(sessionName, isStealth) {
     const sessionDir = path.join(__dirname, `lcr_session_${sessionName}`);
     const isLinux = process.platform === 'linux';
     const chromiumPath = isLinux ? (
         fs.existsSync('/usr/bin/chromium-browser') ? '/usr/bin/chromium-browser' :
-        fs.existsSync('/usr/bin/chromium') ? '/usr/bin/chromium' :
-        fs.existsSync('/snap/bin/chromium') ? '/snap/bin/chromium' : null
+            fs.existsSync('/usr/bin/chromium') ? '/usr/bin/chromium' :
+                fs.existsSync('/snap/bin/chromium') ? '/snap/bin/chromium' : null
     ) : null;
 
     // 😈 BACA STATUS DARI SAKLAR UI (Sudah tidak memakai TARGET_MODE lagi!)
-    const isHeadless = isStealth ? 'new' : false;
+    const isHeadless = isStealth ? true : false;
 
     return puppeteer.launch({
-        headless: isHeadless, 
+        headless: isHeadless,
         defaultViewport: { width: 1280, height: 900 }, // Desktop Default
         ...(chromiumPath ? { executablePath: chromiumPath } : {}),
         args: [
@@ -187,9 +220,14 @@ async function launchBrowser(sessionName, isStealth) {
             '--disable-gpu',
             '--disable-notifications',
             '--window-size=1280,900',
+            '--start-maximized',
             '--disable-blink-features=AutomationControlled',
+
+            // 😈 3 MANTRA ANTI-RESTORE TAB:
             '--disable-session-crashed-bubble',
-            '--hide-crash-restore-bubble',
+            '--disable-restore-session-state',
+            'about:blank', // Paksa Chrome HANYA membuka satu tab kosong!
+
             '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
         ],
         userDataDir: sessionDir
@@ -204,9 +242,8 @@ async function instagramLogin(page, username, password) {
     await page.goto('https://www.instagram.com/', { waitUntil: 'networkidle2', timeout: 30000 });
     await sleep(3000);
 
-    const html = await page.content();
-    const url = page.url();
-    const isLoggedIn = !url.includes('/login') && !html.includes('loginForm') && !html.includes('desktop_dynamic_landing_dialog');
+    const cookies = await page.cookies();
+    const isLoggedIn = cookies.some(c => c.name === 'sessionid');
 
     if (isLoggedIn) {
         sendPulseLog('✅ Instagram session masih aktif.', 'success');
@@ -242,20 +279,20 @@ async function instagramLogin(page, username, password) {
 
     sendPulseLog(`🚨 [HOLD] Sistem menahan progress! Silakan isi kredensial / 2FA di browser. (Waktu: 5 Menit)`, 'warning');
     let isSafe = false;
-    for(let w = 0; w < 60; w++) { 
+    for (let w = 0; w < 60; w++) {
         await sleep(5000);
-        const currentUrl = page.url();
-        const currentHtml = await page.content();
         
-        const isLogin = currentUrl.includes('/login') || currentHtml.includes('loginForm') || currentHtml.includes('desktop_dynamic_landing_dialog');
-        const isChallenge = currentUrl.includes('/challenge') || currentUrl.includes('two_factor');
-        const isSaveInfo = currentUrl.includes('/onetap') || currentHtml.includes('Save Your Login Info') || currentHtml.includes('Simpan Info Login');
-        
-        if (!isLogin && !isChallenge && !isSaveInfo) {
+        // Auto-kill popups during wait
+        await page.evaluate(() => window.__LCR_UTILS__?.killPopups?.()).catch(() => {});
+
+        const currentCookies = await page.cookies();
+        const hasSession = currentCookies.some(c => c.name === 'sessionid');
+
+        if (hasSession) {
             isSafe = true;
             break;
         }
-        if (w % 6 === 0 && w > 0) sendPulseLog(`⏳ [HOLD] Masih menunggu bos selesai login... JANGAN TERBURU-BURU.`, 'warning');
+        if (w % 6 === 0 && w > 0) sendPulseLog(`⏳ [HOLD] Masih belum mendeteksi session aktif... JANGAN TERBURU-BURU, silakan login.`, 'warning');
     }
 
     if (isSafe) {
@@ -276,10 +313,8 @@ async function tiktokLogin(page, username, password) {
     await page.goto('https://www.tiktok.com/', { waitUntil: 'networkidle2', timeout: 30000 });
     await sleep(3000);
 
-    const html = await page.content();
-    const isLoggedIn = (html.includes('Upload') || html.includes('profile-icon') || html.includes('avatar'))
-        && !html.includes('login-button')
-        && !html.includes('Log in');
+    const cookies = await page.cookies();
+    const isLoggedIn = cookies.some(c => c.name.includes('sessionid'));
 
     if (isLoggedIn) {
         sendPulseLog('✅ TikTok session masih aktif.', 'success');
@@ -313,15 +348,16 @@ async function tiktokLogin(page, username, password) {
 
     sendPulseLog(`🚨 [HOLD] Sistem menahan progress! Silakan selesaikan login / Captcha di browser. (Waktu: 5 Menit)`, 'warning');
     let isSafe = false;
-    for(let w = 0; w < 60; w++) { 
+    for (let w = 0; w < 60; w++) {
         await sleep(5000);
-        const currentUrl = page.url();
-        const currentHtml = await page.content();
-        
-        const isLogin = currentUrl.includes('/login') || currentHtml.includes('login-modal');
-        const isCaptcha = currentUrl.includes('/verification') || currentUrl.includes('captcha');
-        
-        if (!isLogin && !isCaptcha && (currentHtml.includes('Upload') || currentHtml.includes('profile-icon'))) {
+
+        // Auto-kill popups during wait
+        await page.evaluate(() => window.__LCR_UTILS__?.killPopups?.()).catch(() => {});
+
+        const currentCookies = await page.cookies();
+        const hasSession = currentCookies.some(c => c.name.includes('sessionid'));
+
+        if (hasSession) {
             isSafe = true;
             break;
         }
@@ -345,14 +381,17 @@ async function instagramActions(page, commentText) {
     return await page.evaluate(async (cmt) => {
         const utils = window.__LCR_UTILS__;
         const results = [];
-        
+
         const SELS = {
             likeSvg: 'svg[aria-label="Like"][height="24"], svg[aria-label="Suka"][height="24"]',
             unlikeSvg: 'svg[aria-label="Unlike"][height="24"], svg[aria-label="Tidak Suka"][height="24"]',
             commentSvg: 'svg[aria-label="Comment"], svg[aria-label="Komentar"]',
-            commentInput: 'textarea[aria-label*="Add a comment" i], textarea[placeholder*="comment" i], textarea[placeholder*="komentar" i]',
-            repostSvg: 'svg[aria-label="Repost"][height="24"]:not(:has(circle))'
+            commentInput: 'textarea[aria-label*="Add a comment" i], textarea[placeholder*="comment" i], textarea[placeholder*="komentar" i], [role="textbox"]',
+            repostSvg: 'svg[aria-label="Repost"][height="24"]:not(:has(circle)), svg[aria-label="Repost"]'
         };
+
+        // AUTO-KILL POPUPS
+        await utils.killPopups();
 
         try {
             if (document.querySelector(SELS.unlikeSvg)) {
@@ -441,28 +480,31 @@ async function tiktokActions(page, commentText) {
     return await page.evaluate(async (cmt) => {
         const utils = window.__LCR_UTILS__;
         const results = [];
-        
+
         const SELS = {
-            likeBtn: 'button:has([data-e2e="like-icon"])',
+            likeBtn: 'button:has([data-e2e="like-icon"]), [data-e2e="like-icon"], button[aria-label*="Like" i], button[aria-label*="Suka" i]',
             likeBtnActive: 'button[aria-pressed="true"]:has([data-e2e="like-icon"])',
-            commentBtn: 'button:has([data-e2e="comment-icon"])',
-            commentInput: '[data-e2e="comment-text"] [contenteditable="true"]',
-            commentPost: 'button[data-e2e="comment-post"]',
-            shareBtn: 'button[aria-label*="Share video"]',
+            commentBtn: 'button:has([data-e2e="comment-icon"]), [data-e2e="comment-icon"]',
+            commentInput: '[data-e2e="comment-input"] [contenteditable="true"], [data-e2e="comment-text"] [contenteditable="true"], .DraftEditor-root [contenteditable="true"], div[contenteditable="true"]',
+            commentPost: 'button[data-e2e="comment-post"], [data-e2e="comment-post"], [data-e2e="comment-post-button"]',
+            shareBtn: 'button[aria-label*="Share video"], [data-e2e="share-icon"]',
             repostOption: '[data-e2e="share-repost"]'
         };
+
+        // AUTO-KILL POPUPS
+        await utils.killPopups();
 
         try {
             if (document.querySelector(SELS.likeBtnActive)) {
                 results.push({ action: 'like', skipped: true });
             } else {
-                const btn = document.querySelector(SELS.likeBtn);
+                const btn = utils.findClickable(SELS.likeBtn) || document.querySelector(SELS.likeBtn);
                 if (btn) {
                     utils.triggerClick(btn);
                     await utils.sleep(1000);
                     results.push({ action: 'like', skipped: false });
                 } else {
-                    results.push({ action: 'like', error: 'Like button not found' });
+                    results.push({ action: 'like', skipped: true, error: 'Like button not found' });
                 }
             }
         } catch (e) { results.push({ action: 'like', error: e.message }); }
@@ -473,21 +515,23 @@ async function tiktokActions(page, commentText) {
             if (cmt) {
                 let input = document.querySelector(SELS.commentInput);
                 if (!input) {
-                    const btn = document.querySelector(SELS.commentBtn);
-                    if (btn) { utils.triggerClick(btn); await utils.sleep(1000); }
+                    const trig = utils.findClickable(SELS.commentBtn) || document.querySelector(SELS.commentBtn);
+                    if (trig) { utils.triggerClick(trig); await utils.sleep(1000); }
                 }
-                
                 input = document.querySelector(SELS.commentInput);
                 if (input) {
+                    utils.triggerClick(input);
+                    await utils.sleep(200);
+                    input.focus();
                     utils.simulatePaste(input, cmt);
                     await utils.sleep(800);
-                    try {
-                        const post = await utils.waitForEnabled(SELS.commentPost, 5000);
-                        utils.triggerClick(post);
+                    const postBtn = utils.findClickable(SELS.commentPost) || document.querySelector(SELS.commentPost);
+                    if (postBtn) {
+                        utils.triggerClick(postBtn);
                         await utils.sleep(2000);
                         results.push({ action: 'comment', skipped: false });
-                    } catch (err) {
-                        results.push({ action: 'comment', error: 'Post btn never enabled' });
+                    } else {
+                        results.push({ action: 'comment', error: 'Post button not found' });
                     }
                 } else {
                     results.push({ action: 'comment', error: 'Input not found' });
@@ -500,26 +544,29 @@ async function tiktokActions(page, commentText) {
         await utils.sleep(1500);
 
         try {
-            const share = document.querySelector(SELS.shareBtn);
-            if (share) {
-                utils.triggerClick(share);
-                await utils.sleep(1500);
-                const repost = document.querySelector(SELS.repostOption);
-                if (repost) {
-                    const label = repost.querySelector('p')?.textContent?.trim() ?? '';
+            const shareBtn = utils.findClickable(SELS.shareBtn) || document.querySelector(SELS.shareBtn);
+            if (shareBtn) {
+                utils.triggerClick(shareBtn);
+                await utils.sleep(1000);
+
+                const repostEl = utils.findClickable(SELS.repostOption) || document.querySelector(SELS.repostOption);
+                if (repostEl) {
+                    const label = repostEl.querySelector('p')?.textContent?.trim() ?? '';
                     if (/remove|hapus/i.test(label)) {
                         document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+                        await utils.sleep(300);
                         results.push({ action: 'repost', skipped: true });
                     } else {
-                        utils.triggerClick(repost);
+                        utils.triggerClick(repostEl);
                         await utils.sleep(1000);
                         results.push({ action: 'repost', skipped: false });
                     }
                 } else {
-                    results.push({ action: 'repost', error: 'Repost option not found' });
+                    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+                    results.push({ action: 'repost', skipped: true, error: 'Repost option not found' });
                 }
             } else {
-                results.push({ action: 'repost', error: 'Share button not found' });
+                results.push({ action: 'repost', skipped: true, error: 'Share/Repost button not found' });
             }
         } catch (e) { results.push({ action: 'repost', error: e.message }); }
 
@@ -566,15 +613,17 @@ async function executeLCR(identity, payload, options = {}) {
     let browser;
     try {
         sendPulseLog(`🌐 Meluncurkan browser stealth...`, 'info');
-        
+
         // 😈 Lempar status Phantom ke peluncur browser!
         browser = await launchBrowser(sessionName, isPhantom);
-        
+
         // ==========================================================
         // 🧹 PROTOKOL TAB TUNGGAL (PEMBERSIHAN SISA CRASH)
         // ==========================================================
-        const pages = await browser.pages(); 
+        const pages = await browser.pages();
         const page = pages[0]; // Ambil alih tab pertama (biasanya about:blank)
+
+        if (!isPhantom) await page.bringToFront(); // Paksa browser muncul ke atas
 
         // Jika Chrome memulihkan tab dari masa lalu, BANTAI SEMUANYA!
         if (pages.length > 1) {
@@ -601,9 +650,9 @@ async function executeLCR(identity, payload, options = {}) {
             await injectLcrUtilities(page);
 
             if (!loginDone[platform]) {
-                if (platform === 'instagram' && identity.ig_email && identity.ig_password) {
+                if (platform === 'instagram') {
                     loginDone['instagram'] = await instagramLogin(page, identity.ig_email, identity.ig_password);
-                } else if (platform === 'tiktok' && identity.tt_email && identity.tt_password) {
+                } else if (platform === 'tiktok') {
                     loginDone['tiktok'] = await tiktokLogin(page, identity.tt_email, identity.tt_password);
                 } else {
                     sendPulseLog('ℹ️  Mencoba pakai session tersimpan...', 'info');
@@ -617,15 +666,16 @@ async function executeLCR(identity, payload, options = {}) {
             } catch (e) {
                 await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
             }
+
             await sleep(4000);
 
             sendPulseLog('🛡️ Memeriksa status layar di halaman post...', 'info');
             const isReady = await waitForPostReady(page, platform);
-            
+
             if (!isReady) {
                 sendPulseLog(`❌ Waktu tunggu habis (5 Menit)! Halaman post masih terblokir. Melewati target ini...`, 'error');
                 currentResults.push({ url, platform, error: 'Blocked by Login/Captcha Wall' });
-                continue; 
+                continue;
             }
 
             await injectLcrUtilities(page);
@@ -650,43 +700,60 @@ async function executeLCR(identity, payload, options = {}) {
             });
 
             // ==========================================================
-            // 📸 PROTOKOL FOTO BUKTI (DYNAMIC MOBILE MORPHING) + SMART FOCUS
+            // 📸 PROTOKOL FOTO BUKTI (ELEMENT CLIPPING vs MOBILE MORPH)
             // ==========================================================
-            sendPulseLog('📸 Menyusutkan browser ke ukuran HP (Mobile View) untuk screenshot...', 'info');
-            
-            await page.setViewport({ width: 375, height: 812, isMobile: true, hasTouch: true });
-            await page.setUserAgent('Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1');
-            await sleep(2000);
-
-            // Smart Focus: Lacak posisi tombol LCR
-            await page.evaluate((plat) => {
-                let actionTarget = null;
-                if (plat === 'instagram') {
-                    actionTarget = document.querySelector('svg[aria-label="Unlike"], svg[aria-label="Tidak Suka"], svg[aria-label="Like"], svg[aria-label="Suka"]');
-                } else if (plat === 'tiktok') {
-                    actionTarget = document.querySelector('[data-e2e="like-icon"], [data-e2e="comment-icon"]');
-                }
-                
-                if (actionTarget) {
-                    actionTarget.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                } else {
-                    window.scrollTo({ top: 0 }); 
-                    window.scrollBy({ top: 300, behavior: 'smooth' });
-                }
-            }, platform);
-            
-            await sleep(1500); 
-
             let screenshotPath = null;
-            try {
-                const ssDir = path.join(__dirname, '../../../frontend/public/screenshots');
-                if (!fs.existsSync(ssDir)) fs.mkdirSync(ssDir, { recursive: true });
-                screenshotPath = path.join(ssDir, `lcr_pro_${i + 1}_${Date.now()}.png`);
+            const ssDir = path.join(__dirname, '../../../frontend/public/screenshots');
+            if (!fs.existsSync(ssDir)) fs.mkdirSync(ssDir, { recursive: true });
+            screenshotPath = path.join(ssDir, `lcr_pro_${i + 1}_${Date.now()}.png`);
+
+            if (platform === 'instagram') {
+                sendPulseLog('📸 Memotret kotak postingan Instagram (Desktop Mode)...', 'info');
+                try {
+                    // Smart Selector untuk elemen yang dikirim Bos
+                    const targetSelector = 'div.xh8yej3[style*="max-width: 673px"], article, div[role="dialog"] article';
+                    const element = await page.$(targetSelector);
+
+                    if (element) {
+                        await element.scrollIntoView();
+                        await sleep(1000);
+                        await element.screenshot({ path: screenshotPath });
+                        sendPulseLog(`📸 Bukti LCR Postingan Instagram tersimpan!`, 'success');
+                    } else {
+                        sendPulseLog('⚠️ Kotak postingan spesifik tidak ditemukan, memotret layar penuh...', 'warning');
+                        await page.screenshot({ path: screenshotPath, fullPage: false });
+                        sendPulseLog(`📸 Bukti LCR Full Desktop tersimpan!`, 'success');
+                    }
+                } catch (e) {
+                    sendPulseLog(`❌ Gagal element-screenshot: ${e.message}`, 'error');
+                }
+            } else {
+                // Protokol TikTok (Tetap Mobile View Morpher)
+                sendPulseLog('📸 Menyusutkan browser ke ukuran HP (Mobile View) untuk TikTok...', 'info');
+                await page.setViewport({ width: 375, height: 812, isMobile: true, hasTouch: true });
+                await page.setUserAgent('Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1');
                 
-                await page.screenshot({ path: screenshotPath });
-                sendPulseLog(`📸 Bukti LCR Mobile tersimpan!`, 'success');
-            } catch (e) {
-                sendPulseLog(`❌ Gagal mengambil screenshot: ${e.message}`, 'error');
+                try {
+                    await page.reload({ waitUntil: 'networkidle2', timeout: 30000 });
+                } catch (e) {
+                    await page.reload({ waitUntil: 'load', timeout: 30000 });
+                }
+                await sleep(3000);
+
+                // Smart Focus TikTok
+                await page.evaluate(() => {
+                    const actionTarget = document.querySelector('[data-e2e="like-icon"], [data-e2e="comment-icon"]');
+                    if (actionTarget) actionTarget.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    else { window.scrollTo({ top: 0 }); window.scrollBy({ top: 300, behavior: 'smooth' }); }
+                });
+                await sleep(1500);
+
+                try {
+                    await page.screenshot({ path: screenshotPath });
+                    sendPulseLog(`📸 Bukti LCR TikTok Mobile tersimpan!`, 'success');
+                } catch (e) {
+                    sendPulseLog(`❌ Gagal mengambil screenshot TikTok: ${e.message}`, 'error');
+                }
             }
 
             // ==========================================================
@@ -695,7 +762,7 @@ async function executeLCR(identity, payload, options = {}) {
             sendPulseLog('🖥️ Mengembalikan browser ke ukuran Desktop...', 'info');
             await page.setViewport({ width: 1280, height: 900, isMobile: false, hasTouch: false });
             await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-            await sleep(1000); 
+            await sleep(1000);
 
             const finalResult = {
                 url, platform,
