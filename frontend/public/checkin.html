@@ -238,13 +238,20 @@
                                     </label>
                                 </div>
 
-                                <div class="p-4 md:p-6 bg-slate-900">
+                                <div class="p-4 md:p-6 bg-slate-900 space-y-3">
                                     <button id="btnCapture"
                                         class="w-full bg-red-600 hover:bg-red-700 text-white py-3.5 md:py-4 rounded-xl font-black text-sm md:text-lg uppercase tracking-widest flex items-center justify-center gap-3 active:scale-95 transition-all shadow-lg">
                                         <span class="material-symbols-outlined text-xl md:text-2xl">photo_camera</span>
                                         Ambil & Kirim
                                     </button>
+                                    <!-- Tombol Batalkan Time-Bomb: hanya muncul setelah timer aktif -->
+                                    <button id="btnCancelTimebomb"
+                                        class="hidden w-full bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/40 py-3 rounded-xl font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all">
+                                        <span class="material-symbols-outlined text-base">timer_off</span>
+                                        Batalkan Jadwal Absen
+                                    </button>
                                 </div>
+
                             </section>
                         </div>
 

@@ -8,6 +8,55 @@ const db = require('../config/database');
 
 const activeSessions = new Map();
 
+// 🔴 MAP: Lacak jumlah percobaan reconnect yang GAGAL berturut-turut per device
+const reconnectAttempts = new Map();
+const MAX_RECONNECT_ATTEMPTS = 3;
+
+/**
+ * Hapus semua jejak device dari sistem + database.
+ * Dipanggil saat device sudah melewati batas reconnect.
+ */
+async function purgeDevice(apiKey, sessionDir, io) {
+    console.log(`\n[${apiKey}] 💀 ====================================`);
+    console.log(`[${apiKey}] 💀 DEVICE DIHAPUS setelah ${MAX_RECONNECT_ATTEMPTS}x reconnect gagal!`);
+    console.log(`[${apiKey}] 💀 ====================================\n`);
+
+    // 1. Hentikan & hapus dari memori
+    if (activeSessions.has(apiKey)) {
+        const oldSocket = activeSessions.get(apiKey);
+        try {
+            oldSocket.ev.removeAllListeners();
+            oldSocket.ws.close();
+        } catch (e) { /* abaikan error saat force-close */ }
+        activeSessions.delete(apiKey);
+    }
+
+    // 2. Reset counter
+    reconnectAttempts.delete(apiKey);
+
+    // 3. Hapus file sesi dari disk
+    if (fs.existsSync(sessionDir)) {
+        fs.rmSync(sessionDir, { recursive: true, force: true });
+        console.log(`[${apiKey}] 🗑️  File sesi berhasil dihapus.`);
+    }
+
+    // 4. Hapus data dari DATABASE (user + semua automation schedule-nya)
+    try {
+        db.prepare('DELETE FROM automation_schedules WHERE api_key = ?').run(apiKey);
+        db.prepare('DELETE FROM message_logs WHERE api_key = ?').run(apiKey);
+        db.prepare('DELETE FROM users WHERE api_key = ?').run(apiKey);
+        console.log(`[${apiKey}] 🗑️  Data database berhasil dihapus.`);
+    } catch (dbErr) {
+        console.error(`[${apiKey}] ❌ Gagal hapus data dari database:`, dbErr);
+    }
+
+    // 5. Beritahu frontend via Socket.io
+    if (io) {
+        io.emit(`status-${apiKey}`, { apiKey, status: 'Purged' });
+        io.emit(`device-purged`, { apiKey, reason: `Gagal reconnect ${MAX_RECONNECT_ATTEMPTS} kali berturut-turut.` });
+    }
+}
+
 function formatNumber(number) {
     if (number.endsWith('@g.us')) {
         return number;
@@ -76,20 +125,32 @@ async function connectToWhatsApp(apiKey, io) {
                 if (io) io.emit(`status-${apiKey}`, { apiKey, status: 'Disconnected' });
 
                 // 2. BERSIHKAN MEMORI SAAT PUTUS
-                // Biar pas reconnect gak dianggap "Sesi lama terdeteksi"
                 activeSessions.delete(apiKey);
 
                 if (shouldReconnect) {
-                    // 3. COOL DOWN SYSTEM (Mencegah Spam 428)
-                    // Kasih jeda 5 detik biar server WA gak ngira kita kena DDOS/Spam
-                    console.log(`[${apiKey}] Menunggu 5 detik sebelum reconnect...`);
-                    setTimeout(() => connectToWhatsApp(apiKey, io), 5000);
+                    // 🔴 STRIKE SYSTEM: Tambah counter setiap kali disconnect
+                    const currentAttempts = (reconnectAttempts.get(apiKey) || 0) + 1;
+                    reconnectAttempts.set(apiKey, currentAttempts);
+
+                    console.log(`[${apiKey}] ⚠️  Percobaan reconnect ke-${currentAttempts}/${MAX_RECONNECT_ATTEMPTS}`);
+
+                    if (currentAttempts >= MAX_RECONNECT_ATTEMPTS) {
+                        // SUDAH 7 KALI GAGAL → PURGE!
+                        await purgeDevice(apiKey, sessionDir, io);
+                    } else {
+                        // 3. COOL DOWN SYSTEM (Mencegah Spam 428)
+                        console.log(`[${apiKey}] Menunggu 5 detik sebelum reconnect...`);
+                        setTimeout(() => connectToWhatsApp(apiKey, io), 5000);
+                    }
                 } else {
                     console.log(`[${apiKey}] ❌ DEVICE DI-LOGOUT DARI HP! Menghapus sesi...`);
+                    reconnectAttempts.delete(apiKey);
                     if (fs.existsSync(sessionDir)) fs.rmSync(sessionDir, { recursive: true, force: true });
                     db.prepare('UPDATE users SET status = ? WHERE api_key = ?').run('Disconnected', apiKey);
                 }
             } else if (connection === 'open') {
+                // ✅ BERHASIL KONEK → Reset counter
+                reconnectAttempts.set(apiKey, 0);
                 console.log(`[${apiKey}] ✅ Mantap! Berhasil terhubung.`);
                 db.prepare('UPDATE users SET status = ? WHERE api_key = ?').run('Connected', apiKey);
                 if (io) io.emit(`status-${apiKey}`, { apiKey, status: 'Connected' });

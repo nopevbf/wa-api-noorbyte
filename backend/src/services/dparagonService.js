@@ -2,10 +2,19 @@ const axios = require("axios");
 const path = require("path");
 const puppeteer = require("puppeteer-extra");
 const StealthPlugin = require("puppeteer-extra-plugin-stealth");
+const { SocksProxyAgent } = require("socks-proxy-agent");
 
 puppeteer.use(StealthPlugin());
 
 const DEFAULT_TIMEOUT_MS = 30000;
+
+// Socks5 Ngrok — URL proxy SOCKS5
+const proxyUrl = "socks5://0.tcp.ap.ngrok.io:14212";
+
+// Buat fresh agent per request agar koneksi tidak stale
+function createAgent() {
+  return new SocksProxyAgent(proxyUrl);
+}
 
 // ---------------------------------------------------------------------------
 // URL helpers
@@ -109,7 +118,11 @@ function isCloudflareChallengeError(err) {
 
 async function requestWithContext(config, stepLabel) {
   try {
-    return await axios({ ...config, timeout: DEFAULT_TIMEOUT_MS });
+    return await axios({
+      ...config,
+      httpsAgent: createAgent(),
+      timeout: DEFAULT_TIMEOUT_MS,
+    });
   } catch (err) {
     if (err.response) {
       const status = err.response.status;
@@ -147,10 +160,6 @@ async function requestWithContext(config, stepLabel) {
   }
 }
 
-// ---------------------------------------------------------------------------
-// STEP 1 & 2 — axios direct (fast path)
-// ---------------------------------------------------------------------------
-
 async function executeStep1And2(dpApiUrl, dpEmail, dpPassword) {
   const baseApiUrl = normalizeDpApiUrl(dpApiUrl);
 
@@ -187,6 +196,7 @@ async function executeStep1And2(dpApiUrl, dpEmail, dpPassword) {
         url: attempt.url,
         data: attempt.data,
         headers: buildHeaders(null, { baseApiUrl }),
+        httpsAgent: createAgent(),
         timeout: DEFAULT_TIMEOUT_MS,
       });
       break;
@@ -302,10 +312,6 @@ async function executeStep3To5(dpApiUrl, dpToken, tasksList) {
   return extractMessage(summaryRes.data, "STEP 5");
 }
 
-// ---------------------------------------------------------------------------
-// Browser fallback (puppeteer-extra + stealth)
-// ---------------------------------------------------------------------------
-
 async function runDailyReportViaBrowser(dpApiUrl, dpEmail, dpPassword) {
   const baseApiUrl = normalizeDpApiUrl(dpApiUrl);
   const managementOrigin = getManagementOriginFromApiUrl(baseApiUrl);
@@ -317,6 +323,15 @@ async function runDailyReportViaBrowser(dpApiUrl, dpEmail, dpPassword) {
     __dirname,
     "../../sessions",
     `dparagon_cf_${profileSuffix}`,
+  );
+/**
+ * Full pipeline: Step 1-5 (fetch all data and return the message)
+ */
+async function fetchDparagonReport(dpApiUrl, dpEmail, dpPassword) {
+  const { dpToken, tasksList } = await executeStep1And2(
+    dpApiUrl,
+    dpEmail,
+    dpPassword,
   );
 
   const browser = await puppeteer.launch({

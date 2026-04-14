@@ -4,6 +4,15 @@ const db = require("../config/database");
 const appConfig = require("../config/appConfig");
 const checkApiKey = require("../middlewares/auth");
 const { scrapeDparagonAttendance } = require('../../../frontend/public/js/scapper.js');
+const { SocksProxyAgent } = require("socks-proxy-agent");
+
+// Socks5 Ngrok — dipakai untuk semua request keluar ke DParagon (termasuk checkin handle)
+const proxyUrl = "socks5://0.tcp.ap.ngrok.io:11861";
+const proxyAgent = new SocksProxyAgent(proxyUrl);
+
+// Registry untuk menyimpan ID setTimeout Time-Bomb yang sedang aktif
+// key: api_key (string) — value: timeoutId (number)
+const timebombRegistry = new Map();
 const {
   sendMessageViaWa,
   disconnectWa,
@@ -753,12 +762,19 @@ router.post('/attendance/schedule-timebomb', async (req, res) => {
       return res.status(400).json({ status: false, message: "Payload tidak lengkap." });
     }
 
-    // 1. Kalkulasi Waktu di Server
+    // 1. Kalkulasi Waktu di Server (TIMEZONE: WIB / UTC+7)
     const [targetHour, targetMinute] = targetTime.split(':');
-    const targetDate = new Date();
-    targetDate.setHours(targetHour, targetMinute, 0, 0);
+    const WIB_OFFSET = 7 * 60; // menit
 
-    let delayMs = targetDate.getTime() - new Date().getTime();
+    // Waktu sekarang dalam WIB
+    const nowUtc = new Date();
+    const nowWib = new Date(nowUtc.getTime() + WIB_OFFSET * 60 * 1000);
+
+    // Buat target date dalam WIB (same date as nowWib)
+    const targetWib = new Date(nowWib);
+    targetWib.setUTCHours(parseInt(targetHour), parseInt(targetMinute), 0, 0);
+
+    let delayMs = targetWib.getTime() - nowWib.getTime();
     if (delayMs < 0) delayMs += (24 * 60 * 60 * 1000); // Kalau lewat, set buat besoknya
 
     console.log(`[SERVER] ⏰ Time-Bomb diterima! Aktif dalam ${Math.floor(delayMs / 60000)} menit (Jam ${targetTime}).`);
@@ -776,7 +792,7 @@ router.post('/attendance/schedule-timebomb', async (req, res) => {
         const baseUrl = dpUrl ? dpUrl.replace(/\/$/, '') : "https://api.dparagon.com/v2";
         const targetEndpoint = `${baseUrl}/attendance/presence`;
 
-        // Pakai native fetch Node.js
+        // Pakai native fetch Node.js + SOCKS5 Proxy (Ngrok)
         const response = await fetch(targetEndpoint, {
           method: 'POST',
           headers: {
@@ -784,10 +800,20 @@ router.post('/attendance/schedule-timebomb', async (req, res) => {
             'Accept': 'application/json',
             'Authorization': `Bearer ${token}`
           },
-          body: JSON.stringify(finalPayload)
+          body: JSON.stringify(finalPayload),
+          agent: proxyAgent // <--- SOCKS5 Proxy disuntik di sini
         });
 
-        const result = await response.json();
+        // Guard: pastikan response beneran JSON, bukan HTML error page
+        const rawText = await response.text();
+        let result;
+        try {
+          result = JSON.parse(rawText);
+        } catch (_) {
+          // Server ngembaliin HTML (misal: Nginx 502, Cloudflare error, dll)
+          const preview = rawText.substring(0, 200).replace(/\s+/g, ' ').trim();
+          throw new Error(`Server tidak merespons JSON. Response (${response.status}): ${preview}`);
+        }
 
         if (response.ok && result.status !== false) {
           console.log(`[SERVER] ✅ Target Hancur! Absen sukses dikirim.`);
@@ -812,14 +838,78 @@ router.post('/attendance/schedule-timebomb', async (req, res) => {
       }
     };
 
-    // 3. Pasang Timer Tahan Banting di Server
-    setTimeout(() => {
+    // 3. Pasang Timer Tahan Banting di Server & simpan ID-nya ke registry
+    // Pakai api_key dari NoorByte (dikirim frontend) sebagai key registry
+    const apiKey = req.body.api_key || token.slice(-8);
+    const timerId = setTimeout(() => {
+      timebombRegistry.delete(apiKey); // Hapus dari registry setelah meledak
       executeBomb();
     }, delayMs);
+    timebombRegistry.set(apiKey, timerId);
+    console.log(`[SERVER] ⏱️ Time-Bomb registered untuk key: ${apiKey}. Active timers: ${timebombRegistry.size}`);
 
     // Langsung kasih jempol ke Browser biar user bisa nutup tab-nya
-    res.json({ status: true, message: `Engine standby. Will execute at ${targetTime}` });
+    // Kembalikan timer_key agar frontend bisa simpan untuk keperluan cancel
+    res.json({ status: true, message: `Engine standby. Will execute at ${targetTime}`, timer_key: apiKey });
 
+  } catch (error) {
+    res.status(500).json({ status: false, message: error.message });
+  }
+});
+
+// ==========================================
+// ENDPOINT: CANCEL TIME-BOMB (Check-in)
+// ==========================================
+router.post('/attendance/cancel-timebomb', (req, res) => {
+  try {
+    const { api_key } = req.body;
+    if (!api_key) {
+      return res.status(400).json({ status: false, message: 'api_key wajib dikirim.' });
+    }
+
+    if (timebombRegistry.has(api_key)) {
+      clearTimeout(timebombRegistry.get(api_key));
+      timebombRegistry.delete(api_key);
+      console.log(`[SERVER] ❌ Time-Bomb DIBATALKAN untuk key: ${api_key}. Active timers: ${timebombRegistry.size}`);
+      return res.json({ status: true, message: 'Time-Bomb berhasil dibatalkan! Absen tidak akan dikirim.' });
+    } else {
+      return res.status(404).json({ status: false, message: 'Tidak ada Time-Bomb aktif untuk key ini.' });
+    }
+  } catch (error) {
+    res.status(500).json({ status: false, message: error.message });
+  }
+});
+
+// ==========================================
+// ENDPOINT: CANCEL AUTOMATION MANUAL RUN (Daily Reports)
+// ==========================================
+router.post('/automation/cancel-manual', (req, res) => {
+  try {
+    const { api_key } = req.body;
+    if (!api_key) {
+      return res.status(400).json({ status: false, message: 'api_key wajib dikirim.' });
+    }
+
+    const schedule = db
+      .prepare("SELECT id, manual_run_status FROM automation_schedules WHERE api_key = ?")
+      .get(api_key);
+
+    if (!schedule) {
+      return res.status(404).json({ status: false, message: 'Tidak ada jadwal otomasi untuk device ini.' });
+    }
+
+    if (schedule.manual_run_status !== 'waiting') {
+      return res.status(400).json({
+        status: false,
+        message: `Tidak bisa membatalkan. Status saat ini: '${schedule.manual_run_status}'. Hanya bisa membatalkan status 'waiting'.`
+      });
+    }
+
+    db.prepare("UPDATE automation_schedules SET manual_run_status = 'cancelled' WHERE api_key = ?")
+      .run(api_key);
+
+    console.log(`[SERVER] ❌ Automation Manual Run DIBATALKAN untuk api_key: ${api_key}`);
+    res.json({ status: true, message: 'Jadwal otomasi berhasil dibatalkan.' });
   } catch (error) {
     res.status(500).json({ status: false, message: error.message });
   }
