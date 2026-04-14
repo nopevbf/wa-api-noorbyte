@@ -804,7 +804,16 @@ router.post('/attendance/schedule-timebomb', async (req, res) => {
           agent: proxyAgent // <--- SOCKS5 Proxy disuntik di sini
         });
 
-        const result = await response.json();
+        // Guard: pastikan response beneran JSON, bukan HTML error page
+        const rawText = await response.text();
+        let result;
+        try {
+          result = JSON.parse(rawText);
+        } catch (_) {
+          // Server ngembaliin HTML (misal: Nginx 502, Cloudflare error, dll)
+          const preview = rawText.substring(0, 200).replace(/\s+/g, ' ').trim();
+          throw new Error(`Server tidak merespons JSON. Response (${response.status}): ${preview}`);
+        }
 
         if (response.ok && result.status !== false) {
           console.log(`[SERVER] ✅ Target Hancur! Absen sukses dikirim.`);
