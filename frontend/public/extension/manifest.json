@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "Pulse LCR Helper (TikTok)",
+  "version": "1.0",
+  "description": "Eksekusi Like, Comment, Repost TikTok langsung dari browser lokal Anda untuk bypass deteksi bot.",
+  "permissions": ["tabs"],
+  "content_scripts": [
+    {
+      "matches": ["http://localhost:*/*", "http://127.0.0.1:*/*"],
+      "js": ["pulse_bridge.js"],
+      "run_at": "document_start"
+    },
+    {
+      "matches": ["*://*.tiktok.com/*"],
+      "js": ["tiktok_bot.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  }
+}

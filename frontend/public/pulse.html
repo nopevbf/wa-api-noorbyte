@@ -103,6 +103,40 @@
                         </div>
                     </section>
 
+                    <section class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-sm">
+                        <div class="flex items-center gap-2 mb-6">
+                            <span class="material-symbols-outlined text-rose-500">devices</span>
+                            <h3 class="text-sm font-bold uppercase tracking-wider text-slate-500">TikTok Local Mode</h3>
+                        </div>
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-950 rounded-lg border border-slate-100 dark:border-slate-800">
+                                <div>
+                                    <h4 class="text-[11px] font-bold uppercase text-slate-500">Local Browser</h4>
+                                    <p class="text-[9px] text-slate-400">Gunakan browser Anda sendiri.</p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" x-model="tiktokLocal.enabled" class="sr-only peer">
+                                    <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-800 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-slate-600 peer-checked:bg-rose-500"></div>
+                                </label>
+                            </div>
+
+                            <div x-show="tiktokLocal.enabled" x-transition class="space-y-3 pt-2">
+                                <label class="block text-[11px] font-bold text-slate-400 uppercase mb-1 ml-1">Buka di:</label>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <button @click="tiktokLocal.mode = 'tab'" :class="tiktokLocal.mode === 'tab' ? 'bg-rose-50 border-rose-200 text-rose-600' : 'bg-slate-50 border-slate-100 text-slate-500'" class="flex items-center justify-center gap-2 py-2 rounded-lg border text-[10px] font-bold transition-all">
+                                        <span class="material-symbols-outlined text-sm">tab</span> New Tab
+                                    </button>
+                                    <button @click="tiktokLocal.mode = 'window'" :class="tiktokLocal.mode === 'window' ? 'bg-rose-50 border-rose-200 text-rose-600' : 'bg-slate-50 border-slate-100 text-slate-500'" class="flex items-center justify-center gap-2 py-2 rounded-lg border text-[10px] font-bold transition-all">
+                                        <span class="material-symbols-outlined text-sm">open_in_new</span> New Window
+                                    </button>
+                                </div>
+                                <p class="text-[9px] text-slate-400 italic bg-amber-50 dark:bg-amber-900/20 p-2 rounded border border-amber-100 dark:border-amber-800/30">
+                                    <span class="font-bold text-amber-600 mr-1">Note:</span> Pastikan Anda sudah login ke TikTok di browser Chrome ini untuk hasil maksimal.
+                                </p>
+                            </div>
+                        </div>
+                    </section>
+
                     <template x-if="mode === 'manual'">
                         <section class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-sm">
                             <div class="flex items-center gap-2 mb-6">
@@ -167,10 +201,66 @@
                     
                     <button @click="mode === 'manual' ? startManual() : startAuto()" ... >
 
-                    <button @click="mode === 'manual' ? startManual() : startAuto()" class="w-full bg-primary hover:bg-primary/90 text-white py-4 rounded-xl font-bold flex items-center justify-center gap-3 shadow-lg shadow-primary/20 active:scale-95 transition-all">
-    <span class="material-symbols-outlined text-xl" style="font-variation-settings: 'FILL' 1;" x-text="mode === 'manual' ? 'play_arrow' : 'sensors'"></span>
-    <span x-text="mode === 'manual' ? 'Start Manual Execution' : 'Activate Auto-Monitor'"></span>
-</button>
+                    <button @click="mode === 'manual' ? startManual() : startAuto()" 
+                            :disabled="tiktokLocal.enabled && !isExtensionInstalled"
+                            :class="(tiktokLocal.enabled && !isExtensionInstalled) ? 'bg-slate-300 cursor-not-allowed' : 'bg-primary hover:bg-primary/90 shadow-primary/20 active:scale-95'"
+                            class="w-full text-white py-4 rounded-xl font-bold flex items-center justify-center gap-3 shadow-lg transition-all">
+                        <span class="material-symbols-outlined text-xl" style="font-variation-settings: 'FILL' 1;" x-text="mode === 'manual' ? 'play_arrow' : 'sensors'"></span>
+                        <span x-text="mode === 'manual' ? 'Start Manual Execution' : 'Activate Auto-Monitor'"></span>
+                    </button>
+
+                    <div x-show="tiktokLocal.enabled && !isExtensionInstalled" x-transition class="mt-4 p-4 bg-rose-50 dark:bg-rose-900/20 border border-rose-100 dark:border-rose-800/30 rounded-xl">
+                        <div class="flex gap-3">
+                            <span class="material-symbols-outlined text-rose-500">extension_off</span>
+                            <div class="flex-1">
+                                <h4 class="text-xs font-bold text-rose-600 uppercase">Extension Required</h4>
+                                <p class="text-[10px] text-rose-500/80 mt-1 leading-relaxed">Local Browser mode TikTok membutuhkan extension agar robot bisa bekerja di browser asli Anda.</p>
+                                <div class="mt-3 flex gap-2">
+                                    <a href="/api/extension/download" class="flex-1 bg-rose-500 hover:bg-rose-600 text-white text-[10px] font-bold py-2 rounded-lg flex items-center justify-center gap-1.5 transition-all">
+                                        <span class="material-symbols-outlined text-sm">download</span> Download ZIP
+                                    </a>
+                                    <button @click="showExtTutorial = true" class="flex-1 bg-white border border-rose-200 text-rose-600 text-[10px] font-bold py-2 rounded-lg flex items-center justify-center gap-1.5 transition-all">
+                                        <span class="material-symbols-outlined text-sm">help</span> Cara Pasang
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MODAL TUTORIAL EXTENSION -->
+                <div x-show="showExtTutorial" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+                    <div @click.away="showExtTutorial = false" class="bg-white dark:bg-slate-900 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800">
+                        <div class="p-6">
+                            <div class="flex justify-between items-center mb-6">
+                                <h3 class="text-lg font-bold">Instalasi Extension</h3>
+                                <button @click="showExtTutorial = false" class="text-slate-400 hover:text-slate-600">
+                                    <span class="material-symbols-outlined">close</span>
+                                </button>
+                            </div>
+                            
+                            <div class="space-y-6">
+                                <div class="flex gap-4">
+                                    <div class="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm shrink-0">1</div>
+                                    <p class="text-sm text-slate-600 dark:text-slate-400"><span class="font-bold text-slate-900 dark:text-white">Download & Extract</span> file ZIP extension melalui tombol di sidebar.</p>
+                                </div>
+                                <div class="flex gap-4">
+                                    <div class="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm shrink-0">2</div>
+                                    <p class="text-sm text-slate-600 dark:text-slate-400">Buka Chrome dan pergi ke <code class="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-primary">chrome://extensions</code></p>
+                                </div>
+                                <div class="flex gap-4">
+                                    <div class="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm shrink-0">3</div>
+                                    <p class="text-sm text-slate-600 dark:text-slate-400">Aktifkan <span class="font-bold text-slate-900 dark:text-white">Developer Mode</span> di pojok kanan atas.</p>
+                                </div>
+                                <div class="flex gap-4">
+                                    <div class="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm shrink-0">4</div>
+                                    <p class="text-sm text-slate-600 dark:text-slate-400">Klik <span class="font-bold text-slate-900 dark:text-white">Load Unpacked</span> dan pilih folder yang sudah diextract tadi.</p>
+                                </div>
+                            </div>
+
+                            <button @click="showExtTutorial = false" class="w-full mt-8 bg-slate-900 dark:bg-white dark:text-slate-900 text-white py-3 rounded-xl font-bold text-sm">Saya Mengerti</button>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="lg:col-span-5 space-y-6">
@@ -226,9 +316,9 @@
                                     <p class="text-xs text-center">Belum ada hasil. Jalankan Manual Execution untuk memulai.</p>
                                 </div>
                             </template>
-                            <table class="w-full text-left border-collapse" x-show="lcrResults.length > 0">
+                            <table class="w-full text-left border-collapse" x-show="allResults.length > 0">
                                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
-                                    <template x-for="(res, idx) in lcrResults" :key="idx">
+                                    <template x-for="(res, idx) in allResults" :key="idx">
                                         <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                                             <td class="px-4 py-3">
                                                 <div class="text-[10px] font-bold text-slate-900 dark:text-white truncate max-w-[120px]" x-text="(res.platform || '').toUpperCase() + ' #' + (idx+1)"></div>

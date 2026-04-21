@@ -4,6 +4,12 @@ document.addEventListener('alpine:init', () => {
         isWaiting: true,
         stealthMode: false, // 😈 DEFAULT: Browser Terlihat (VISIBLE)
         
+        // TikTok Local Automation Settings
+        tiktokLocal: {
+            enabled: true,
+            mode: 'tab' // 'tab' | 'window'
+        },
+
         // Memori Penyimpanan Input
         config: {
             name: '',
@@ -20,9 +26,17 @@ document.addEventListener('alpine:init', () => {
             targetId: ''
         },
 
-        // LCR Status & Results dari Backend
-        lcrStatus: 'idle', // idle | running | done | error
-        lcrResults: [],
+        // Extension State
+        showExtTutorial: false,
+        get isExtensionInstalled() {
+            return document.documentElement.hasAttribute('data-pulse-extension');
+        },
+
+        // Session-based Tracking
+        sessions: {
+            main: { status: 'idle', results: [] },
+            tiktok: { status: 'idle', results: [] }
+        },
         statusPollInterval: null,
 
         // Terminal Logs Array
@@ -35,19 +49,35 @@ document.addEventListener('alpine:init', () => {
         socket: null,
 
         init() {
+            // Extension Event Listeners
+            window.addEventListener('PULSE_EXT_LOG', (e) => {
+                const { message, type } = e.detail;
+                this.addLog(type || 'Extension', message, this.getLogColor(type));
+            });
+
+            window.addEventListener('PULSE_EXT_PROGRESS', (e) => {
+                const result = e.detail;
+                this.sessions.tiktok.results.push(result);
+                this.addLog('Progress', `[EXTENSION] Link TikTok diproses: ${result.url.substring(0, 25)}...`, 'text-rose-400');
+            });
+
             // Connect Socket.io untuk terima log real-time dari backend
             if (typeof io !== 'undefined') {
                 this.socket = io();
 
                 this.socket.on('pulse_log', (data) => {
-                    this.addLog(data.type || 'Server', data.message, this.getLogColor(data.type));
+                    const prefix = data.sessionId ? `[${data.sessionId.toUpperCase()}] ` : '';
+                    this.addLog(data.type || 'Server', prefix + data.message, this.getLogColor(data.type));
                 });
 
                 this.socket.on('pulse_progress', (data) => {
+                    const sid = data.sessionId || 'main';
+                    if (!this.sessions[sid]) this.sessions[sid] = { status: 'running', results: [] };
+                    
                     if (data.result) {
-                        this.lcrResults.push(data.result);
+                        this.sessions[sid].results.push(data.result);
                     }
-                    this.addLog('Progress', `Link ${data.current}/${data.total} selesai.`, 'text-purple-400');
+                    this.addLog('Progress', `[${sid.toUpperCase()}] Link ${data.current}/${data.total} selesai.`, 'text-purple-400');
                 });
 
                 this.socket.on('connect', () => {
@@ -60,7 +90,8 @@ document.addEventListener('alpine:init', () => {
             if (saved) {
                 try {
                     const parsed = JSON.parse(saved);
-                    this.config = { ...this.config, ...parsed };
+                    this.config = { ...this.config, ...parsed.identity };
+                    if (parsed.tiktokLocal) this.tiktokLocal = parsed.tiktokLocal;
                 } catch(e) { /* ignore */ }
             }
         },
@@ -95,54 +126,41 @@ document.addEventListener('alpine:init', () => {
         // Simpan config ke localStorage
         saveConfig() {
             localStorage.setItem('pulse_config', JSON.stringify({
-                name: this.config.name,
-                ig: this.config.ig,
-                tt: this.config.tt
+                identity: this.config,
+                tiktokLocal: this.tiktokLocal
             }));
         },
 
         // POLLING STATUS DARI BACKEND
         startStatusPolling() {
             if (this.statusPollInterval) clearInterval(this.statusPollInterval);
-            this.pollStatus();
-            this.statusPollInterval = setInterval(() => this.pollStatus(), 5000);
+            this.statusPollInterval = setInterval(() => this.pollAllStatuses(), 3000);
         },
 
-        stopStatusPolling() {
-            if (this.statusPollInterval) {
+        async pollAllStatuses() {
+            let stillRunning = false;
+            for (const sid of Object.keys(this.sessions)) {
+                try {
+                    const res = await fetch(`/api/pulse/status?sessionId=${sid}`);
+                    const result = await res.json();
+                    if (result.status && result.data) {
+                        this.sessions[sid].status = result.data.status;
+                        if (result.data.results) this.sessions[sid].results = result.data.results;
+                        if (result.data.status === 'running') stillRunning = true;
+                    }
+                } catch(e) {}
+            }
+            if (!stillRunning && this.isWaiting === false) {
+                this.isWaiting = true;
                 clearInterval(this.statusPollInterval);
                 this.statusPollInterval = null;
+                this.addLog('System', 'Semua misi pararel selesai.', 'text-emerald-500');
             }
         },
 
-        async pollStatus() {
-            try {
-                const res = await fetch('/api/pulse/status');
-                const result = await res.json();
-                if (result.status && result.data) {
-                    this.lcrStatus = result.data.status;
-                    
-                    // Update results jika ada data baru
-                    if (result.data.results && result.data.results.length > this.lcrResults.length) {
-                        this.lcrResults = result.data.results;
-                    }
-
-                    // Stop polling jika sudah selesai atau error
-                    if (result.data.status === 'done' || result.data.status === 'error') {
-                        this.stopStatusPolling();
-                        this.isWaiting = true;
-                        
-                        if (result.data.status === 'done') {
-                            this.addLog('Done', `Semua link selesai diproses! Total: ${this.lcrResults.length}`, 'text-emerald-500');
-                        }
-                        if (result.data.error) {
-                            this.addLog('Error', result.data.error, 'text-red-500');
-                        }
-                    }
-                }
-            } catch(e) {
-                // Silent fail for polling
-            }
+        // Get combined results for the UI
+        get allResults() {
+            return [...this.sessions.main.results, ...this.sessions.tiktok.results];
         },
 
         // EKSEKUSI MODE MANUAL
@@ -153,41 +171,67 @@ document.addEventListener('alpine:init', () => {
             }
 
             this.isWaiting = false;
-            this.lcrResults = [];
-            this.lcrStatus = 'running';
             this.saveConfig();
 
-            const linkCount = this.manual.links.split('\n').filter(l => l.trim()).length;
-            this.addLog('Action', `Mengirim ${linkCount} link ke LCR Engine...`, 'text-purple-400');
+            const allLinks = this.manual.links.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+            
+            let tiktokLinks = [];
+            let mainLinks = [];
 
+            if (this.tiktokLocal.enabled) {
+                tiktokLinks = allLinks.filter(l => l.toLowerCase().includes('tiktok.com'));
+                mainLinks = allLinks.filter(l => !l.toLowerCase().includes('tiktok.com'));
+            } else {
+                mainLinks = allLinks;
+            }
+
+            // Reset States
+            this.sessions.main = { status: mainLinks.length > 0 ? 'running' : 'idle', results: [] };
+            this.sessions.tiktok = { status: tiktokLinks.length > 0 ? 'running' : 'idle', results: [] };
+
+            // Start TikTok Session (Extension / Local)
+            if (tiktokLinks.length > 0) {
+                const isExtInstalled = document.documentElement.hasAttribute('data-pulse-extension');
+                
+                if (isExtInstalled) {
+                    this.addLog('Extension', `Mengirim ${tiktokLinks.length} link TikTok ke Chrome Extension...`, 'text-rose-400');
+                    const commentToUse = this.manual.comments.split('\n').filter(c => c.trim())[0] || '';
+                    
+                    window.dispatchEvent(new CustomEvent('PULSE_EXECUTE_TIKTOK', {
+                        detail: { links: tiktokLinks, comment: commentToUse }
+                    }));
+                } else {
+                    this.addLog('Warning', `Extension belum terinstall! Jalankan mode server (Visible Browser)...`, 'text-amber-500');
+                    this.sendToBackend(tiktokLinks, 'tiktok', false);
+                }
+            }
+
+            // Start Main Session (PHANTOM/STEALTH)
+            if (mainLinks.length > 0) {
+                this.addLog('Action', `🚀 Memulai Sesi Utama (Phantom Mode)...`, 'text-purple-400');
+                this.sendToBackend(mainLinks, 'main', true);
+            }
+
+            this.startStatusPolling();
+        },
+
+        async sendToBackend(links, sessionId, stealth) {
             try {
-                // Kirim data ke Backend API
-                // Di dalam fungsi startManual()
                 const response = await fetch('/api/pulse/execute-manual', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         identity: this.config,
-                        payload: this.manual,
-                        options: { stealthMode: this.stealthMode } // 😈 Kirim status saklar ke Backend!
+                        payload: { ...this.manual, links: links.join('\n') },
+                        options: { sessionId, stealthMode: stealth }
                     })
                 });
-
                 const result = await response.json();
-
-                if(response.ok && result.status) {
-                    this.addLog('Server', result.message || 'LCR Engine berjalan di background.', 'text-emerald-400');
-                    this.addLog('Info', 'Pantau progress di terminal ini. Browser boleh tetap terbuka.', 'text-slate-400');
-                    
-                    // Mulai polling untuk update status
-                    this.startStatusPolling();
-                } else {
-                    throw new Error(result.message || 'Gagal memulai LCR Engine.');
+                if (!result.status === 'success') {
+                    this.addLog('Error', `Gagal memulai sesi ${sessionId}: ${result.message}`, 'text-red-500');
                 }
-            } catch (error) {
-                this.addLog('Fatal', error.message, 'text-red-500');
-                this.isWaiting = true;
-                this.lcrStatus = 'error';
+            } catch (err) {
+                this.addLog('Error', `Fatal error sesi ${sessionId}: ${err.message}`, 'text-red-500');
             }
         },
 

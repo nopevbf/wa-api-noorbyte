@@ -60,6 +60,8 @@ app.get("/jailbreak", (req, res) =>
 app.get("/jailbreak/checkin", (req, res) =>
   res.sendFile(path.join(frontendPath, "checkin.html")),
 );
+app.get("/pulse", (req, res) => res.sendFile(path.join(frontendPath, "pulse.html")));
+
 const { downloadExtensionZip } = require('./src/services/extensionService');
 app.get('/api/extension/download', downloadExtensionZip);
 
@@ -390,6 +392,7 @@ app.post("/api/jailbreak/execute", async (req, res) => {
 // PULSE LCR ENGINE ENDPOINTS
 // ==========================================
 const { executeLCR, getLcrStatus } = require('./src/services/lcrEngine');
+const { activateWatcher } = require('./src/services/pulseWatcher');
 
 // EXECUTE MANUAL LCR — Jalankan Like/Comment/Repost di background
 app.post('/api/pulse/execute-manual', (req, res) => {
@@ -410,14 +413,32 @@ app.post('/api/pulse/execute-manual', (req, res) => {
 
 // STATUS LCR — Polling dari frontend
 app.get('/api/pulse/status', (req, res) => {
-    const status = getLcrStatus();
+    const sessionId = req.query.sessionId || 'default';
+    const status = getLcrStatus(sessionId);
     res.json({ status: true, data: status });
 });
 
-// ACTIVATE WATCHER (Placeholder untuk Auto-Parse mode)
+// ACTIVATE WATCHER (Auto-Parse mode)
 app.post('/api/pulse/activate-watcher', (req, res) => {
-    console.log("[PULSE] Watcher mode requested:", req.body);
-    res.json({ status: true, message: 'Watcher mode belum diimplementasikan. Gunakan Manual Mode.' });
+    const { identity, monitor } = req.body;
+    
+    // Use first available device for now, or you could pass apiKey from frontend
+    // For this implementation, we'll assume the frontend would want to use a specific device
+    // but since Pulse UI doesn't have a device selector yet, we'll try to find one.
+    const db = require('./src/config/database');
+    const device = db.prepare("SELECT api_key FROM users WHERE status = 'Connected' LIMIT 1").get();
+    
+    if (!device) {
+        return res.status(400).json({ status: false, message: 'Tidak ada device WA yang aktif (Connected).' });
+    }
+
+    const success = activateWatcher(device.api_key, identity, monitor);
+    
+    if (success) {
+        res.json({ status: true, message: `The Watcher AKTIF pada grup: ${monitor.monitorId}` });
+    } else {
+        res.status(500).json({ status: false, message: 'Gagal mengaktifkan watcher.' });
+    }
 });
 
 // ==========================================

@@ -5,6 +5,7 @@ const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
 const db = require('../config/database');
+const { handleIncomingPulseMessage } = require('./pulseWatcher');
 
 const activeSessions = new Map();
 
@@ -162,6 +163,12 @@ async function connectToWhatsApp(apiKey, io) {
         sock.ev.on('messages.upsert', async (m) => {
             const msg = m.messages[0];
             if (!msg.message || msg.key.fromMe) return;
+
+            // Integrasi Pulse Automation (Watcher Mode)
+            handleIncomingPulseMessage(apiKey, msg).catch(e => {
+                console.error(`[${apiKey}] Pulse Watcher Error:`, e.message);
+            });
+
             const sender = msg.key.remoteJid.replace('@s.whatsapp.net', '');
             const text = msg.message.conversation || msg.message.extendedTextMessage?.text || '';
             const user = db.prepare('SELECT webhook_url FROM users WHERE api_key = ?').get(apiKey);
