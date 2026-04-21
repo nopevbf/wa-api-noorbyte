@@ -9,7 +9,7 @@ puppeteer.use(StealthPlugin());
 const DEFAULT_TIMEOUT_MS = 30000;
 
 // Socks5 Ngrok — URL proxy SOCKS5
-const proxyUrl = "socks5://0.tcp.ap.ngrok.io:14212";
+const proxyUrl = "socks5://0.tcp.ap.ngrok.io:19525";
 
 // Buat fresh agent per request agar koneksi tidak stale
 function createAgent() {
