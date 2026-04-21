@@ -57,3 +57,4 @@ backend/public/lcr_screenshots/
 # Ignore cache files
 **/cache/
 **/cache_files/
+.blackboxcli/

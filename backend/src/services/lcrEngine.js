@@ -235,6 +235,7 @@ async function launchBrowser(sessionName, isStealth) {
             '--disable-dev-shm-usage',
             '--disable-gpu',
             '--disable-notifications',
+            '--disable-infobars',
             '--window-size=1280,900',
             '--start-maximized',
             '--disable-blink-features=AutomationControlled',
@@ -243,6 +244,7 @@ async function launchBrowser(sessionName, isStealth) {
             'about:blank',
             '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36'
         ],
+        ignoreDefaultArgs: ['--enable-automation'],
         userDataDir: sessionDir,
         ignoreHTTPSErrors: true
     });
@@ -319,13 +321,41 @@ async function instagramLogin(page, username, password) {
 // TIKTOK: LOGIN
 // ==========================================
 async function tiktokLogin(page, username, password) {
+    // 🛠️ FIX 10: Helper — cek rate limit keywords di halaman
+    const RATE_LIMIT_KEYWORDS = [
+        'maximum number of attempts',
+        'too many attempts',
+        'try again later',
+        'too fast',
+        'too many login',
+        'maximum attempt',
+        'login too frequently'
+    ];
+    const checkRateLimit = async () => {
+        const text = await page.evaluate(() => document.body?.innerText?.toLowerCase() || '').catch(() => '');
+        return RATE_LIMIT_KEYWORDS.some(k => text.includes(k));
+    };
+
+    // 🛠️ FIX 11: Helper — nuke session folder dari disk (bukan cuma cookies di memory)
+    const nukeSessionDir = () => {
+        const sessionDir = path.join(__dirname, `lcr_session_${(global.__lcrSessionName || 'default')}`);
+        if (fs.existsSync(sessionDir)) {
+            try {
+                fs.rmSync(sessionDir, { recursive: true, force: true });
+                sendPulseLog(`🗑️ Folder session "${path.basename(sessionDir)}" dihapus dari disk.`, 'info');
+            } catch (e) {
+                sendPulseLog(`⚠️ Gagal hapus folder session: ${e.message}`, 'warning');
+            }
+        }
+    };
+
     sendPulseLog('🔐 Mengecek status login TikTok...', 'info');
     // 🛠️ FIX 2: Ganti networkidle2 ke domcontentloaded agar tidak timeout
     await page.goto('https://www.tiktok.com/', { waitUntil: 'domcontentloaded', timeout: 45000 });
     await sleep(3000);
 
     const cookies = await page.cookies();
-    const isLoggedIn = cookies.some(c => c.name.includes('sessionid'));
+    const isLoggedIn = cookies.some(c => c.name === 'sessionid');
 
     if (isLoggedIn) {
         sendPulseLog('✅ TikTok session masih aktif.', 'success');
@@ -336,6 +366,14 @@ async function tiktokLogin(page, username, password) {
     await page.goto('https://www.tiktok.com/login/phone-or-email/email', { waitUntil: 'domcontentloaded', timeout: 45000 });
     await sleep(2000);
 
+    // 🛠️ FIX 12: Early detection — cek rate limit SEBELUM isi form
+    if (await checkRateLimit()) {
+        sendPulseLog('🚫 TikTok RATE LIMIT terdeteksi SEBELUM login! Browser profile sudah di-flag.', 'error');
+        nukeSessionDir();
+        sendPulseLog('⏳ Session dihapus dari disk. Tunggu 10-15 menit lalu coba lagi.', 'warning');
+        return false;
+    }
+
     if (username && password) {
         try {
             await page.waitForSelector('input[type="password"]', { timeout: 10000 });
@@ -343,14 +381,29 @@ async function tiktokLogin(page, username, password) {
                 const userInp = document.querySelector('input[name="username"], input[placeholder*="email" i], input[type="text"]');
                 const passInp = document.querySelector('input[type="password"]');
                 window.__LCR_UTILS__.simulateTyping(userInp, u);
-                window.__LCR_UTILS__.simulateTyping(passInp, p);
             }, username, password);
-            await sleep(1500);
+            // 🛠️ FIX 4: Delay natural antara field username → password
+            await sleep(Math.floor(Math.random() * 1000) + 1000);
+            await page.evaluate((p) => {
+                const passInp = document.querySelector('input[type="password"]');
+                window.__LCR_UTILS__.simulateTyping(passInp, p);
+            }, password);
+            // 🛠️ FIX 5: Delay natural sebelum submit (2-3 detik)
+            await sleep(Math.floor(Math.random() * 1000) + 2000);
             await page.evaluate(() => {
                 const btn = document.querySelector('button[type="submit"], button[data-e2e="login-button"]');
                 if (btn) window.__LCR_UTILS__.triggerClick(btn);
             });
-            await sleep(5000);
+            // 🛠️ FIX 6: Delay lebih panjang setelah submit (8 detik)
+            await sleep(8000);
+
+            // 🛠️ FIX 7: Deteksi "Maximum Attempt" / Rate Limit setelah submit
+            if (await checkRateLimit()) {
+                sendPulseLog('🚫 TikTok RATE LIMIT setelah submit! Menghapus session dari disk...', 'error');
+                nukeSessionDir();
+                sendPulseLog('⏳ Session dihapus. Tunggu 10-15 menit lalu coba lagi.', 'warning');
+                return false;
+            }
         } catch (err) {
             sendPulseLog('⚠️ Auto-fill gagal, masuk ke mode manual.', 'warning');
         }
@@ -362,8 +415,17 @@ async function tiktokLogin(page, username, password) {
         await sleep(5000);
         // Auto-kill popups during wait
         await page.evaluate(() => window.__LCR_UTILS__?.killPopups?.()).catch(() => { });
+
+        // 🛠️ FIX 8: Cek rate limit juga selama loop tunggu manual
+        if (await checkRateLimit()) {
+            sendPulseLog('🚫 Rate limit masih aktif di halaman. Menghentikan tunggu...', 'error');
+            nukeSessionDir();
+            sendPulseLog('🧹 Session dihapus dari disk. Coba lagi nanti (10-15 menit).', 'warning');
+            return false;
+        }
+
         const currentCookies = await page.cookies();
-        const hasSession = currentCookies.some(c => c.name.includes('sessionid'));
+        const hasSession = currentCookies.some(c => c.name === 'sessionid');
         if (hasSession) {
             isSafe = true;
             break;
@@ -612,6 +674,8 @@ async function executeLCR(identity, payload, options = {}) {
     sendPulseLog('═══════════════════════════════════', 'info');
 
     const sessionName = (identity.name || 'default').replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+    // 🛠️ FIX 13: Simpan sessionName ke global agar tiktokLogin bisa nuke folder yang benar
+    global.__lcrSessionName = sessionName;
 
     let browser;
     try {
@@ -660,6 +724,13 @@ async function executeLCR(identity, payload, options = {}) {
                     sendPulseLog('ℹ️  Mencoba pakai session tersimpan...', 'info');
                     loginDone[platform] = true;
                 }
+            }
+
+            // 🛠️ FIX 9: Kalau login gagal (rate limit / timeout), STOP total — jangan lanjut navigasi
+            if (loginDone[platform] === false) {
+                sendPulseLog(`🛑 Login ${platform} gagal. Menghentikan seluruh operasi LCR.`, 'error');
+                currentResults.push({ url, platform, error: `Login ${platform} failed (rate limit / timeout)` });
+                break;
             }
 
             sendPulseLog('📡 Navigasi ke post...', 'info');
