@@ -60,7 +60,8 @@ app.get("/jailbreak", (req, res) =>
 app.get("/jailbreak/checkin", (req, res) =>
   res.sendFile(path.join(frontendPath, "checkin.html")),
 );
-app.get("/pulse", (req, res) => res.sendFile(path.join(frontendPath, "pulse.html")));
+const { downloadExtensionZip } = require('./src/services/extensionService');
+app.get('/api/extension/download', downloadExtensionZip);
 
 // Redirect sisanya ke login jika bukan request ke API
 app.get("*", (req, res, next) => {
