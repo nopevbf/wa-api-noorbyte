@@ -1,8 +1,15 @@
 'use strict';
 
-const puppeteer = require('puppeteer');
+// ==========================================
+// IMPORT WAJIB UNTUK STEALTH
+// ==========================================
+const puppeteer = require('puppeteer-extra');
+const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const path = require('path');
 const fs = require('fs');
+
+// Aktifkan mode stealth
+puppeteer.use(StealthPlugin());
 
 // ==========================================
 // HELPER: RANDOM DELAY ANTI-BOT (3-8 detik)
@@ -53,10 +60,12 @@ async function injectLcrUtilities(page) {
             reactClick: (el) => {
                 const fiberKey = Object.keys(el).find(k => k.startsWith('__reactFiber'));
                 if (!fiberKey) return false;
+
                 let fiber = el[fiberKey];
                 while (fiber) {
                     const props = fiber.memoizedProps || fiber.pendingProps;
                     if (props && typeof props.onClick === 'function') {
+
                         props.onClick({
                             type: 'click', target: el, currentTarget: el,
                             bubbles: true, cancelable: true,
@@ -101,6 +110,7 @@ async function injectLcrUtilities(page) {
                 return new Promise((resolve, reject) => {
                     const el = document.querySelector(selector);
                     if (el) return resolve(el);
+
                     const observer = new MutationObserver(() => {
                         const target = document.querySelector(selector);
                         if (target) {
@@ -109,6 +119,7 @@ async function injectLcrUtilities(page) {
                         }
                     });
                     observer.observe(document.body, { childList: true, subtree: true });
+
                     setTimeout(() => {
                         observer.disconnect();
                         reject(new Error(`Timeout waiting for ${selector}`));
@@ -127,11 +138,10 @@ async function injectLcrUtilities(page) {
                     try {
                         const txt = (btn.innerText || btn.textContent || '').toLowerCase();
                         const aria = (btn.getAttribute('aria-label') || '').toLowerCase();
-                        
+
                         // Deteksi Tombol Silang (X) atau Teks Penolakan
                         const isClose = aria.includes('close') || aria.includes('tutup') || aria.includes('dismiss');
                         const isNotNow = /not now|lain kali|maybe later|cancel|nanti saja|close|tutup|ignore|no thanks|bukan sekarang/i.test(txt);
-
                         if ((isClose || isNotNow) && btn.offsetWidth > 0 && btn.offsetHeight > 0) {
                             window.__LCR_UTILS__.triggerClick(btn);
                             await window.__LCR_UTILS__.sleep(300);
@@ -181,7 +191,7 @@ async function waitForPostReady(page, platform) {
         // AUTO-ESC attempt for non-critical walls
         if (w % 2 === 0) {
             await page.keyboard.press('Escape');
-            await page.evaluate(() => window.__LCR_UTILS__?.killPopups?.()).catch(() => {});
+            await page.evaluate(() => window.__LCR_UTILS__?.killPopups?.()).catch(() => { });
             await sleep(1000);
         }
 
@@ -196,23 +206,29 @@ async function waitForPostReady(page, platform) {
 // ==========================================
 // LAUNCH BROWSER (DYNAMIC MODE: VISIBLE/PHANTOM)
 // ==========================================
-// 😈 Tambahkan parameter "isStealth" untuk menerima perintah dari UI
 async function launchBrowser(sessionName, isStealth) {
     const sessionDir = path.join(__dirname, `lcr_session_${sessionName}`);
-    const isLinux = process.platform === 'linux';
-    const chromiumPath = isLinux ? (
-        fs.existsSync('/usr/bin/chromium-browser') ? '/usr/bin/chromium-browser' :
-            fs.existsSync('/usr/bin/chromium') ? '/usr/bin/chromium' :
-                fs.existsSync('/snap/bin/chromium') ? '/snap/bin/chromium' : null
-    ) : null;
 
-    // 😈 BACA STATUS DARI SAKLAR UI (Sudah tidak memakai TARGET_MODE lagi!)
+    // 🛠️ FIX 1: Universal OS Chrome Path Wajib buat ngibulin bot detector
+    let executablePath = null;
+    if (process.platform === 'linux') {
+        executablePath = fs.existsSync('/usr/bin/google-chrome') ? '/usr/bin/google-chrome' :
+            fs.existsSync('/usr/bin/chromium-browser') ? '/usr/bin/chromium-browser' :
+                fs.existsSync('/usr/bin/chromium') ? '/usr/bin/chromium' :
+                    fs.existsSync('/snap/bin/chromium') ? '/snap/bin/chromium' : null;
+    } else if (process.platform === 'win32') {
+        executablePath = fs.existsSync('C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe') ? 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe' :
+            fs.existsSync('C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe') ? 'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe' : null;
+    } else if (process.platform === 'darwin') {
+        executablePath = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+    }
+
     const isHeadless = isStealth ? true : false;
 
     return puppeteer.launch({
         headless: isHeadless,
-        defaultViewport: { width: 1280, height: 900 }, // Desktop Default
-        ...(chromiumPath ? { executablePath: chromiumPath } : {}),
+        defaultViewport: { width: 1280, height: 900 },
+        ...(executablePath ? { executablePath } : {}), // Paksa pakai Chrome Asli
         args: [
             '--no-sandbox',
             '--disable-setuid-sandbox',
@@ -222,15 +238,13 @@ async function launchBrowser(sessionName, isStealth) {
             '--window-size=1280,900',
             '--start-maximized',
             '--disable-blink-features=AutomationControlled',
-
-            // 😈 3 MANTRA ANTI-RESTORE TAB:
             '--disable-session-crashed-bubble',
             '--disable-restore-session-state',
-            'about:blank', // Paksa Chrome HANYA membuka satu tab kosong!
-
-            '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            'about:blank',
+            '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36'
         ],
-        userDataDir: sessionDir
+        userDataDir: sessionDir,
+        ignoreHTTPSErrors: true
     });
 }
 
@@ -239,7 +253,8 @@ async function launchBrowser(sessionName, isStealth) {
 // ==========================================
 async function instagramLogin(page, username, password) {
     sendPulseLog('🔐 Mengecek status login Instagram...', 'info');
-    await page.goto('https://www.instagram.com/', { waitUntil: 'networkidle2', timeout: 30000 });
+    // 🛠️ FIX 2: Ganti networkidle2 ke domcontentloaded agar tidak timeout
+    await page.goto('https://www.instagram.com/', { waitUntil: 'domcontentloaded', timeout: 45000 });
     await sleep(3000);
 
     const cookies = await page.cookies();
@@ -254,9 +269,8 @@ async function instagramLogin(page, username, password) {
         sendPulseLog('⚠️ Kredensial kosong. Menunggu campur tangan Master...', 'warning');
     } else {
         sendPulseLog('🔑 Mulai proses login otomatis IG...', 'info');
-        await page.goto('https://www.instagram.com/accounts/login/', { waitUntil: 'networkidle2', timeout: 30000 });
+        await page.goto('https://www.instagram.com/accounts/login/', { waitUntil: 'domcontentloaded', timeout: 45000 });
         await sleep(2000);
-
         try {
             await page.waitForSelector('input[name="username"]', { timeout: 10000 });
             await page.evaluate((u, p) => {
@@ -265,7 +279,6 @@ async function instagramLogin(page, username, password) {
                 window.__LCR_UTILS__.simulateTyping(userInp, u);
                 window.__LCR_UTILS__.simulateTyping(passInp, p);
             }, username, password);
-
             await sleep(1500);
             await page.evaluate(() => {
                 const btn = document.querySelector('button[type="submit"]');
@@ -281,13 +294,10 @@ async function instagramLogin(page, username, password) {
     let isSafe = false;
     for (let w = 0; w < 60; w++) {
         await sleep(5000);
-        
         // Auto-kill popups during wait
-        await page.evaluate(() => window.__LCR_UTILS__?.killPopups?.()).catch(() => {});
-
+        await page.evaluate(() => window.__LCR_UTILS__?.killPopups?.()).catch(() => { });
         const currentCookies = await page.cookies();
         const hasSession = currentCookies.some(c => c.name === 'sessionid');
-
         if (hasSession) {
             isSafe = true;
             break;
@@ -310,7 +320,8 @@ async function instagramLogin(page, username, password) {
 // ==========================================
 async function tiktokLogin(page, username, password) {
     sendPulseLog('🔐 Mengecek status login TikTok...', 'info');
-    await page.goto('https://www.tiktok.com/', { waitUntil: 'networkidle2', timeout: 30000 });
+    // 🛠️ FIX 2: Ganti networkidle2 ke domcontentloaded agar tidak timeout
+    await page.goto('https://www.tiktok.com/', { waitUntil: 'domcontentloaded', timeout: 45000 });
     await sleep(3000);
 
     const cookies = await page.cookies();
@@ -322,7 +333,7 @@ async function tiktokLogin(page, username, password) {
     }
 
     sendPulseLog('🔑 Mulai proses login TikTok...', 'info');
-    await page.goto('https://www.tiktok.com/login/phone-or-email/email', { waitUntil: 'networkidle2', timeout: 30000 });
+    await page.goto('https://www.tiktok.com/login/phone-or-email/email', { waitUntil: 'domcontentloaded', timeout: 45000 });
     await sleep(2000);
 
     if (username && password) {
@@ -334,7 +345,6 @@ async function tiktokLogin(page, username, password) {
                 window.__LCR_UTILS__.simulateTyping(userInp, u);
                 window.__LCR_UTILS__.simulateTyping(passInp, p);
             }, username, password);
-
             await sleep(1500);
             await page.evaluate(() => {
                 const btn = document.querySelector('button[type="submit"], button[data-e2e="login-button"]');
@@ -350,13 +360,10 @@ async function tiktokLogin(page, username, password) {
     let isSafe = false;
     for (let w = 0; w < 60; w++) {
         await sleep(5000);
-
         // Auto-kill popups during wait
-        await page.evaluate(() => window.__LCR_UTILS__?.killPopups?.()).catch(() => {});
-
+        await page.evaluate(() => window.__LCR_UTILS__?.killPopups?.()).catch(() => { });
         const currentCookies = await page.cookies();
         const hasSession = currentCookies.some(c => c.name.includes('sessionid'));
-
         if (hasSession) {
             isSafe = true;
             break;
@@ -409,7 +416,6 @@ async function instagramActions(page, commentText) {
         } catch (e) { results.push({ action: 'like', error: e.message }); }
 
         await utils.sleep(1500);
-
         try {
             if (cmt) {
                 let input = document.querySelector(SELS.commentInput);
@@ -438,7 +444,6 @@ async function instagramActions(page, commentText) {
         } catch (e) { results.push({ action: 'comment', error: e.message }); }
 
         await utils.sleep(1500);
-
         try {
             const repostSvg = document.querySelector(SELS.repostSvg);
             if (repostSvg) {
@@ -510,7 +515,6 @@ async function tiktokActions(page, commentText) {
         } catch (e) { results.push({ action: 'like', error: e.message }); }
 
         await utils.sleep(1500);
-
         try {
             if (cmt) {
                 let input = document.querySelector(SELS.commentInput);
@@ -542,7 +546,6 @@ async function tiktokActions(page, commentText) {
         } catch (e) { results.push({ action: 'comment', error: e.message }); }
 
         await utils.sleep(1500);
-
         try {
             const shareBtn = utils.findClickable(SELS.shareBtn) || document.querySelector(SELS.shareBtn);
             if (shareBtn) {
@@ -613,7 +616,6 @@ async function executeLCR(identity, payload, options = {}) {
     let browser;
     try {
         sendPulseLog(`🌐 Meluncurkan browser stealth...`, 'info');
-
         // 😈 Lempar status Phantom ke peluncur browser!
         browser = await launchBrowser(sessionName, isPhantom);
 
@@ -623,7 +625,7 @@ async function executeLCR(identity, payload, options = {}) {
         const pages = await browser.pages();
         const page = pages[0]; // Ambil alih tab pertama (biasanya about:blank)
 
-        if (!isPhantom) await page.bringToFront(); // Paksa browser muncul ke atas
+        if (!isPhantom) await page.bringToFront();
 
         // Jika Chrome memulihkan tab dari masa lalu, BANTAI SEMUANYA!
         if (pages.length > 1) {
@@ -634,7 +636,7 @@ async function executeLCR(identity, payload, options = {}) {
         }
 
         // Set Desktop default saat baru diluncurkan
-        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36');
         await page.evaluateOnNewDocument(() => { Object.defineProperty(navigator, 'webdriver', { get: () => false }); });
 
         let loginDone = {};
@@ -661,14 +663,19 @@ async function executeLCR(identity, payload, options = {}) {
             }
 
             sendPulseLog('📡 Navigasi ke post...', 'info');
+            // 🛠️ FIX 3: Strategi Navigasi Cerdas dan 404 handler
             try {
-                await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
+                const response = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 45000 });
+                if (response && response.status() === 404) {
+                    sendPulseLog(`❌ Postingan tidak ditemukan (404) atau sudah dihapus.`, 'error');
+                    currentResults.push({ url, platform, error: 'Post 404 Not Found' });
+                    continue;
+                }
             } catch (e) {
-                await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
+                sendPulseLog(`⚠️ Peringatan Navigasi: ${e.message}. Memeriksa ketersediaan elemen...`, 'warning');
             }
 
             await sleep(4000);
-
             sendPulseLog('🛡️ Memeriksa status layar di halaman post...', 'info');
             const isReady = await waitForPostReady(page, platform);
 
@@ -732,11 +739,11 @@ async function executeLCR(identity, payload, options = {}) {
                 sendPulseLog('📸 Menyusutkan browser ke ukuran HP (Mobile View) untuk TikTok...', 'info');
                 await page.setViewport({ width: 375, height: 812, isMobile: true, hasTouch: true });
                 await page.setUserAgent('Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1');
-                
+
                 try {
-                    await page.reload({ waitUntil: 'networkidle2', timeout: 30000 });
+                    await page.reload({ waitUntil: 'domcontentloaded', timeout: 30000 });
                 } catch (e) {
-                    await page.reload({ waitUntil: 'load', timeout: 30000 });
+                    sendPulseLog(`⚠️ Peringatan Reload: ${e.message}`, 'warning');
                 }
                 await sleep(3000);
 
@@ -761,7 +768,7 @@ async function executeLCR(identity, payload, options = {}) {
             // ==========================================================
             sendPulseLog('🖥️ Mengembalikan browser ke ukuran Desktop...', 'info');
             await page.setViewport({ width: 1280, height: 900, isMobile: false, hasTouch: false });
-            await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+            await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36');
             await sleep(1000);
 
             const finalResult = {
