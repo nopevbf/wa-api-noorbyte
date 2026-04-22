@@ -196,15 +196,28 @@ if (window.__AUTO_LCR_TT__) {
       }
 
       // Wait for post to fully render using data-e2e (language-independent)
-      await waitForEl('[data-e2e="like-icon"]', 15000);
+      try {
+        await waitForEl('[data-e2e="like-icon"], [data-e2e="comment-icon"], button[aria-label*="Like"], button[aria-label*="Suka"]', 10000);
+      } catch (err) {
+        // Continue blindly if timeout
+      }
 
-      const randomDelay = () => sleep(1000 + Math.random() * 2000);
+      const randomDelay = () => sleep(7000 + Math.random() * 3000);
 
+      // Watch time
+      await randomDelay();
+
+      // 1. LIKE
       results.push(await likePost());
       await randomDelay();
+      
+      // 2. COMMENT
       results.push(await postComment(comment));
       await randomDelay();
+      
+      // 3. REPOST
       results.push(await repostPost());
+      await randomDelay();
 
       // Scroll back to top so screenshot captures the post from the beginning
       window.scrollTo({ top: 0, behavior: 'smooth' });

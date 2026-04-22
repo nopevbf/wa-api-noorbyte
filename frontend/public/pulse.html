@@ -329,7 +329,14 @@
                                                 </div>
                                             </td>
                                             <td class="px-4 py-3 text-right">
-                                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold" :class="res.error ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'" x-text="res.error ? 'ERR' : 'OK'"></span>
+                                                <div class="flex items-center justify-end gap-2">
+                                                    <template x-if="res.screenshot">
+                                                        <button @click="activeScreenshot = res.screenshot; showScreenshot = true;" class="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition-colors text-slate-400 hover:text-primary">
+                                                            <span class="material-symbols-outlined text-sm">image</span>
+                                                        </button>
+                                                    </template>
+                                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold" :class="res.error ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'" x-text="res.error ? 'ERR' : 'OK'"></span>
+                                                </div>
                                             </td>
                                         </tr>
                                     </template>
@@ -342,8 +349,50 @@
             </div>
         </div>
     </main>
+
+    <!-- MODAL PREVIEW SCREENSHOT -->
+    <div x-show="showScreenshot" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-10 bg-slate-900/80 backdrop-blur-sm">
+        <div @click.away="showScreenshot = false" class="bg-white dark:bg-slate-900 w-full max-w-5xl rounded-2xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800 flex flex-col max-h-full">
+            <div class="p-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50">
+                <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary">visibility</span>
+                    <h3 class="text-sm font-bold uppercase tracking-wider">Screenshot Proof</h3>
+                </div>
+                <button @click="showScreenshot = false" class="p-2 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full transition-all">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <div class="flex-1 overflow-auto p-2 bg-slate-100 dark:bg-slate-950">
+                <img :src="activeScreenshot" class="w-full rounded-lg shadow-lg">
+            </div>
+            <div class="p-4 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 flex justify-end">
+                <button @click="showScreenshot = false" class="px-6 py-2 bg-slate-900 dark:bg-white dark:text-slate-900 text-white rounded-xl font-bold text-xs">Tutup</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL SESSION COMPLETE (DOWNLOAD ZIP) -->
+    <div x-show="showCompleteModal" x-cloak class="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/90 backdrop-blur-md">
+        <div class="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800 p-8 text-center">
+            <div class="w-20 h-20 bg-green-100 dark:bg-green-900/30 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                <span class="material-symbols-outlined text-4xl" style="font-variation-settings: 'FILL' 1;">task_alt</span>
+            </div>
+            <h3 class="text-2xl font-black text-slate-900 dark:text-white mb-2">Misi Selesai!</h3>
+            <p class="text-slate-500 dark:text-slate-400 text-sm mb-8 leading-relaxed">Semua link telah berhasil dieksekusi. Apakah Anda ingin mengunduh semua bukti screenshot dalam satu folder?</p>
+            
+            <div class="space-y-3">
+                <button @click="downloadAllScreenshots()" class="w-full bg-primary hover:bg-primary/90 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-3 shadow-lg shadow-primary/20 transition-all active:scale-95">
+                    <span class="material-symbols-outlined">download_for_offline</span> Unduh Semua (.ZIP)
+                </button>
+                <button @click="showCompleteModal = false" class="w-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 py-4 rounded-2xl font-bold transition-all hover:bg-slate-200 dark:hover:bg-slate-700">
+                    Nanti Saja
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="/socket.io/socket.io.js"></script>
 <script src="/js/sidebar.js?v=2"></script>
 

@@ -2,87 +2,43 @@
 
 // Guard against double-injection
 if (window.__AUTO_LCR_TT__) {
-  chrome.runtime.sendMessage({ type: 'ACTIONS_DONE', results: [{ action: 'guard', skipped: true }] });
+  chrome.runtime.sendMessage({ type: 'LOG', message: '⚠️ Script terdeteksi ganda, menghentikan salah satu.', logType: 'warning' });
 } else {
   window.__AUTO_LCR_TT__ = true;
 
-  // ─── Selectors (update here if TikTok changes their DOM) ──────────────────
   const SELECTORS = {
-    // data-e2e is language-independent — aria-label varies per locale
     likeBtn:        'button:has([data-e2e="like-icon"])',
-    likeBtnActive:  'button[aria-pressed="true"]:has([data-e2e="like-icon"])',
-
-    // Comment panel trigger — button wrapping data-e2e="comment-icon" span
+    likeBtnActive:  'button[aria-pressed="true"]:has([data-e2e="like-icon"]), button:has([data-e2e="like-icon"][style*="fill: rgb(255, 43, 85)"]), button:has([data-e2e="like-icon"][style*="fill: rgb(254, 44, 85)"])',
     commentBtn:     'button:has([data-e2e="comment-icon"])',
-
-    // DraftEditor contenteditable inside comment-text container
     commentInput:   '[data-e2e="comment-text"] [contenteditable="true"]',
-
-    // Post button — starts disabled, enables after text entered
     commentPost:    'button[data-e2e="comment-post"]',
-
-    // Repost — click share first, then pick repost from popup
     shareBtn:       'button[aria-label*="Share video"]',
     repostOption:   '[data-e2e="share-repost"]',
-
-    // Login wall
     loginIndicator: 'form[action*="login"], [data-e2e="login-modal"]',
   };
 
-  // ─── Utilities ──────────────────────────────────────────────────────────────
+  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-  function sleep(ms) {
-    return new Promise(r => setTimeout(r, ms));
+  async function waitForEl(selector, timeoutMs = 10000) {
+    const startTime = Date.now();
+    while (Date.now() - startTime < timeoutMs) {
+      const el = document.querySelector(selector);
+      if (el) return el;
+      await sleep(500);
+    }
+    throw new Error(`Timeout: Elemen ${selector} tidak muncul.`);
   }
 
-  function waitForEl(selector, timeoutMs = 7000) {
-    return new Promise((resolve, reject) => {
-      const check = () => document.querySelector(selector);
-      const found = check();
-      if (found) return resolve(found);
-
-      const obs = new MutationObserver(() => {
-        const el = check();
-        if (el) { obs.disconnect(); clearInterval(poll); resolve(el); }
-      });
-      obs.observe(document.body, { childList: true, subtree: true });
-
-      // Polling fallback — catches elements if TikTok re-renders and observer misses it
-      const poll = setInterval(() => {
-        const el = check();
-        if (el) { obs.disconnect(); clearInterval(poll); resolve(el); }
-      }, 500);
-
-      setTimeout(() => {
-        obs.disconnect();
-        clearInterval(poll);
-        reject(new Error(`Timeout: ${selector}`));
-      }, timeoutMs);
-    });
+  async function waitForEnabled(selector, timeoutMs = 5000) {
+    const startTime = Date.now();
+    while (Date.now() - startTime < timeoutMs) {
+      const el = document.querySelector(selector);
+      if (el && !el.disabled) return el;
+      await sleep(500);
+    }
+    return null;
   }
 
-  // Wait for a button to lose its disabled attribute
-  function waitForEnabled(selector, timeoutMs = 5000) {
-    return new Promise((resolve, reject) => {
-      const check = () => {
-        const el = document.querySelector(selector);
-        return el && !el.disabled ? el : null;
-      };
-      const found = check();
-      if (found) return resolve(found);
-      const obs = new MutationObserver(() => {
-        const el = check();
-        if (el) { obs.disconnect(); resolve(el); }
-      });
-      obs.observe(document.body, {
-        childList: true, subtree: true,
-        attributes: true, attributeFilter: ['disabled'],
-      });
-      setTimeout(() => { obs.disconnect(); reject(new Error('Post button never enabled')); }, timeoutMs);
-    });
-  }
-
-  // React fiber direct call — bypasses isTrusted checks
   function reactClick(el) {
     const fiberKey = Object.keys(el).find(k => k.startsWith('__reactFiber'));
     if (!fiberKey) return false;
@@ -90,12 +46,7 @@ if (window.__AUTO_LCR_TT__) {
     while (fiber) {
       const props = fiber.memoizedProps || fiber.pendingProps;
       if (props && typeof props.onClick === 'function') {
-        props.onClick({
-          type: 'click', target: el, currentTarget: el,
-          bubbles: true, cancelable: true,
-          preventDefault: () => {}, stopPropagation: () => {},
-          nativeEvent: new MouseEvent('click'),
-        });
+        props.onClick({ type: 'click', target: el, currentTarget: el, bubbles: true, cancelable: true, preventDefault: () => {}, stopPropagation: () => {}, nativeEvent: new MouseEvent('click') });
         return true;
       }
       fiber = fiber.return;
@@ -113,108 +64,113 @@ if (window.__AUTO_LCR_TT__) {
     }
   }
 
-  // ─── Actions ────────────────────────────────────────────────────────────────
+  function sendLog(message, type = 'info') {
+    chrome.runtime.sendMessage({ type: 'LOG', message, logType: type }).catch(()=>{});
+  }
 
   async function likePost() {
     if (document.querySelector(SELECTORS.likeBtnActive)) {
+      sendLog('❤️ Post sudah di-like. Melewati...', 'warning');
       return { action: 'like', skipped: true };
     }
     const btn = await waitForEl(SELECTORS.likeBtn);
+    sendLog('❤️ Menekan tombol Like...', 'info');
     triggerClick(btn);
-    await sleep(800);
+    await sleep(1500);
     return { action: 'like', skipped: false };
   }
 
   async function postComment(text) {
-    // Open comment panel
+    if (!text) return { action: 'comment', skipped: true };
     let input = document.querySelector(SELECTORS.commentInput);
     if (!input) {
       const btn = document.querySelector(SELECTORS.commentBtn);
-      if (btn) { triggerClick(btn); await sleep(800); }
+      if (btn) { sendLog('💬 Membuka panel komentar...', 'info'); triggerClick(btn); await sleep(1500); }
     }
-
-    // Wait for DraftEditor contenteditable
     input = await waitForEl(SELECTORS.commentInput);
-
-    // DraftEditor ignores execCommand — use paste event instead,
-    // which triggers DraftEditor's built-in paste handler and updates internal state
-    triggerClick(input);
-    await sleep(200);
-    input.focus();
-
-    const dt = new DataTransfer();
-    dt.setData('text/plain', text);
-    input.dispatchEvent(new ClipboardEvent('paste', {
-      clipboardData: dt,
-      bubbles: true,
-      cancelable: true,
-    }));
-    await sleep(400);
-
-    // Wait for Post button to become enabled (disabled attr is removed after text input)
+    sendLog(`💬 Mengetik komentar...`, 'info');
+    triggerClick(input); await sleep(500); input.focus();
+    const dt = new DataTransfer(); dt.setData('text/plain', text);
+    input.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
+    await sleep(1500);
     const postBtn = await waitForEnabled(SELECTORS.commentPost);
-    triggerClick(postBtn);
-    await sleep(1000);
-    return { action: 'comment', skipped: false };
+    if (postBtn) {
+      triggerClick(postBtn); await sleep(2000);
+      sendLog('✅ Komentar terkirim!', 'success');
+      return { action: 'comment', skipped: false };
+    }
+    return { action: 'comment', error: 'Tombol post tidak aktif' };
   }
 
   async function repostPost() {
-    // Open share popup
     const shareBtn = document.querySelector(SELECTORS.shareBtn);
-    if (!shareBtn) throw new Error('Share button not found');
-    triggerClick(shareBtn);
-
-    // Wait for repost option in popup
+    if (!shareBtn) return { action: 'repost', error: 'Tombol share tidak ada' };
+    triggerClick(shareBtn); await sleep(1500);
     const repostEl = await waitForEl(SELECTORS.repostOption);
-
-    // If already reposted the label text changes — skip
     const label = repostEl.querySelector('p')?.textContent.trim() ?? '';
-    if (/remove/i.test(label)) {
-      // Close popup with Escape and skip
+    if (/remove|hapus/i.test(label)) {
+      sendLog('🔁 Sudah di-repost. Melewati...', 'warning');
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-      await sleep(300);
       return { action: 'repost', skipped: true };
     }
-
-    triggerClick(repostEl);
-    await sleep(800);
+    sendLog('🔁 Melakukan Repost...', 'info');
+    triggerClick(repostEl); await sleep(1500);
+    sendLog('✅ Repost sukses!', 'success');
     return { action: 'repost', skipped: false };
   }
 
-  // ─── Main entry ─────────────────────────────────────────────────────────────
-
+  let isRunning = false;
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (message.type === 'PING') { sendResponse({ ok: true }); return true; }
     if (message.type !== 'RUN_ACTIONS') return false;
 
-    const { comment } = message;
-    const results = [];
+    if (isRunning) {
+      sendResponse({ received: true });
+      return true;
+    }
+    
+    isRunning = true;
+    sendResponse({ received: true });
 
     (async () => {
-      if (document.querySelector(SELECTORS.loginIndicator)) {
-        throw new Error('not logged in');
+      try {
+        sendLog('🚀 Memulai rangkaian aksi TikTok Local...', 'info');
+        if (document.querySelector(SELECTORS.loginIndicator)) {
+          throw new Error('Belum login ke TikTok!');
+        }
+
+        await waitForEl('[data-e2e="like-icon"]', 15000);
+        sendLog('📌 Postingan siap dieksekusi.', 'success');
+
+        const results = [];
+        const randomDelay = async () => {
+          const ms = 7000 + Math.random() * 4000; // Minimal 7 detik
+          sendLog(`⏳ Jeda aman (${(ms/1000).toFixed(1)}s)...`, 'info');
+          await sleep(ms);
+        };
+
+        // 1. LIKE (Urutan Pertama sesuai request)
+        results.push(await likePost());
+        await randomDelay();
+
+        // 2. COMMENT
+        results.push(await postComment(message.comment));
+        await randomDelay();
+
+        // 3. REPOST
+        results.push(await repostPost());
+        await randomDelay();
+
+        sendLog('📸 Menyiapkan screenshot...', 'info');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        await sleep(2000);
+        
+        chrome.runtime.sendMessage({ type: 'ACTIONS_DONE', results });
+      } catch (err) {
+        sendLog(`❌ Error: ${err.message}`, 'error');
+        chrome.runtime.sendMessage({ type: 'ACTIONS_ERROR', error: err.message });
       }
-
-      // Wait for post to fully render using data-e2e (language-independent)
-      await waitForEl('[data-e2e="like-icon"]', 15000);
-
-      const randomDelay = () => sleep(1000 + Math.random() * 2000);
-
-      results.push(await likePost());
-      await randomDelay();
-      results.push(await postComment(comment));
-      await randomDelay();
-      results.push(await repostPost());
-
-      // Scroll back to top
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      await sleep(1000 + Math.random() * 1000);
-      
-      chrome.runtime.sendMessage({ type: 'ACTIONS_DONE', results });
-    })().catch(err => {
-      chrome.runtime.sendMessage({ type: 'ACTIONS_ERROR', error: err.message });
-    });
-
-    return false;
+    })();
+    return true;
   });
 }

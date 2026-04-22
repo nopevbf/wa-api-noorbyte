@@ -26,6 +26,11 @@ document.addEventListener('alpine:init', () => {
             targetId: ''
         },
 
+        // Screenshot Modal State
+        showScreenshot: false,
+        activeScreenshot: '',
+        showCompleteModal: false,
+
         // Extension State
         showExtTutorial: false,
         get isExtensionInstalled() {
@@ -57,8 +62,16 @@ document.addEventListener('alpine:init', () => {
 
             window.addEventListener('PULSE_EXT_PROGRESS', (e) => {
                 const result = e.detail;
-                this.sessions.tiktok.results.push(result);
+                // Reaktivitas Alpine: gunakan assignment instead of push
+                this.sessions.tiktok.results = [...this.sessions.tiktok.results, result];
                 this.addLog('Progress', `[EXTENSION] Link TikTok diproses: ${result.url.substring(0, 25)}...`, 'text-rose-400');
+            });
+
+            // Listener untuk Queue Selesai dari Extension
+            window.addEventListener('PULSE_EXT_DONE', () => {
+                this.addLog('Success', '🔥 Semua tugas local TikTok selesai!', 'text-emerald-400');
+                if (this.sessions.tiktok) this.sessions.tiktok.status = 'done';
+                this.showCompleteModal = true; // Tampilkan popup intuitif
             });
 
             // Connect Socket.io untuk terima log real-time dari backend
@@ -78,6 +91,11 @@ document.addEventListener('alpine:init', () => {
                         this.sessions[sid].results.push(data.result);
                     }
                     this.addLog('Progress', `[${sid.toUpperCase()}] Link ${data.current}/${data.total} selesai.`, 'text-purple-400');
+
+                    // Jika ini link terakhir dari main session, tawarkan download juga
+                    if (data.current === data.total && sid === 'main') {
+                        setTimeout(() => { this.showCompleteModal = true; }, 2000);
+                    }
                 });
 
                 this.socket.on('connect', () => {
@@ -94,6 +112,38 @@ document.addEventListener('alpine:init', () => {
                     if (parsed.tiktokLocal) this.tiktokLocal = parsed.tiktokLocal;
                 } catch(e) { /* ignore */ }
             }
+        },
+
+        // FUNGSI DOWNLOAD SEMUA SCREENSHOT (ZIP)
+        async downloadAllScreenshots() {
+            const zip = new JSZip();
+            const results = this.allResults.filter(r => r.screenshot);
+            
+            if (results.length === 0) {
+                this.addLog('Warning', 'Tidak ada screenshot untuk diunduh.', 'text-amber-500');
+                return;
+            }
+
+            this.addLog('System', `Mengompres ${results.length} bukti screenshot...`, 'text-blue-400');
+
+            const dateStr = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+            const folderName = `LCR_${dateStr}`;
+            const folder = zip.folder(folderName);
+
+            results.forEach((res, index) => {
+                const base64Data = res.screenshot.split(',')[1];
+                const fileName = `lcr_${res.platform}_${index + 1}.png`;
+                folder.file(fileName, base64Data, { base64: true });
+            });
+
+            const content = await zip.generateAsync({ type: "blob" });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(content);
+            link.download = `${folderName}.zip`;
+            link.click();
+
+            this.showCompleteModal = false;
+            this.addLog('Success', '📁 Folder screenshot berhasil diunduh!', 'text-emerald-400');
         },
 
         // Fungsi Menambah Log ke Terminal
@@ -140,6 +190,11 @@ document.addEventListener('alpine:init', () => {
         async pollAllStatuses() {
             let stillRunning = false;
             for (const sid of Object.keys(this.sessions)) {
+                if (this.sessions[sid].isLocal) {
+                    if (this.sessions[sid].status === 'running') stillRunning = true;
+                    continue; // Jangan tanya backend untuk sesi lokal extension
+                }
+                
                 try {
                     const res = await fetch(`/api/pulse/status?sessionId=${sid}`);
                     const result = await res.json();
@@ -186,19 +241,24 @@ document.addEventListener('alpine:init', () => {
             }
 
             // Reset States
-            this.sessions.main = { status: mainLinks.length > 0 ? 'running' : 'idle', results: [] };
-            this.sessions.tiktok = { status: tiktokLinks.length > 0 ? 'running' : 'idle', results: [] };
+            this.sessions.main = { status: mainLinks.length > 0 ? 'running' : 'idle', results: [], isLocal: false };
+            this.sessions.tiktok = { status: tiktokLinks.length > 0 ? 'running' : 'idle', results: [], isLocal: false };
 
             // Start TikTok Session (Extension / Local)
             if (tiktokLinks.length > 0) {
                 const isExtInstalled = document.documentElement.hasAttribute('data-pulse-extension');
                 
                 if (isExtInstalled) {
+                    this.sessions.tiktok.isLocal = true;
                     this.addLog('Extension', `Mengirim ${tiktokLinks.length} link TikTok ke Chrome Extension...`, 'text-rose-400');
                     const commentToUse = this.manual.comments.split('\n').filter(c => c.trim())[0] || '';
                     
                     window.dispatchEvent(new CustomEvent('PULSE_EXECUTE_TIKTOK', {
-                        detail: { links: tiktokLinks, comment: commentToUse }
+                        detail: { 
+                            links: tiktokLinks, 
+                            comment: commentToUse,
+                            mode: this.tiktokLocal.mode // 'tab' | 'window'
+                        }
                     }));
                 } else {
                     this.addLog('Warning', `Extension belum terinstall! Jalankan mode server (Visible Browser)...`, 'text-amber-500');
