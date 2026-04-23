@@ -105,31 +105,23 @@ async function internalScrapeDparagonAttendance(env, email, password, fullName, 
 
     const sessionDir = `browser_session_${mappedEnv}`;
 
-    // Deteksi OS: di Linux server, gunakan system Chromium jika tersedia
-    const isLinux = process.platform === 'linux';
-    const chromiumPath = isLinux ? (
-        require('fs').existsSync('/usr/bin/chromium-browser') ? '/usr/bin/chromium-browser' :
-        require('fs').existsSync('/usr/bin/chromium') ? '/usr/bin/chromium' :
-        require('fs').existsSync('/snap/bin/chromium') ? '/snap/bin/chromium' : null
-    ) : null;
+    const puppeteerArgs = [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--start-maximized'
+    ];
 
-    if (isLinux && chromiumPath) {
-        sendLog(`[SYSTEM] Menggunakan System Chromium: ${chromiumPath}`, 'info');
+    if (process.env.PROXY_URL) {
+        puppeteerArgs.push(`--proxy-server=${process.env.PROXY_URL}`);
+        sendLog(`[SYSTEM] Menggunakan Proxy untuk bypass: ${process.env.PROXY_URL}`, 'info');
     }
 
     const browser = await puppeteer.launch({
-        headless: 'new', // Pakai engine headless versi terbaru biar gak gampang ketahuan
-        defaultViewport: null, // Dibikin null biar dia 100% nurut sama --window-size
-        ...(chromiumPath ? { executablePath: chromiumPath } : {}),
-        args: [
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-gpu',
-            '--disable-software-rasterizer',
-            '--window-size=1920,1080', // Paksa layar segede monitor Full HD
-            '--disable-blink-features=AutomationControlled' // 🔥 MAGIC FLAG: Biar nggak ketahuan bot!
-        ],
+        headless: "new",
+        defaultViewport: null,
+        args: puppeteerArgs,
         userDataDir: path.join(__dirname, sessionDir)
     });
 
@@ -151,7 +143,7 @@ async function internalScrapeDparagonAttendance(env, email, password, fullName, 
 
         let currentUrl = page.url();
         let htmlCheck = await page.content();
-        
+
         if (htmlCheck.toLowerCase().includes('just a moment') || htmlCheck.toLowerCase().includes('cloudflare')) {
             sendLog(`[WARNING] Terkena blokir Cloudflare (Just a moment...) di URL: ${currentUrl}`, 'error');
         }
@@ -170,7 +162,7 @@ async function internalScrapeDparagonAttendance(env, email, password, fullName, 
 
             // Kunjungi Base URL dan biarkan sistem DParagon redirect otomatis ke auth.dparagon.com/login
             await page.goto(config.baseUrl, { waitUntil: 'networkidle2' });
-            
+
             await page.waitForSelector('input[id="username"]');
             await page.type('input[id="username"]', email, { delay: 50 });
 
@@ -215,12 +207,12 @@ async function internalScrapeDparagonAttendance(env, email, password, fullName, 
             sendLog(`[WARNING] Selector 'table[id="sticky_table"]' tidak ditemukan. Kemungkinan data kosong, atau halaman belum selesai load.`, 'warning');
             sendLog(`[WARNING] URL yang sedang diakses: ${currentUrlFail}`, 'warning');
             await page.screenshot({ path: path.join(__dirname, 'error_selector_not_found.png') });
-            
+
             // DUMP HTML BUAT DEBUG!
             const htmlContent = await page.content();
             require('fs').writeFileSync(path.join(__dirname, 'error_page_dump.html'), htmlContent);
             sendLog(`[INFO] HTML halaman yang gagal telah disimpan ke error_page_dump.html untuk dicek.`, 'info');
-            
+
             return [];
         }
 

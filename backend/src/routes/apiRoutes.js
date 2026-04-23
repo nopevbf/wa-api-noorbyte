@@ -6,9 +6,9 @@ const checkApiKey = require("../middlewares/auth");
 const { scrapeDparagonAttendance } = require('../../../frontend/public/js/scapper.js');
 const { SocksProxyAgent } = require("socks-proxy-agent");
 
-// Socks5 Ngrok — dipakai untuk semua request keluar ke DParagon (termasuk checkin handle)
-const proxyUrl = "socks5://0.tcp.ap.ngrok.io:17755";
-const proxyAgent = new SocksProxyAgent(proxyUrl);
+// Socks5 Proxy dari env — dipakai untuk semua request keluar ke DParagon (termasuk checkin handle)
+const proxyUrl = process.env.PROXY_URL || "";
+const proxyAgent = proxyUrl ? new SocksProxyAgent(proxyUrl) : null;
 
 // Registry untuk menyimpan ID setTimeout Time-Bomb yang sedang aktif
 // key: api_key (string) — value: timeoutId (number)
@@ -796,18 +796,22 @@ router.post('/attendance/schedule-timebomb', async (req, res) => {
         const axios = require('axios');
         let response;
         try {
-          response = await axios.post(targetEndpoint, finalPayload, {
+          const axiosConfig = {
             headers: {
               'Content-Type': 'application/json',
               'Accept': 'application/json',
               'Authorization': `Bearer ${token}`
             },
-            // Buat fresh agent setiap request agar koneksi tidak stale
-            httpsAgent: new SocksProxyAgent(proxyUrl),
-            httpAgent: new SocksProxyAgent(proxyUrl),
             timeout: 30000,
             validateStatus: () => true // Jangan throw error untuk status apapun, kita handle di bawah
-          });
+          };
+
+          if (proxyUrl) {
+            axiosConfig.httpsAgent = new SocksProxyAgent(proxyUrl);
+            axiosConfig.httpAgent = new SocksProxyAgent(proxyUrl);
+          }
+
+          response = await axios.post(targetEndpoint, finalPayload, axiosConfig);
         } catch (err) {
           throw new Error(`Koneksi axios gagal: ${err.message}`);
         }
