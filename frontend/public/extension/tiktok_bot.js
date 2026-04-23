@@ -149,6 +149,9 @@ if (window.__AUTO_LCR_TT__) {
           await sleep(ms);
         };
 
+        // Jeda waktu tonton (Watch Time) sebelum Like
+        await randomDelay();
+
         // 1. LIKE (Urutan Pertama sesuai request)
         results.push(await likePost());
         await randomDelay();

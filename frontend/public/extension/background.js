@@ -2,12 +2,13 @@
 // State harus disimpan di storage agar tidak hilang saat service worker inactive
 
 const saveState = (data) => chrome.storage.local.set(data);
-const getState = () => chrome.storage.local.get(['queue', 'currentComment', 'currentMode', 'isRunning', 'currentTabId', 'currentWindowId', 'currentUrl']);
+const getState = () => chrome.storage.local.get(['queue', 'currentComment', 'currentMode', 'isRunning', 'currentTabId', 'currentWindowId', 'currentUrl', 'totalLinks']);
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'START_TIKTOK_QUEUE') {
         const state = {
             queue: request.links || [],
+            totalLinks: (request.links || []).length,
             currentComment: request.comment || '',
             currentMode: request.mode || 'tab',
             isRunning: true,
@@ -126,7 +127,7 @@ async function handleActionsError(error) {
 
 async function processNext() {
     const state = await getState();
-    let { queue, currentMode, currentComment } = state;
+    let { queue, currentMode, currentComment, totalLinks } = state;
 
     if (!queue || queue.length === 0) {
         await saveState({ isRunning: false });
@@ -138,7 +139,9 @@ async function processNext() {
     const nextUrl = queue.shift();
     await saveState({ queue, currentUrl: nextUrl });
 
-    sendLog(`[EXT] Membuka ${currentMode === 'window' ? 'Jendela' : 'Tab'} untuk: ${nextUrl}`, 'info');
+    const total = totalLinks || 1;
+    const current = total - queue.length;
+    sendLog(`[EXT] 🔗 Memproses Link ${current}/${total} | Membuka ${currentMode === 'window' ? 'Jendela' : 'Tab'}`, 'info');
     
     if (currentMode === 'window') {
         chrome.windows.create({ url: nextUrl, focused: true, width: 1280, height: 850 }, (win) => {

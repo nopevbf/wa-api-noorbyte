@@ -6,7 +6,7 @@ const archiver = require('archiver');
  * Endpoint untuk download extension dalam bentuk ZIP
  */
 async function downloadExtensionZip(req, res) {
-    const extensionDir = path.join(__dirname, '../../frontend/public/extension');
+    const extensionDir = path.join(__dirname, '../../../frontend/public/extension');
     
     // Set header untuk download
     res.attachment('pulse-lcr-extension.zip');
