@@ -1,13 +1,13 @@
 const axios = require("axios");
 const { SocksProxyAgent } = require("socks-proxy-agent");
 
-// Socks5 Ngrok — URL proxy SOCKS5
-const proxyUrl = "socks5://0.tcp.ap.ngrok.io:17755";
+// Socks5 Proxy dari env
+const proxyUrl = process.env.PROXY_URL || "";
 
 // Buat fresh agent per request agar koneksi tidak stale
 // (Ngrok sering timeout/reconnect → agent lama = socket hang up)
 function createAgent() {
-  return new SocksProxyAgent(proxyUrl);
+  return proxyUrl ? new SocksProxyAgent(proxyUrl) : undefined;
 }
 
 // Timeout default per request — cegah socket hang up yang lama

@@ -104,17 +104,24 @@ async function internalScrapeDparagonAttendance(env, email, password, fullName, 
     sendLog(`[SYSTEM] Initiating Master Override untuk [${safeName.toUpperCase()}] di ENV [${safeEnv.toUpperCase()}]...`, 'info');
 
     const sessionDir = `browser_session_${mappedEnv}`;
+
+    const puppeteerArgs = [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--start-maximized'
+    ];
+
+    if (process.env.PROXY_URL) {
+        puppeteerArgs.push(`--proxy-server=${process.env.PROXY_URL}`);
+        sendLog(`[SYSTEM] Menggunakan Proxy untuk bypass: ${process.env.PROXY_URL}`, 'info');
+    }
+
     const browser = await puppeteer.launch({
         headless: "new",
         defaultViewport: null,
-        args: [
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-gpu',
-            '--start-maximized',
-            '--proxy-server=socks5://0.tcp.ap.ngrok.io:17755'
-        ],
+        args: puppeteerArgs,
         userDataDir: path.join(__dirname, sessionDir)
     });
 
