@@ -151,6 +151,10 @@ async function internalScrapeDparagonAttendance(env, email, password, fullName, 
 
         let currentUrl = page.url();
         let htmlCheck = await page.content();
+        
+        if (htmlCheck.toLowerCase().includes('just a moment') || htmlCheck.toLowerCase().includes('cloudflare')) {
+            sendLog(`[WARNING] Terkena blokir Cloudflare (Just a moment...) di URL: ${currentUrl}`, 'error');
+        }
 
         // Kalau dilempar ke login page, ATAU kena 403 Forbidden, eksekusi login pake kredensial dari UI
         if (currentUrl.includes('/login') || (htmlCheck.includes('403') && htmlCheck.toLowerCase().includes('whoops'))) {
