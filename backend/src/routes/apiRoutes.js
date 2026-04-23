@@ -792,30 +792,35 @@ router.post('/attendance/schedule-timebomb', async (req, res) => {
         const baseUrl = dpUrl ? dpUrl.replace(/\/$/, '') : "https://api.dparagon.com/v2";
         const targetEndpoint = `${baseUrl}/attendance/presence`;
 
-        // Pakai native fetch Node.js + SOCKS5 Proxy (Ngrok)
-        const response = await fetch(targetEndpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify(finalPayload),
-          agent: proxyAgent // <--- SOCKS5 Proxy disuntik di sini
-        });
+        // Pakai Axios + SOCKS5 Proxy (Ngrok) agar bypass Cloudflare
+        const axios = require('axios');
+        let response;
+        try {
+          response = await axios.post(targetEndpoint, finalPayload, {
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            // Buat fresh agent setiap request agar koneksi tidak stale
+            httpsAgent: new SocksProxyAgent(proxyUrl),
+            httpAgent: new SocksProxyAgent(proxyUrl),
+            timeout: 30000,
+            validateStatus: () => true // Jangan throw error untuk status apapun, kita handle di bawah
+          });
+        } catch (err) {
+          throw new Error(`Koneksi axios gagal: ${err.message}`);
+        }
 
         // Guard: pastikan response beneran JSON, bukan HTML error page
-        const rawText = await response.text();
-        let result;
-        try {
-          result = JSON.parse(rawText);
-        } catch (_) {
+        const result = response.data;
+        if (typeof result === 'string') {
           // Server ngembaliin HTML (misal: Nginx 502, Cloudflare error, dll)
-          const preview = rawText.substring(0, 200).replace(/\s+/g, ' ').trim();
+          const preview = result.substring(0, 200).replace(/\s+/g, ' ').trim();
           throw new Error(`Server tidak merespons JSON. Response (${response.status}): ${preview}`);
         }
 
-        if (response.ok && result.status !== false) {
+        if (response.status >= 200 && response.status < 300 && result.status !== false) {
           console.log(`[SERVER] ✅ Target Hancur! Absen sukses dikirim.`);
         } else {
           let realError = "Ditolak sistem.";
