@@ -14,6 +14,7 @@ backend/sessions/**
 
 # Ignore database files
 **/database.db
+backend/database.db
 **/database.sqlite
 **/db/*
 
