@@ -615,9 +615,11 @@ async function runDailyReportViaBrowser(dpApiUrl, dpEmail, dpPassword) {
       }
     }
   }
+}
 
-  module.exports = {
-    executeStep1And2,
-    executeStep3To5,
-    fetchDparagonReport,
-  };
+module.exports = {
+  executeStep1And2,
+  executeStep3To5,
+  fetchDparagonReport,
+};
+
