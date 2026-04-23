@@ -324,17 +324,8 @@ async function runDailyReportViaBrowser(dpApiUrl, dpEmail, dpPassword) {
     "../../sessions",
     `dparagon_cf_${profileSuffix}`,
   );
-  /**
-   * Full pipeline: Step 1-5 (fetch all data and return the message)
-   */
-  async function fetchDparagonReport(dpApiUrl, dpEmail, dpPassword) {
-    const { dpToken, tasksList } = await executeStep1And2(
-      dpApiUrl,
-      dpEmail,
-      dpPassword,
-    );
 
-    const browser = await puppeteer.launch({
+  const browser = await puppeteer.launch({
       headless: true,
       userDataDir,
       args: [
@@ -561,13 +552,13 @@ async function runDailyReportViaBrowser(dpApiUrl, dpEmail, dpPassword) {
       await page.close().catch(() => { });
       await browser.close().catch(() => { });
     }
-  }
+}
 
-  // ---------------------------------------------------------------------------
-  // Shared helper
-  // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Shared helper
+// ---------------------------------------------------------------------------
 
-  function extractMessage(summaryData, stepLabel) {
+function extractMessage(summaryData, stepLabel) {
     const msg =
       summaryData.payload?.message ||
       (typeof summaryData.payload === "string" ? summaryData.payload : null) ||
@@ -617,10 +608,8 @@ async function runDailyReportViaBrowser(dpApiUrl, dpEmail, dpPassword) {
   }
 
 
-  module.exports = {
-    executeStep1And2,
-    executeStep3To5,
-    fetchDparagonReport,
-  };
-}
-
+module.exports = {
+  executeStep1And2,
+  executeStep3To5,
+  fetchDparagonReport,
+};
