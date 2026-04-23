@@ -127,16 +127,23 @@ async function internalScrapeDparagonAttendance(env, email, password, fullName, 
 
     const page = await browser.newPage();
 
+    // Spoof User-Agent ke Chrome desktop agar server tidak serve versi berbeda
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+    await page.setExtraHTTPHeaders({ 'Accept-Language': 'id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7' });
+
     try {
-        const encodedName = encodeURIComponent(fullName);
+        // PENTING: nama harus UPPERCASE agar match dengan data di DB DParagon
+        const encodedName = encodeURIComponent(fullName.toUpperCase());
         const targetUrl = `${config.baseUrl}/hrd/reportAttendance?devision_filter=&location_filter=&area_filter=&name_filter=${encodedName}&date_range_filter=&status_filter=&page=${targetPage}`;
 
         sendLog(`[PROCESS] Mengecek akses Direktori Absensi...`, "info");
-        await page.goto(targetUrl, { waitUntil: 'networkidle2' });
+        await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
+        // Tunggu ekstra agar DataTables / JS selesai render
+        await new Promise(r => setTimeout(r, 3000));
 
         let currentUrl = page.url();
         let htmlCheck = await page.content();
-        
+
         if (htmlCheck.toLowerCase().includes('just a moment') || htmlCheck.toLowerCase().includes('cloudflare')) {
             sendLog(`[WARNING] Terkena blokir Cloudflare (Just a moment...) di URL: ${currentUrl}`, 'error');
         }
@@ -155,7 +162,7 @@ async function internalScrapeDparagonAttendance(env, email, password, fullName, 
 
             // Kunjungi Base URL dan biarkan sistem DParagon redirect otomatis ke auth.dparagon.com/login
             await page.goto(config.baseUrl, { waitUntil: 'networkidle2' });
-            
+
             await page.waitForSelector('input[id="username"]');
             await page.type('input[id="username"]', email, { delay: 50 });
 
@@ -163,15 +170,28 @@ async function internalScrapeDparagonAttendance(env, email, password, fullName, 
             await page.type('input[id="userpassword"]', password, { delay: 50 });
 
             sendLog("[PROCESS] Submit Kredensial...", "info");
-            await Promise.all([
-                page.waitForNavigation({ waitUntil: 'networkidle2' }),
-                page.click('button[type="submit"]')
-            ]);
+
+            // Click submit dan tunggu navigasi selesai (toleran terhadap SSO multi-redirect)
+            await page.click('button[type="submit"]');
+
+            // Tunggu sampai URL berubah dari halaman login (max 60 detik)
+            try {
+                await page.waitForFunction(
+                    () => !window.location.href.includes('/login'),
+                    { timeout: 60000 }
+                );
+                // Beri waktu extra setelah redirect selesai
+                await new Promise(r => setTimeout(r, 2000));
+            } catch (navErr) {
+                sendLog(`[WARNING] Timeout menunggu redirect login, lanjut cek URL...`, 'warning');
+            }
+
             sendLog(`[SUCCESS] Web Login Berhasil!`, 'success');
 
             // Balik lagi ke targetUrl setelah berhasil login
             sendLog(`[PROCESS] Melanjutkan Kembali ke Direktori Absensi...`, "info");
-            await page.goto(targetUrl, { waitUntil: 'networkidle2' });
+            await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
+            await new Promise(r => setTimeout(r, 3000));
         } else {
             sendLog(`[SUCCESS] Otorisasi Bypass masih aktif dan sukses. Melanjutkan...`, 'success');
         }
@@ -181,18 +201,18 @@ async function internalScrapeDparagonAttendance(env, email, password, fullName, 
         // ==========================================
         try {
             // Kita tunggu ID dari table nya langsung, untuk jaga-jaga kalau data di dalam tbodynya (tr) itu kosong
-            await page.waitForSelector('table[id="sticky_table"]', { timeout: 15000 });
+            await page.waitForSelector('table[id="sticky_table"]', { timeout: 30000 });
         } catch (e) {
             const currentUrlFail = page.url();
             sendLog(`[WARNING] Selector 'table[id="sticky_table"]' tidak ditemukan. Kemungkinan data kosong, atau halaman belum selesai load.`, 'warning');
             sendLog(`[WARNING] URL yang sedang diakses: ${currentUrlFail}`, 'warning');
             await page.screenshot({ path: path.join(__dirname, 'error_selector_not_found.png') });
-            
+
             // DUMP HTML BUAT DEBUG!
             const htmlContent = await page.content();
             require('fs').writeFileSync(path.join(__dirname, 'error_page_dump.html'), htmlContent);
             sendLog(`[INFO] HTML halaman yang gagal telah disimpan ke error_page_dump.html untuk dicek.`, 'info');
-            
+
             return [];
         }
 
