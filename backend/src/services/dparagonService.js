@@ -2,7 +2,7 @@ const axios = require("axios");
 const { SocksProxyAgent } = require("socks-proxy-agent");
 
 // Socks5 Ngrok — URL proxy SOCKS5
-const proxyUrl = "socks5://0.tcp.ap.ngrok.io:14212";
+const proxyUrl = "socks5://0.tcp.ap.ngrok.io:17755";
 
 // Buat fresh agent per request agar koneksi tidak stale
 // (Ngrok sering timeout/reconnect → agent lama = socket hang up)
