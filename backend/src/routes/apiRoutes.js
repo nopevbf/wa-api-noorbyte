@@ -7,7 +7,7 @@ const { scrapeDparagonAttendance } = require('../../../frontend/public/js/scappe
 const { SocksProxyAgent } = require("socks-proxy-agent");
 
 // Socks5 Ngrok — dipakai untuk semua request keluar ke DParagon (termasuk checkin handle)
-const proxyUrl = "socks5://0.tcp.ap.ngrok.io:11861";
+const proxyUrl = "socks5://0.tcp.ap.ngrok.io:17755";
 const proxyAgent = new SocksProxyAgent(proxyUrl);
 
 // Registry untuk menyimpan ID setTimeout Time-Bomb yang sedang aktif
