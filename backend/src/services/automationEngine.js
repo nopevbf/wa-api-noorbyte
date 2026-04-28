@@ -318,6 +318,12 @@ async function processManualRuns() {
           "SUCCESS",
           `Otomatis run selesai! Pesan terkirim. (Latency: ${latencySec}s)`,
         );
+
+        const summary = `[DAILY REPORT] Laporan berhasil terkirim ke ${schedule.target_number}`;
+        db.prepare(
+          "INSERT INTO message_logs (api_key, target_number, message, status) VALUES (?, ?, ?, ?)",
+        ).run(schedule.api_key, schedule.target_number, summary, "SUCCESS");
+
         db.prepare(
           "UPDATE automation_schedules SET manual_run_status = 'done', last_sent_date = ? WHERE id = ?",
         ).run(today, schedule.id);
@@ -334,6 +340,12 @@ async function processManualRuns() {
           "ERROR",
           `Otomatis run gagal: ${err.message}`,
         );
+
+        const summary = `[DAILY REPORT] Gagal mengirim laporan ke ${schedule.target_number}`;
+        db.prepare(
+          "INSERT INTO message_logs (api_key, target_number, message, status) VALUES (?, ?, ?, ?)",
+        ).run(schedule.api_key, schedule.target_number, summary, "FAILED");
+
         db.prepare(
           "UPDATE automation_schedules SET manual_run_status = 'error' WHERE id = ?",
         ).run(schedule.id);
