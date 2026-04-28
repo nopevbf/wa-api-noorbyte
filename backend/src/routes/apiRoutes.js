@@ -485,11 +485,19 @@ router.post("/automation/save-settings", (req, res) => {
     send_wa_time,
     frequency,
     is_active,
+    start_date,
+    end_date,
+    custom_days,
+    excluded_dates,
   } = req.body;
 
   if (!api_key) {
     return res.status(400).json({ status: false, message: "API Key wajib diisi." });
   }
+
+  // Konversi array ke string JSON agar bisa disimpan di SQLite TEXT
+  const customDaysStr = Array.isArray(custom_days) ? JSON.stringify(custom_days) : custom_days;
+  const excludedDatesStr = Array.isArray(excluded_dates) ? JSON.stringify(excluded_dates) : excluded_dates;
 
   try {
     // Cek apakah sudah ada schedule untuk api_key ini
@@ -502,11 +510,13 @@ router.post("/automation/save-settings", (req, res) => {
       db.prepare(
         `UPDATE automation_schedules SET
           dp_api_url = ?, dp_email = ?, dp_password = ?, target_number = ?,
-          fetch_time = ?, send_wa_time = ?, frequency = ?, is_active = ?
+          fetch_time = ?, send_wa_time = ?, frequency = ?, is_active = ?,
+          start_date = ?, end_date = ?, custom_days = ?, excluded_dates = ?
         WHERE api_key = ?`
       ).run(
         dp_api_url, dp_email, dp_password, target_number,
         fetch_time, send_wa_time, frequency || "daily", is_active ? 1 : 0,
+        start_date, end_date, customDaysStr, excludedDatesStr,
         api_key
       );
     } else {
@@ -514,11 +524,13 @@ router.post("/automation/save-settings", (req, res) => {
       db.prepare(
         `INSERT INTO automation_schedules
           (api_key, dp_api_url, dp_email, dp_password, target_number,
-           fetch_time, send_wa_time, frequency, is_active)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+           fetch_time, send_wa_time, frequency, is_active,
+           start_date, end_date, custom_days, excluded_dates)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       ).run(
         api_key, dp_api_url, dp_email, dp_password, target_number,
-        fetch_time, send_wa_time, frequency || "daily", is_active ? 1 : 0
+        fetch_time, send_wa_time, frequency || "daily", is_active ? 1 : 0,
+        start_date, end_date, customDaysStr, excludedDatesStr
       );
     }
 
@@ -591,6 +603,16 @@ router.get("/automation/status", (req, res) => {
 
     const logs = getScheduleLogs(schedule.id);
 
+    // Parse JSON strings back to arrays
+    let custom_days = [];
+    let excluded_dates = [];
+    try {
+      custom_days = schedule.custom_days ? JSON.parse(schedule.custom_days) : [];
+      excluded_dates = schedule.excluded_dates ? JSON.parse(schedule.excluded_dates) : [];
+    } catch (e) {
+      console.error("[SERVER] Gagal parsing JSON custom_days/excluded_dates:", e.message);
+    }
+
     res.status(200).json({
       status: true,
       data: {
@@ -604,6 +626,10 @@ router.get("/automation/status", (req, res) => {
         last_sent_date: schedule.last_sent_date,
         manual_run_status: schedule.manual_run_status,
         manual_run_time: schedule.manual_run_time,
+        start_date: schedule.start_date,
+        end_date: schedule.end_date,
+        custom_days: custom_days,
+        excluded_dates: excluded_dates,
         logs: logs,
       },
     });

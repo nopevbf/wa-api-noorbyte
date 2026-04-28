@@ -44,4 +44,20 @@ db.exec(`
   );
 `);
 
+// Migrasi Database: Tambahkan kolom baru jika belum ada
+try {
+  db.exec(`
+    ALTER TABLE automation_schedules ADD COLUMN start_date TEXT;
+    ALTER TABLE automation_schedules ADD COLUMN end_date TEXT;
+    ALTER TABLE automation_schedules ADD COLUMN custom_days TEXT;
+    ALTER TABLE automation_schedules ADD COLUMN excluded_dates TEXT;
+  `);
+  console.log("[DATABASE] Kolom baru untuk scheduling berhasil ditambahkan.");
+} catch (error) {
+  // Jika kolom sudah ada, abaikan error "duplicate column name"
+  if (!error.message.includes("duplicate column name")) {
+    console.error("[DATABASE] Gagal migrasi kolom baru:", error.message);
+  }
+}
+
 module.exports = db;
