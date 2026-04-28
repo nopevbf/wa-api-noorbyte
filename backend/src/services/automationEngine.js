@@ -219,6 +219,11 @@ async function processSend(schedule) {
       "SUCCESS",
       `Pesan WhatsApp berhasil terkirim! (Latency: ${latencySec}s)`,
     );
+
+    const summary = `[DAILY REPORT] Laporan berhasil terkirim ke ${schedule.target_number}`;
+    db.prepare(
+      "INSERT INTO message_logs (api_key, target_number, message, status) VALUES (?, ?, ?, ?)",
+    ).run(schedule.api_key, schedule.target_number, summary, "SUCCESS");
   } catch (err) {
     addScheduleLog(
       schedule.id,
@@ -226,6 +231,11 @@ async function processSend(schedule) {
       "ERROR",
       `Gagal kirim WA: ${err.message}`,
     );
+
+    const summary = `[DAILY REPORT] Gagal mengirim laporan ke ${schedule.target_number}`;
+    db.prepare(
+      "INSERT INTO message_logs (api_key, target_number, message, status) VALUES (?, ?, ?, ?)",
+    ).run(schedule.api_key, schedule.target_number, summary, "FAILED");
   }
 }
 
