@@ -13,6 +13,7 @@ const config = {
   env: NODE_ENV,
   isProd,
   version: packageJson.version || "1.0.0",
+  description: packageJson.description || "",
 
   // DParagon API URL — otomatis pilih berdasarkan NODE_ENV
   dparagonApiUrl: isProd

@@ -66,4 +66,6 @@ backend/database.db
 **/cache_files/
 
 # Ignore test files
+**/tests/
+backend/tests/
 **/test/

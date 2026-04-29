@@ -33,6 +33,7 @@ router.get("/app-config", (req, res) => {
     data: {
       env: appConfig.env,
       version: appConfig.version,
+      description: appConfig.description,
       dparagonApiUrl: appConfig.dparagonApiUrl,
     },
   });
@@ -270,6 +271,17 @@ router.post("/automation/run-manual", (req, res) => {
     res.status(200).json({ status: true, message: "Jadwal manual run terdaftar." });
   } catch (error) {
     res.status(500).json({ status: false, message: "Gagal menjadwalkan.", error: error.message });
+  }
+});
+
+router.post("/automation/cancel-manual", (req, res) => {
+  const { api_key } = req.body;
+  if (!api_key) return res.status(400).json({ status: false, message: "API Key wajib diisi." });
+  try {
+    db.prepare(`UPDATE automation_schedules SET manual_run_time = NULL, manual_run_status = NULL WHERE api_key = ?`).run(api_key);
+    res.status(200).json({ status: true, message: "Jadwal manual berhasil dibatalkan." });
+  } catch (error) {
+    res.status(500).json({ status: false, message: "Gagal membatalkan jadwal.", error: error.message });
   }
 });
 

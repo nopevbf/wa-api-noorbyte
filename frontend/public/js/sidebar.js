@@ -241,7 +241,9 @@ async function loadSidebar() {
       const configData = await configRes.json();
       if (configData.status && configData.data && configData.data.version) {
         const versionEl = document.getElementById("system-version");
-        if (versionEl) versionEl.innerText = configData.data.version;
+        if (versionEl) {
+          versionEl.innerHTML = `v${configData.data.version}<br><span class="text-[8px] font-normal tracking-wide opacity-80 mt-1 block">${configData.data.description || ""}</span>`;
+        }
       }
     } catch (e) {
       console.warn("Gagal memuat versi sistem:", e.message);
