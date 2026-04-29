@@ -224,9 +224,28 @@ router.post("/automation/save-settings", (req, res) => {
   const customDaysStr = JSON.stringify(custom_days || []);
   const excludedDatesStr = JSON.stringify(excluded_dates || []);
   try {
-    const existing = db.prepare("SELECT id FROM automation_schedules WHERE api_key = ?").get(api_key);
+    const existing = db.prepare("SELECT * FROM automation_schedules WHERE api_key = ?").get(api_key);
+    
+    // Reset "last run" flags if re-enabling or changing scheduled times
+    let resetFlags = false;
     if (existing) {
-      db.prepare(`UPDATE automation_schedules SET dp_api_url = ?, dp_email = ?, dp_password = ?, target_number = ?, fetch_time = ?, send_wa_time = ?, frequency = ?, is_active = ?, start_date = ?, end_date = ?, custom_days = ?, excluded_dates = ? WHERE api_key = ?`).run(dp_api_url, dp_email, dp_password, target_number, fetch_time, send_wa_time, frequency || "daily", is_active ? 1 : 0, start_date, end_date, customDaysStr, excludedDatesStr, api_key);
+      if (is_active && (!existing.is_active || existing.fetch_time !== fetch_time || existing.send_wa_time !== send_wa_time)) {
+        resetFlags = true;
+      }
+      
+      db.prepare(`
+        UPDATE automation_schedules 
+        SET dp_api_url = ?, dp_email = ?, dp_password = ?, target_number = ?, fetch_time = ?, send_wa_time = ?, 
+            frequency = ?, is_active = ?, start_date = ?, end_date = ?, custom_days = ?, excluded_dates = ?,
+            last_fetched_date = ?, last_sent_date = ?
+        WHERE api_key = ?
+      `).run(
+        dp_api_url, dp_email, dp_password, target_number, fetch_time, send_wa_time, 
+        frequency || "daily", is_active ? 1 : 0, start_date, end_date, customDaysStr, excludedDatesStr,
+        resetFlags ? null : existing.last_fetched_date,
+        resetFlags ? null : existing.last_sent_date,
+        api_key
+      );
     } else {
       db.prepare(`INSERT INTO automation_schedules (api_key, dp_api_url, dp_email, dp_password, target_number, fetch_time, send_wa_time, frequency, is_active, start_date, end_date, custom_days, excluded_dates) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(api_key, dp_api_url, dp_email, dp_password, target_number, fetch_time, send_wa_time, frequency || "daily", is_active ? 1 : 0, start_date, end_date, customDaysStr, excludedDatesStr);
     }

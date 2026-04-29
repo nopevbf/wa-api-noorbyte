@@ -17,6 +17,8 @@ db.exec(`
 
 // In-memory log cache per schedule
 const scheduleLogs = {};
+// In-memory lock to prevent concurrent processing of the same schedule
+const processingSchedules = new Set();
 
 function addScheduleLog(scheduleId, colorClass, label, text) {
   if (!scheduleLogs[scheduleId]) scheduleLogs[scheduleId] = [];
@@ -355,74 +357,95 @@ async function processManualRuns() {
 }
 
 /**
- * Main engine tick — called every 30 seconds
+ * Main engine tick — called recursively with setTimeout
  */
 async function engineTick() {
-  const currentTime = getCurrentTimeWIB();
-  const today = getTodayDateWIB();
-  const dayOfWeek = new Date(
-    new Date().toLocaleString("en-US", { timeZone: "Asia/Jakarta" }),
-  ).getDay();
+  try {
+    const currentTime = getCurrentTimeWIB();
+    const today = getTodayDateWIB();
+    const dayOfWeek = new Date(
+      new Date().toLocaleString("en-US", { timeZone: "Asia/Jakarta" }),
+    ).getDay();
 
-  // 1. Process SCHEDULED automations
-  const activeSchedules = db
-    .prepare("SELECT * FROM automation_schedules WHERE is_active = 1")
-    .all();
+    // 1. Process SCHEDULED automations
+    const activeSchedules = db
+      .prepare("SELECT * FROM automation_schedules WHERE is_active = 1")
+      .all();
 
-  for (const schedule of activeSchedules) {
-    // Unified Validation Logic
-    let shouldRunToday = true;
+    for (const schedule of activeSchedules) {
+      // Prevent concurrent processing of the same schedule
+      if (processingSchedules.has(schedule.id)) continue;
 
-    // 1. Date Range: today >= start_date and today <= end_date
-    if (schedule.start_date && today < schedule.start_date) shouldRunToday = false;
-    if (schedule.end_date && today > schedule.end_date) shouldRunToday = false;
+      // Unified Validation Logic
+      let shouldRunToday = true;
 
-    // 2. Excluded Dates: today not in excluded_dates
-    if (schedule.excluded_dates) {
-      try {
-        const excluded = JSON.parse(schedule.excluded_dates);
-        if (Array.isArray(excluded) && excluded.includes(today)) {
-          shouldRunToday = false;
-        }
-      } catch (e) {}
-    }
+      // 1. Date Range: today >= start_date and today <= end_date
+      if (schedule.start_date && today < schedule.start_date) shouldRunToday = false;
+      if (schedule.end_date && today > schedule.end_date) shouldRunToday = false;
 
-    // 3. Frequency & Custom Days
-    if (schedule.frequency === "weekdays") {
-      if (dayOfWeek === 0 || dayOfWeek === 6) shouldRunToday = false;
-    } else if (schedule.frequency === "custom") {
-      if (schedule.custom_days) {
+      // 2. Excluded Dates: today not in excluded_dates
+      if (schedule.excluded_dates) {
         try {
-          const customDays = JSON.parse(schedule.custom_days);
-          // dayOfWeek: 0=Sun, 1=Mon, ..., 6=Sat
-          if (Array.isArray(customDays) && !customDays.includes(dayOfWeek)) {
+          const excluded = JSON.parse(schedule.excluded_dates);
+          if (Array.isArray(excluded) && excluded.includes(today)) {
             shouldRunToday = false;
           }
         } catch (e) {}
       }
+
+      // 3. Frequency & Custom Days
+      if (schedule.frequency === "weekdays") {
+        if (dayOfWeek === 0 || dayOfWeek === 6) shouldRunToday = false;
+      } else if (schedule.frequency === "custom") {
+        if (schedule.custom_days) {
+          try {
+            const customDays = JSON.parse(schedule.custom_days);
+            if (Array.isArray(customDays) && !customDays.includes(dayOfWeek)) {
+              shouldRunToday = false;
+            }
+          } catch (e) {}
+        }
+      }
+
+      if (!shouldRunToday) continue;
+
+      // Check if it's time to fetch OR send
+      const needsFetch = currentTime === schedule.fetch_time && schedule.last_fetched_date !== today;
+      const needsSend = currentTime === schedule.send_wa_time && schedule.last_sent_date !== today;
+
+      if (needsFetch || needsSend) {
+        processingSchedules.add(schedule.id);
+        
+        try {
+          if (needsFetch) {
+            await processFetch(freshSchedule(schedule.id) || schedule);
+          }
+          if (needsSend) {
+            await processSend(freshSchedule(schedule.id) || schedule);
+          }
+        } catch (err) {
+          console.error(`[ENGINE] Error processing schedule #${schedule.id}:`, err.message);
+        } finally {
+          processingSchedules.delete(schedule.id);
+        }
+      }
     }
 
-    if (!shouldRunToday) continue;
-
-    // Check fetch time
-    if (
-      currentTime === schedule.fetch_time &&
-      schedule.last_fetched_date !== today
-    ) {
-      await processFetch(schedule);
-    }
-
-    // Check send time
-    if (
-      currentTime === schedule.send_wa_time &&
-      schedule.last_sent_date !== today
-    ) {
-      await processSend(schedule);
+    // 2. Process Otomatis runs
+    await processManualRuns();
+  } catch (err) {
+    console.error("[AUTOMATION ENGINE] Tick error:", err.message);
+  } finally {
+    // Schedule next tick after 5 seconds, ensuring no overlapping ticks
+    if (engineInterval) {
+      engineInterval = setTimeout(engineTick, 5000);
     }
   }
+}
 
-  // 2. Process Otomatis runs
-  await processManualRuns();
+// Helper to get fresh schedule data from DB
+function freshSchedule(id) {
+  return db.prepare("SELECT * FROM automation_schedules WHERE id = ?").get(id);
 }
 
 let engineInterval = null;
@@ -433,11 +456,8 @@ let engineInterval = null;
 function startAutomationEngine() {
   if (engineInterval) return;
   console.log("🤖 [AUTOMATION ENGINE] Started — checking every 5 seconds.");
-  engineInterval = setInterval(engineTick, 5000);
-  // Run immediately once
-  engineTick().catch((err) =>
-    console.error("[AUTOMATION ENGINE] Tick error:", err.message),
-  );
+  engineInterval = true; // Use as a flag to indicate it should keep running
+  engineTick();
 }
 
 /**
@@ -445,7 +465,9 @@ function startAutomationEngine() {
  */
 function stopAutomationEngine() {
   if (engineInterval) {
-    clearInterval(engineInterval);
+    if (typeof engineInterval === 'number') {
+      clearTimeout(engineInterval);
+    }
     engineInterval = null;
     console.log("🤖 [AUTOMATION ENGINE] Stopped.");
   }
