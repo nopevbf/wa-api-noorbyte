@@ -289,4 +289,77 @@ async function loadSidebar() {
   }
 }
 
-document.addEventListener("DOMContentLoaded", loadSidebar);
+async function loadNavbar() {
+  const currentPath = window.location.pathname;
+  if (currentPath.startsWith("/jailbreak")) return;
+
+  const headerTag = document.querySelector("main header");
+  if (!headerTag) return;
+
+  try {
+    const response = await fetch("/components/navbar.html");
+    if (!response.ok) throw new Error("Gagal memuat navbar");
+    const html = await response.text();
+    headerTag.outerHTML = html;
+
+    // Tunggu sebentar agar DOM terupdate
+    setTimeout(() => {
+      const navbarPageName = document.getElementById("navbar-page-name");
+      const navbarUserName = document.getElementById("navbar-user-name");
+      const navbarUserRole = document.getElementById("navbar-user-role");
+      const navbarUserAvatar = document.getElementById("navbar-user-avatar");
+
+      const isAdmin = localStorage.getItem("connectApi_loggedIn") === "true";
+      const guestUsername = localStorage.getItem("noorbyte_username");
+
+      let displayUsername = "Guest";
+      let displayRole = "Guest Access";
+      if (isAdmin) {
+        displayUsername = "Admin";
+        displayRole = "Master Access";
+      } else if (guestUsername) {
+        displayUsername = guestUsername;
+        displayRole = "Device Owner";
+      }
+
+      if (navbarUserName) navbarUserName.innerText = displayUsername;
+      if (navbarUserRole) navbarUserRole.innerText = displayRole;
+      if (navbarUserAvatar) {
+        navbarUserAvatar.innerText = displayUsername.substring(0, 2).toUpperCase();
+      }
+
+      const pageNames = {
+        "/dashboard": "Dashboard",
+        "/devices": "Devices",
+        "/automation": "Automation",
+        "/checkin": "Check-in",
+        "/groups": "Groups",
+        "/tester": "API Tester",
+        "/verify": "Verification"
+      };
+
+      const cleanPath = currentPath.replace(".html", "").split("?")[0];
+      const pageName = pageNames[cleanPath] || document.title.split(" - ")[0].split(" | ")[0] || "System";
+      if (navbarPageName) navbarPageName.innerText = pageName;
+
+      // Re-bind toggle sidebar button
+      const toggleBtn = document.getElementById("toggleSidebarBtn");
+      if (toggleBtn) {
+        toggleBtn.addEventListener("click", () => {
+          const sidebar = document.getElementById("app-sidebar");
+          const backdrop = document.getElementById("sidebar-backdrop");
+          if (sidebar) sidebar.classList.remove("-translate-x-full");
+          if (backdrop) backdrop.classList.remove("hidden");
+        });
+      }
+    }, 0);
+
+  } catch (error) {
+    console.error("Error load navbar:", error);
+  }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  loadSidebar();
+  loadNavbar();
+});
