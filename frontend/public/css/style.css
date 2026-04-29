@@ -22,3 +22,59 @@
     from { opacity: 0; transform: scale(0.95); }
     to { opacity: 1; transform: scale(1); }
 }
+
+/* Toast Notifications */
+.toast-pill {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  background: white;
+  border: 1px solid rgba(0,0,0,0.05);
+  border-radius: 9999px;
+  box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1);
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+  animation: toast-in 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  max-width: 320px;
+}
+
+.toast-pill.success {
+  border-left: 4px solid #10b981;
+}
+
+.toast-pill.error {
+  border-left: 4px solid #ef4444;
+}
+
+.toast-pill.info {
+  border-left: 4px solid #3b82f6;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.toast-out {
+  animation: toast-out 0.4s ease forwards;
+}
+
+@keyframes toast-out {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+}

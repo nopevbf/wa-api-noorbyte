@@ -3,9 +3,11 @@ node_modules/
 **/node_modules/**
 */node_modules/**
 .env
-.env.local
+.env.*
+!.env.example
 
 # Ignore session data files (keep the folder structure)
+sessions/
 backend/sessions/**
 !backend/sessions/.gitkeep
 
@@ -17,19 +19,26 @@ backend/sessions/**
 backend/database.db
 **/database.sqlite
 **/db/*
+*.db
+*.sqlite
 
 # Ignore API keys and tokens
 **/api_keys.json
 **/api_tokens.json
+**/credentials.json
+**/creds.json
 
 # Ignore log files
 **/logs/*.log
+*.log
 
 # Ignore temporary files
 **/temp/*.tmp
+*.tmp
 
 # Ignore backup files
 **/backup/*.bak
+*.bak
 
 # Ignore compiled files
 **/dist/
@@ -38,6 +47,11 @@ backend/database.db
 # Ignore IDE files
 **/.idea/
 **/.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 
 # Ignore deployment files
 **/deploy/

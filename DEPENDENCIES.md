@@ -1,15 +1,13 @@
-# Dependencies Project wa-api-noorbyte
+# Dependencies Project wa-api-noorbyte - v1.0.0
 
-Dokumen ini merangkum library yang dibutuhkan untuk menjalankan project pada sisi backend dan frontend.
+Dokumen ini merangkum library yang dibutuhkan untuk menjalankan project.
 
 ## Cara Install
 
-Jalankan perintah berikut dari root project:
+Jalankan perintah berikut dari folder backend:
 
 ```bash
 cd backend
-npm install
-cd ../frontend
 npm install
 ```
 
@@ -27,34 +25,16 @@ Lokasi: `backend/package.json`
 | `express`                 | `^4.22.1`     | Framework HTTP server dan routing API                     |
 | `pino`                    | `^10.3.1`     | Logger untuk Baileys dan proses backend                   |
 | `puppeteer`               | `^24.40.0`    | Headless browser untuk automasi dan scraping web          |
+| `puppeteer-extra`         | `^3.3.6`      | Core library untuk puppeteer extra                        |
+| `puppeteer-extra-plugin-stealth` | `^2.11.2` | Plugin stealth untuk bypass deteksi bot                  |
 | `qrcode`                  | `^1.5.4`      | Generate QR code (data URL / image)                       |
 | `qrcode-terminal`         | `^0.12.0`     | Tampilkan QR code langsung di terminal                    |
 | `socket.io`               | `^4.8.3`      | Komunikasi real-time antara backend dan UI                |
 
-## Frontend Dependencies
-
-Lokasi: `frontend/package.json`
-
-| Library                 | Versi      | Kegunaan                               |
-| ----------------------- | ---------- | -------------------------------------- |
-| `axios`                 | `^1.13.6`  | Request HTTP dari UI ke backend API    |
-| `cors`                  | `^2.8.6`   | Dukungan CORS untuk server UI          |
-| `express`               | `^4.22.1`  | Menjalankan server UI statis           |
-| `http-proxy-middleware` | `^3.0.5`   | Proxy request dari frontend ke backend |
-| `puppeteer`             | `^24.40.0` | Headless browser automasi & interaksi  |
-
 ## Catatan Keamanan
 
 Hasil `npm install` saat ini:
-
 - Backend: tidak ada vulnerability.
-- Frontend: terdeteksi 1 high severity vulnerability.
-
-Untuk mencoba perbaikan otomatis, jalankan:
-
-```bash
-cd frontend && npm audit fix
-```
 
 ## Rekomendasi Versi Node.js
 

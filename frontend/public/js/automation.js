@@ -590,8 +590,34 @@ Occupancy Rate: 0%
 
   const toggleBtn = document.getElementById("scheduleToggle");
   if (toggleBtn) {
-    toggleBtn.addEventListener("change", (e) => {
-      updatePreviewUI(e.target.checked);
+    toggleBtn.addEventListener("change", async (e) => {
+      const isActive = e.target.checked;
+      updatePreviewUI(isActive);
+      
+      // Auto-save status to backend
+      const formData = getFormData();
+      if (!formData.api_key) {
+          // If no device selected, don't show toast yet, user might be just playing with UI
+          return;
+      }
+
+      try {
+          const res = await fetch(`${API_URL}/automation/save-settings`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(formData),
+          });
+          const result = await res.json();
+          if (result.status) {
+              showToast(isActive ? "Otomatisasi Aktif 🚀" : "Otomatisasi Dimatikan 🛑", "success");
+              if (isActive) startStatusPolling();
+              else stopStatusPolling();
+          } else {
+              showToast("Gagal update status", "error");
+          }
+      } catch (err) {
+          showToast("Error koneksi", "error");
+      }
     });
   }
 
@@ -818,4 +844,29 @@ function showModal(title, message) {
   if (titleEl) titleEl.innerText = title;
   if (messageEl) messageEl.innerHTML = message;
   if (modalEl) modalEl.classList.remove("hidden");
+}
+
+function showToast(message, type = "info", duration = 3000) {
+  const container = document.getElementById("toastContainer");
+  if (!container) return;
+
+  const toast = document.createElement("div");
+  toast.className = `toast-pill ${type}`;
+  
+  let icon = "info";
+  if (type === "success") icon = "check_circle";
+  if (type === "error") icon = "error";
+
+  toast.innerHTML = `
+    <span class="material-symbols-outlined ${type === 'success' ? 'text-emerald-500' : type === 'error' ? 'text-red-500' : 'text-blue-500'}">${icon}</span>
+    <span>${message}</span>
+  `;
+
+  container.appendChild(toast);
+
+  // Auto remove
+  setTimeout(() => {
+    toast.classList.add("toast-out");
+    setTimeout(() => toast.remove(), 400);
+  }, duration);
 }
