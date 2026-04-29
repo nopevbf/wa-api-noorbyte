@@ -242,7 +242,7 @@ async function loadSidebar() {
       if (configData.status && configData.data && configData.data.version) {
         const versionEl = document.getElementById("system-version");
         if (versionEl) {
-          versionEl.innerHTML = `v${configData.data.version}<br><span class="text-[8px] font-normal tracking-wide opacity-80 mt-1 block">${configData.data.description || ""}</span>`;
+          versionEl.innerHTML = `v${configData.data.version}`;
         }
       }
     } catch (e) {

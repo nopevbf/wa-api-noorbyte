@@ -1,4 +1,4 @@
-# Dependencies Project wa-api-noorbyte - v1.0.0
+# Dependencies Project wa-api-noorbyte - v1.1.0
 
 Dokumen ini merangkum library yang dibutuhkan untuk menjalankan project.
 

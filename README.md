@@ -1,4 +1,4 @@
-# WhatsApp API (wa-api-noorbyte) - v1.0.0
+# WhatsApp API (wa-api-noorbyte) - v1.1.0
 
 Proyek ini adalah API backend terintegrasi WhatsApp menggunakan `whiskeysockets/baileys` dengan antarmuka frontend (UI) modern yang terpadu dalam satu layanan Node.js.
 
@@ -63,7 +63,11 @@ wa-api-noorbyte/
 
 ## Versioning & Changelog
 
-### v1.0.0 (Latest)
+### v1.1.0 (Latest)
+- **Version Bump**: Pembaruan sistem version ke `1.1.0` menggunakan standar Semantic Versioning.
+- **App Description**: Menambahkan deskripsi aplikasi ("WhatsApp API Backend with Automation Engine & Baileys") yang diekspos melalui endpoint `/api/app-config` dan dirender pada Sidebar UI.
+
+### v1.0.0
 - **Unified Service**: Penggabungan server backend dan frontend ke dalam satu proses Node.js.
 - **Simplified Structure**: Penghapusan redundansi file `package.json` dan folder `node_modules` di level frontend.
 - **Enhanced Security**: Pembaruan `.gitignore` untuk proteksi menyeluruh terhadap file sesi dan kredensial.
