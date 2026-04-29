@@ -3,6 +3,7 @@ const router = express.Router();
 const db = require("../config/database");
 const appConfig = require("../config/appConfig");
 const checkApiKey = require("../middlewares/auth");
+const rateLimit = require("express-rate-limit");
 const { 
   scrapeDparagonAttendance, 
   parseDparagonTime, 
@@ -15,6 +16,15 @@ const crypto = require("crypto");
 // Socks5 Proxy dari env — dipakai untuk semua request keluar ke DParagon (termasuk checkin handle)
 const proxyUrl = process.env.PROXY_URL || "";
 const proxyAgent = proxyUrl ? new SocksProxyAgent(proxyUrl) : null;
+
+// Rate limiter untuk endpoint yang sensitif (device management, auth)
+const sensitiveLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 menit
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { status: false, message: "Terlalu banyak permintaan. Coba lagi nanti." },
+});
 
 // Registry untuk menyimpan ID setTimeout Time-Bomb yang sedang aktif
 // key: api_key (string) — value: timeoutId (number)
@@ -46,6 +56,9 @@ router.get("/dashboard-stats", (req, res) => {
     let totalMsg = 0, successMsg = 0, recentLogs = [];
 
     if (role === 'admin') {
+      if (!process.env.ADMIN_API_KEY || api_key !== process.env.ADMIN_API_KEY) {
+        return res.status(401).json({ status: false, message: "Unauthorized: Kredensial admin tidak valid." });
+      }
       const totalResult = db.prepare("SELECT COUNT(*) as count FROM message_logs").get();
       totalMsg = totalResult ? totalResult.count : 0;
       const successResult = db.prepare("SELECT COUNT(*) as count FROM message_logs WHERE status = 'SUCCESS'").get();
@@ -80,6 +93,9 @@ router.get("/get-devices", (req, res) => {
     const { role, api_key } = req.query;
     let devices = [];
     if (role === 'admin') {
+      if (!process.env.ADMIN_API_KEY || api_key !== process.env.ADMIN_API_KEY) {
+        return res.status(401).json({ status: false, message: "Unauthorized: Kredensial admin tidak valid." });
+      }
       devices = db.prepare("SELECT username, phone, api_key, status FROM users").all();
     } else if (api_key) {
       devices = db.prepare("SELECT username, phone, api_key, status FROM users WHERE api_key = ?").all(api_key);
@@ -92,7 +108,7 @@ router.get("/get-devices", (req, res) => {
   }
 });
 
-router.post("/add-device", (req, res) => {
+router.post("/add-device", sensitiveLimiter, checkApiKey, (req, res) => {
   const { name, phone } = req.body;
   if (!name || !phone) return res.status(400).json({ status: false, message: "Nama dan Nomor WA wajib diisi." });
   const token = "DEV-" + crypto.randomBytes(4).toString("hex").toUpperCase();
@@ -104,7 +120,7 @@ router.post("/add-device", (req, res) => {
   }
 });
 
-router.post("/disconnect-device", async (req, res) => {
+router.post("/disconnect-device", sensitiveLimiter, checkApiKey, async (req, res) => {
   const { api_key } = req.body;
   if (!api_key) return res.status(400).json({ status: false, message: "API Key wajib dikirim." });
   try {
@@ -116,7 +132,7 @@ router.post("/disconnect-device", async (req, res) => {
   }
 });
 
-router.post("/connect-device", async (req, res) => {
+router.post("/connect-device", sensitiveLimiter, checkApiKey, async (req, res) => {
   const { api_key } = req.body;
   if (!api_key) return res.status(400).json({ status: false, message: "API Key wajib dikirim." });
   try {
@@ -127,7 +143,7 @@ router.post("/connect-device", async (req, res) => {
   }
 });
 
-router.post("/delete-device", async (req, res) => {
+router.post("/delete-device", sensitiveLimiter, checkApiKey, async (req, res) => {
   const { api_key } = req.body;
   if (!api_key) return res.status(400).json({ status: false, message: "API Key wajib dikirim." });
   try {
@@ -257,7 +273,7 @@ router.post("/automation/save-settings", (req, res) => {
   }
 });
 
-router.post("/automation/run-manual", (req, res) => {
+router.post("/automation/run-manual", sensitiveLimiter, checkApiKey, (req, res) => {
   const { api_key, run_time, dp_api_url, dp_email, dp_password, target_number } = req.body;
   if (!api_key || !run_time) return res.status(400).json({ status: false, message: "API Key dan waktu wajib diisi." });
   try {
@@ -301,7 +317,7 @@ router.get("/automation/status", (req, res) => {
   }
 });
 
-router.post('/rename-device', async (req, res) => {
+router.post('/rename-device', sensitiveLimiter, checkApiKey, async (req, res) => {
   const { api_key, new_name } = req.body;
   if (!api_key || !new_name) return res.status(400).json({ status: false, message: "Data tidak lengkap." });
   try {
@@ -312,15 +328,17 @@ router.post('/rename-device', async (req, res) => {
   }
 });
 
-router.get("/automation/kpi", (req, res) => {
+router.get("/automation/kpi", sensitiveLimiter, (req, res) => {
   const { api_key } = req.query;
   if (!api_key) return res.status(400).json({ status: false, message: "API Key wajib diisi." });
   try {
-    const schedule = db.prepare("SELECT id FROM automation_schedules WHERE api_key = ?").get(api_key);
-    if (!schedule) return res.status(200).json({ status: true, data: { success_rate: 0, avg_latency: 0 } });
-    const logs = getScheduleLogs(schedule.id);
-    // ... logic hitung KPI ...
-    res.status(200).json({ status: true, data: { success_rate: 100, avg_latency: 1.2 } }); // Simplified for brevity
+    const totalResult = db.prepare("SELECT COUNT(*) as count FROM message_logs WHERE api_key = ?").get(api_key);
+    const successResult = db.prepare("SELECT COUNT(*) as count FROM message_logs WHERE api_key = ? AND status = 'SUCCESS'").get(api_key);
+    const total = totalResult ? totalResult.count : 0;
+    const success = successResult ? successResult.count : 0;
+    // Multiply by 1000 then divide by 10 to get percentage with one decimal place (e.g. 95.5)
+    const success_rate = total === 0 ? 0 : Math.round((success / total) * 1000) / 10;
+    res.status(200).json({ status: true, data: { success_rate, total_sent: total } });
   } catch (error) {
     res.status(500).json({ status: false, message: "Gagal ambil KPI." });
   }
