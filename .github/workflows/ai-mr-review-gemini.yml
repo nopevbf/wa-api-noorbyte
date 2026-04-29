@@ -1,0 +1,143 @@
+name: 🤖 AI MR Review (ISTQB-Based — Gemini)
+
+on:
+  pull_request:
+    branches:
+      - main
+      - master
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  ai-review:
+    name: AI Code Review (Gemini)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install @google/generative-ai
+
+      - name: Get PR diff
+        id: diff
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git fetch origin ${{ github.base_ref }}
+          DIFF=$(git diff origin/${{ github.base_ref }}...HEAD -- '*.js' '*.ts' '*.jsx' '*.tsx' '*.mjs' '*.cjs' | head -c 8000)
+          CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | head -50 | tr '\n' ', ')
+
+          echo "CHANGED_FILES=$CHANGED_FILES" >> $GITHUB_ENV
+          echo "$DIFF" > /tmp/pr_diff.txt
+
+      - name: Run AI Review (Gemini)
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          BASE_BRANCH: ${{ github.base_ref }}
+          HEAD_BRANCH: ${{ github.head_ref }}
+        run: |
+          node << 'EOF'
+          const { GoogleGenerativeAI } = require("@google/generative-ai");
+          const fs = require("fs");
+
+          const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+          const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+          const diff = fs.readFileSync("/tmp/pr_diff.txt", "utf8");
+
+          const prompt = `You are a Senior QA Engineer and Code Reviewer with deep expertise in ISTQB standards, STLC methodology, and Node.js / TypeScript best practices.
+
+          ## PR Context
+          - **Title:** ${process.env.PR_TITLE}
+          - **Author:** ${process.env.PR_AUTHOR}
+          - **Branch:** \`${process.env.HEAD_BRANCH}\` → \`${process.env.BASE_BRANCH}\`
+          - **Changed Files:** ${process.env.CHANGED_FILES || "N/A"}
+          - **Description:** ${process.env.PR_BODY || "_(no description provided)_"}
+
+          ## Code Diff
+          \`\`\`diff
+          ${diff || "_(no diff available)_"}
+          \`\`\`
+
+          ---
+
+          Review this PR across the following dimensions. Format your response in clean Markdown suitable for a GitHub PR comment.
+
+          ### 1. 🎯 Change Summary
+          Briefly summarize what this PR changes and what modules/components are affected.
+
+          ### 2. 🧪 Test Coverage Assessment (ISTQB)
+          - Are unit tests added/updated for changed logic?
+          - Are happy path, negative, boundary value (BVA), and edge cases covered?
+          - Are assertions specific or too loose?
+          - List any **missing test scenarios**.
+
+          ### 3. 🔍 Code Quality
+          - Logic correctness and error handling
+          - Null/undefined safety
+          - DRY and SOLID compliance
+          - Readability and naming clarity
+          - Performance concerns
+
+          ### 4. 🔐 Security Checklist (OWASP-Aware)
+          Flag any: input validation gaps, hardcoded secrets, auth/authz issues, injection vectors, XSS risks.
+
+          ### 5. 🚦 Review Verdict
+
+          **Overall Risk:** [Low / Medium / High / Critical]
+
+          **Status:** [✅ Approved | ⚠️ Approved with Comments | ❌ Changes Requested]
+
+          **🚫 Blocking Issues (must fix before merge):**
+          - (list or "None")
+
+          **💡 Suggestions (non-blocking):**
+          - (list or "None")
+
+          **👍 What's done well:**
+          - (list positives)
+
+          Keep the tone constructive and professional. Be concise but specific.`;
+
+          async function runReview() {
+            const result = await model.generateContent(prompt);
+            const review = result.response.text();
+
+            const comment = `## 🤖 AI Code Review — ISTQB-Based (Gemini)\n\n> _Automated review powered by Google Gemini. This is a quality gate, not a replacement for human review._\n\n---\n\n${review}\n\n---\n<sub>Generated on commit \`${{ github.sha }}\` · Workflow: \`ai-mr-review-gemini\`</sub>`;
+
+            fs.writeFileSync("/tmp/review_comment.txt", comment);
+            console.log("✅ Review generated successfully.");
+          }
+
+          runReview().catch(err => {
+            console.error("❌ Gemini Review failed:", err.message);
+            fs.writeFileSync("/tmp/review_comment.txt", "## 🤖 AI Code Review\n\n⚠️ Review could not be generated. Please check the workflow logs.\n\n**Error:** " + err.message);
+          });
+          EOF
+
+      - name: Post review comment to PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          COMMENT=$(cat /tmp/review_comment.txt)
+          gh pr comment "$PR_NUMBER" --body "$COMMENT"
