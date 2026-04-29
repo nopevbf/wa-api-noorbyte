@@ -159,9 +159,6 @@ router.post("/disconnect-device", async (req, res) => {
   }
 });
 
-// Jangan lupa tambahin connectToWhatsApp di baris import paling atas (sekitar baris 5)
-// const { sendMessageViaWa, disconnectWa, connectToWhatsApp } = require('../services/waEngine');
-
 // ENDPOINT BARU: Menyalakan mesin WA dan generate QR
 router.post("/connect-device", async (req, res) => {
   const { api_key } = req.body;
@@ -252,8 +249,6 @@ router.post("/send-message", checkApiKey, async (req, res) => {
       timeZone: "Asia/Jakarta",
     });
 
-    // Buat Message ID acak (Pastikan require('crypto') udah ada di paling atas file apiRoutes.js)
-    const crypto = require("crypto");
     const messageId =
       "WAPI_" + crypto.randomBytes(5).toString("hex").toUpperCase();
 

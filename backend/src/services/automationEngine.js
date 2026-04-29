@@ -370,13 +370,39 @@ async function engineTick() {
     .all();
 
   for (const schedule of activeSchedules) {
-    // Skip weekends if frequency = weekdays
-    if (
-      schedule.frequency === "weekdays" &&
-      (dayOfWeek === 0 || dayOfWeek === 6)
-    ) {
-      continue;
+    // Unified Validation Logic
+    let shouldRunToday = true;
+
+    // 1. Date Range: today >= start_date and today <= end_date
+    if (schedule.start_date && today < schedule.start_date) shouldRunToday = false;
+    if (schedule.end_date && today > schedule.end_date) shouldRunToday = false;
+
+    // 2. Excluded Dates: today not in excluded_dates
+    if (schedule.excluded_dates) {
+      try {
+        const excluded = JSON.parse(schedule.excluded_dates);
+        if (Array.isArray(excluded) && excluded.includes(today)) {
+          shouldRunToday = false;
+        }
+      } catch (e) {}
     }
+
+    // 3. Frequency & Custom Days
+    if (schedule.frequency === "weekdays") {
+      if (dayOfWeek === 0 || dayOfWeek === 6) shouldRunToday = false;
+    } else if (schedule.frequency === "custom") {
+      if (schedule.custom_days) {
+        try {
+          const customDays = JSON.parse(schedule.custom_days);
+          // dayOfWeek: 0=Sun, 1=Mon, ..., 6=Sat
+          if (Array.isArray(customDays) && !customDays.includes(dayOfWeek)) {
+            shouldRunToday = false;
+          }
+        } catch (e) {}
+      }
+    }
+
+    if (!shouldRunToday) continue;
 
     // Check fetch time
     if (
