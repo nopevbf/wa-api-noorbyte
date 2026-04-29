@@ -588,17 +588,84 @@ Occupancy Rate: 0%
     }
   }
 
+  // ==========================================
+  // 6.5. AUTO-SAVE LOCAL INPUTS
+  // ==========================================
+  const autoSaveLocal = () => {
+    const formData = getFormData();
+    const localSettings = {
+      dpApiUrl: formData.dp_api_url,
+      dpEmail: formData.dp_email,
+      dpPassword: formData.dp_password,
+      scheduleEnabled: formData.is_active,
+      fetchTime: formData.fetch_time,
+      sendWaTime: formData.send_wa_time,
+      frequency: formData.frequency,
+      startDate: formData.start_date,
+      endDate: formData.end_date,
+      customDays: formData.custom_days,
+      excludedDates: formData.excluded_dates,
+      targetNumber: formData.target_number,
+    };
+    localStorage.setItem("connectApiSettings", JSON.stringify(localSettings));
+    if (formData.api_key) {
+      localStorage.setItem("automationSelectedDevice", formData.api_key);
+    }
+  };
+
+  // Bind autoSaveLocal to config inputs
+  ["dpApiUrl", "dpEmail", "accountPassword", "targetNumber", "executionTime", "startDate", "endDate"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener("change", autoSaveLocal);
+      el.addEventListener("blur", autoSaveLocal);
+    }
+  });
+  
+  document.querySelectorAll('input[name="frequency"], input[name="customDay"]').forEach(el => {
+    el.addEventListener("change", autoSaveLocal);
+  });
+  
+  if (typeof selector !== "undefined" && selector) {
+    selector.addEventListener("change", autoSaveLocal);
+  }
+
   const toggleBtn = document.getElementById("scheduleToggle");
   if (toggleBtn) {
     toggleBtn.addEventListener("change", async (e) => {
       const isActive = e.target.checked;
+      const formData = getFormData();
+
+      // VALIDASI SEBELUM AKTIF
+      if (isActive) {
+        if (
+          !formData.api_key ||
+          !formData.dp_api_url ||
+          !formData.dp_email ||
+          !formData.dp_password ||
+          !formData.target_number
+        ) {
+          e.target.checked = false; // Batalkan check
+          updatePreviewUI(false);
+          
+          if (typeof showModal === 'function') {
+            showModal(
+              "Validasi Gagal",
+              "Harap lengkapi DParagon API Configuration (URL, Email, Password) dan WhatsApp Configuration (Device, Target) terlebih dahulu sebelum mengaktifkan jadwal."
+            );
+          } else {
+            alert("Harap lengkapi semua konfigurasi terlebih dahulu sebelum mengaktifkan jadwal.");
+          }
+          return;
+        }
+      }
+
       updatePreviewUI(isActive);
+      autoSaveLocal(); // Simpan state terbaru ke localStorage
       
       // Auto-save status to backend
-      const formData = getFormData();
       if (!formData.api_key) {
-          // If no device selected, don't show toast yet, user might be just playing with UI
-          return;
+          return; // Should not hit here if isActive is true due to validation, but safe to keep for isActive=false
       }
 
       try {
@@ -609,14 +676,16 @@ Occupancy Rate: 0%
           });
           const result = await res.json();
           if (result.status) {
-              showToast(isActive ? "Otomatisasi Aktif 🚀" : "Otomatisasi Dimatikan 🛑", "success");
+              if (typeof showToast === 'function') {
+                  showToast(isActive ? "Otomatisasi Aktif 🚀" : "Otomatisasi Dimatikan 🛑", "success");
+              }
               if (isActive) startStatusPolling();
               else stopStatusPolling();
           } else {
-              showToast("Gagal update status", "error");
+              if (typeof showToast === 'function') showToast("Gagal update status", "error");
           }
       } catch (err) {
-          showToast("Error koneksi", "error");
+          if (typeof showToast === 'function') showToast("Error koneksi", "error");
       }
     });
   }
