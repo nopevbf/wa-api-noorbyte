@@ -234,6 +234,20 @@ async function loadSidebar() {
     if (backdrop) backdrop.addEventListener("click", closeSidebar);
 
     // ==========================================
+    // 3.5. FETCH SYSTEM VERSION
+    // ==========================================
+    try {
+      const configRes = await fetch("/api/app-config");
+      const configData = await configRes.json();
+      if (configData.status && configData.data && configData.data.version) {
+        const versionEl = document.getElementById("system-version");
+        if (versionEl) versionEl.innerText = configData.data.version;
+      }
+    } catch (e) {
+      console.warn("Gagal memuat versi sistem:", e.message);
+    }
+
+    // ==========================================
     // 4. LOGIC LOGOUT (Berlaku di Semua Halaman)
     // ==========================================
     const btnLogout = document.getElementById("btnLogout");

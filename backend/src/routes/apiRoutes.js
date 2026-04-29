@@ -32,6 +32,7 @@ router.get("/app-config", (req, res) => {
     status: true,
     data: {
       env: appConfig.env,
+      version: appConfig.version,
       dparagonApiUrl: appConfig.dparagonApiUrl,
     },
   });

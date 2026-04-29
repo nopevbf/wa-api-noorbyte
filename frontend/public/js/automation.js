@@ -127,6 +127,19 @@ document.addEventListener("DOMContentLoaded", async () => {
   // 1. INIT DEVICES DROPDOWN
   // ==========================================
   const selector = document.getElementById("deviceSelector");
+
+  // Register listener early to catch initial dispatch
+  if (selector) {
+    selector.addEventListener("change", () => {
+      if (selector.value) {
+        localStorage.setItem("automationSelectedDevice", selector.value);
+        startStatusPolling(); // Start polling cycle when device is selected
+      } else {
+        stopStatusPolling(); // Stop if no device selected
+      }
+    });
+  }
+
   if (selector) {
     try {
       const isAdmin = localStorage.getItem("connectApi_loggedIn") === "true";
@@ -158,12 +171,6 @@ document.addEventListener("DOMContentLoaded", async () => {
           );
           if (matchOption && !matchOption.disabled) {
             selector.value = savedDevice;
-
-            // ==========================================
-            // TRIGGER EVENTNYA DI SINI BOS!
-            // Karena di detik ini, opsi-opsinya udah 100% jadi.
-            // ==========================================
-            selector.dispatchEvent(new Event("change"));
           }
         }
       }
@@ -509,6 +516,11 @@ document.addEventListener("DOMContentLoaded", async () => {
               addExcludedDateBadge(dateStr);
             });
           }
+
+          // Notifikasi Sinkronisasi Berhasil
+          if (typeof showToast === 'function') {
+            showToast("Konfigurasi disinkronkan dari server ✅", "success");
+          }
         }
 
         // Update message preview from backend cached message
@@ -848,39 +860,6 @@ Occupancy Rate: 0%
   }
 
   // ==========================================
-  // 8. ON LOAD: Fetch existing backend status
-  // ==========================================
-  // When device selector changes, save selection and poll status
-  if (selector) {
-    selector.addEventListener("change", () => {
-      if (selector.value) {
-        localStorage.setItem("automationSelectedDevice", selector.value);
-      }
-      pollStatus(true);
-    });
-  }
-
-  // ALWAYS try to restore state from backend on page load
-  // This ensures logs, button state, and preview are never lost
-  setTimeout(() => {
-    const savedDevice = localStorage.getItem("automationSelectedDevice");
-    const currentDevice = selector ? selector.value : "";
-    if (currentDevice || savedDevice) {
-      startStatusPolling();
-    }
-  }, 1000);
-
-  // ==========================================
-  // 9. AUTO-LOAD DEVICE ON PAGE LOAD
-  // ==========================================
-  const savedDevice = localStorage.getItem("automationSelectedDevice");
-  if (savedDevice && selector) {
-    selector.value = savedDevice;
-    // Trigger change event to update UI and start polling
-    selector.dispatchEvent(new Event("change"));
-  }
-
-  // ==========================================
   // 10. KPI WIDGET LOGIC (REAL DATA)
   // ==========================================
   let lastRunDate = null; // Akan diisi otomatis dari Backend
@@ -904,6 +883,14 @@ Occupancy Rate: 0%
 
   // Update tulisan waktu setiap 1 menit
   setInterval(updateLastRunTimer, 60000);
+
+  // ==========================================
+  // FINAL TRIGGER: Auto-sync on page load if device exists
+  // ==========================================
+  const initialDevice = localStorage.getItem("automationSelectedDevice");
+  if (initialDevice) {
+    startStatusPolling();
+  }
 });
 
 function showModal(title, message) {
