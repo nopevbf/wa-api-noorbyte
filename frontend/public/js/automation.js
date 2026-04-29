@@ -56,6 +56,74 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   // ==========================================
+  // 0b. INIT ADVANCED SCHEDULING UI
+  // ==========================================
+  const startDateInput = document.getElementById("startDate");
+  if (startDateInput && !startDateInput.value) {
+    const today = new Date().toISOString().split("T")[0];
+    startDateInput.value = today;
+  }
+
+  const freqCustom = document.getElementById("freqCustom");
+  const customDaysContainer = document.getElementById("customDaysContainer");
+  const freqRadios = document.querySelectorAll('input[name="frequency"]');
+  const btnAddExcludedDate = document.getElementById("btnAddExcludedDate");
+  const excludedDateInput = document.getElementById("excludedDateInput");
+  const excludedDatesList = document.getElementById("excludedDatesList");
+
+  const toggleCustomDays = () => {
+    if (freqCustom && freqCustom.checked) {
+      customDaysContainer?.classList.remove("hidden");
+    } else {
+      customDaysContainer?.classList.add("hidden");
+    }
+  };
+
+  freqRadios.forEach((radio) => {
+    radio.addEventListener("change", toggleCustomDays);
+  });
+
+  const addExcludedDateBadge = (dateStr) => {
+    if (!dateStr) return;
+    
+    // Avoid duplicates
+    const existing = Array.from(excludedDatesList.querySelectorAll("span")).find(
+      (s) => s.textContent === dateStr
+    );
+    if (existing) return;
+
+    const badge = document.createElement("div");
+    badge.className = "flex items-center gap-1.5 px-3 py-1 bg-primary/10 text-primary border border-primary/20 rounded-full text-xs font-bold animate-in fade-in zoom-in duration-200";
+    badge.innerHTML = `
+      <span>${dateStr}</span>
+      <button type="button" class="hover:text-red-500 transition-colors flex items-center">
+        <span class="material-symbols-outlined text-[14px]">close</span>
+      </button>
+    `;
+
+    badge.querySelector("button").addEventListener("click", () => {
+      badge.remove();
+    });
+
+    excludedDatesList.appendChild(badge);
+  };
+
+  if (btnAddExcludedDate && excludedDateInput && excludedDatesList) {
+    btnAddExcludedDate.addEventListener("click", () => {
+      const dateStr = excludedDateInput.value;
+      if (!dateStr) {
+        showModal("Peringatan", "Pilih tanggal terlebih dahulu.");
+        return;
+      }
+      addExcludedDateBadge(dateStr);
+      excludedDateInput.value = ""; // Reset input
+    });
+  }
+
+  // Initial check
+  toggleCustomDays();
+
+  // ==========================================
   // 1. INIT DEVICES DROPDOWN
   // ==========================================
   const selector = document.getElementById("deviceSelector");
@@ -166,11 +234,19 @@ document.addEventListener("DOMContentLoaded", async () => {
       dp_email: document.getElementById("dpEmail")?.value || "",
       dp_password: document.getElementById("accountPassword")?.value || "",
       target_number: document.getElementById("targetNumber")?.value || "",
-      fetch_time: document.getElementById("fetchTime")?.value || "08:00",
-      send_wa_time: document.getElementById("sendWaTime")?.value || "09:00",
+      fetch_time: document.getElementById("executionTime")?.value || "08:00",
+      send_wa_time: document.getElementById("executionTime")?.value || "08:00",
       frequency:
         document.querySelector('input[name="frequency"]:checked')?.value ||
         "daily",
+      start_date: document.getElementById("startDate")?.value || "",
+      end_date: document.getElementById("endDate")?.value || "",
+      custom_days: Array.from(
+        document.querySelectorAll('input[name="customDay"]:checked'),
+      ).map((el) => parseInt(el.value)),
+      excluded_dates: Array.from(
+        document.querySelectorAll("#excludedDatesList span"),
+      ).map((el) => el.textContent),
       is_active: document.getElementById("scheduleToggle")?.checked || false,
     };
   }
@@ -326,8 +402,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function startStatusPolling() {
     if (statusPollInterval) clearInterval(statusPollInterval);
-    pollStatus(); // Run immediately
-    statusPollInterval = setInterval(pollStatus, 10000); // Poll every 10s
+    pollStatus(true); // Initial load when starting polling
+    statusPollInterval = setInterval(() => pollStatus(false), 10000); // Subsequent polls
   }
 
   function stopStatusPolling() {
@@ -337,7 +413,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
-  async function pollStatus() {
+  async function pollStatus(isInitial = false) {
     // Try selector value first, fallback to localStorage
     let apiKey = selector ? selector.value : "";
     if (!apiKey) {
@@ -393,11 +469,46 @@ document.addEventListener("DOMContentLoaded", async () => {
           renderBackendLogs(data.logs);
         }
 
-        // Restore schedule toggle from backend state
-        const schedToggle = document.getElementById("scheduleToggle");
-        if (schedToggle && data.is_active && !schedToggle.checked) {
-          schedToggle.checked = true;
-          updatePreviewUI(true);
+        // --- CONFIGURATION SYNC (Only on Initial Load or Device Change) ---
+        if (isInitial) {
+          // Restore schedule toggle from backend state
+          const schedToggle = document.getElementById("scheduleToggle");
+          if (schedToggle) {
+            schedToggle.checked = !!data.is_active;
+            updatePreviewUI(!!data.is_active);
+          }
+
+          // Restore execution time
+          if (data.fetch_time && document.getElementById("executionTime")) {
+            document.getElementById("executionTime").value = data.fetch_time;
+          }
+
+          // Restore Advanced Scheduling from backend
+          if (data.start_date && document.getElementById("startDate")) {
+            document.getElementById("startDate").value = data.start_date;
+          }
+          if (data.end_date && document.getElementById("endDate")) {
+            document.getElementById("endDate").value = data.end_date;
+          }
+          if (data.frequency) {
+            if (data.frequency === "weekdays")
+              document.getElementById("freqWeekdays").checked = true;
+            else if (data.frequency === "custom")
+              document.getElementById("freqCustom").checked = true;
+            else document.getElementById("freqDaily").checked = true;
+            toggleCustomDays();
+          }
+          if (data.custom_days) {
+            document.querySelectorAll('input[name="customDay"]').forEach((el) => {
+              el.checked = data.custom_days.includes(parseInt(el.value));
+            });
+          }
+          if (data.excluded_dates && excludedDatesList) {
+            excludedDatesList.innerHTML = "";
+            data.excluded_dates.forEach((dateStr) => {
+              addExcludedDateBadge(dateStr);
+            });
+          }
         }
 
         // Update message preview from backend cached message
@@ -427,8 +538,8 @@ document.addEventListener("DOMContentLoaded", async () => {
           }
         }
       }
-    } catch {
-      // Silently ignore polling errors
+    } catch (err) {
+      console.warn("Poll status error:", err);
     }
   }
 
@@ -440,8 +551,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!msgPreview) return;
 
     if (isActive) {
-      const fetchTime = document.getElementById("fetchTime").value || "--:--";
-      const sendTime = document.getElementById("sendWaTime").value || "--:--";
+      const execTime = document.getElementById("executionTime")?.value || "--:--";
       const isWeekdays = document.getElementById("freqWeekdays").checked
         ? " (Hari Kerja)"
         : "";
@@ -449,7 +559,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       msgPreview.innerText = `=========================
 🤖 SISTEM OTOMATISASI DAILY REPORT DPARAGON AKTIF
 🌍 Zona Waktu Server: Asia/Jakarta (WIB)
-⏰ Jadwal${isWeekdays}: Tarik Data (${fetchTime} WIB) --> Kirim WA (${sendTime} WIB)
+⏰ Jadwal${isWeekdays}: Jam Eksekusi (${execTime} WIB)
 ✅ EKSEKUSI BERJALAN DI SERVER (Aman tutup browser)
 =========================
 
@@ -489,67 +599,6 @@ Occupancy Rate: 0%
   // 7. SIMPAN SETTINGAN (Kirim ke Backend)
   // ==========================================
   const btnSaveSettings = document.getElementById("btnSaveSettings");
-  const fetchTimeInput = document.getElementById("fetchTime");
-  const sendWaTimeInput = document.getElementById("sendWaTime");
-  const toggleScheduleInput = document.getElementById("scheduleToggle");
-  const scheduleWarningMsg = document.getElementById("scheduleWarningMsg");
-
-  function validateScheduleTimes() {
-    if (
-      !fetchTimeInput ||
-      !sendWaTimeInput ||
-      !toggleScheduleInput ||
-      !scheduleWarningMsg
-    )
-      return true;
-
-    const isEnabled = toggleScheduleInput.checked;
-    const fetchT = fetchTimeInput.value;
-    const sendT = sendWaTimeInput.value;
-
-    if (isEnabled && fetchT === sendT) {
-      scheduleWarningMsg.classList.remove("hidden");
-      fetchTimeInput.classList.add(
-        "border-red-500",
-        "bg-red-50/50",
-        "text-red-600",
-        "focus:border-red-500",
-        "focus:ring-red-500/20",
-      );
-      sendWaTimeInput.classList.add(
-        "border-red-500",
-        "bg-red-50/50",
-        "text-red-600",
-        "focus:border-red-500",
-        "focus:ring-red-500/20",
-      );
-      return false;
-    } else {
-      scheduleWarningMsg.classList.add("hidden");
-      fetchTimeInput.classList.remove(
-        "border-red-500",
-        "bg-red-50/50",
-        "text-red-600",
-        "focus:border-red-500",
-        "focus:ring-red-500/20",
-      );
-      sendWaTimeInput.classList.remove(
-        "border-red-500",
-        "bg-red-50/50",
-        "text-red-600",
-        "focus:border-red-500",
-        "focus:ring-red-500/20",
-      );
-      return true;
-    }
-  }
-
-  if (fetchTimeInput)
-    fetchTimeInput.addEventListener("input", validateScheduleTimes);
-  if (sendWaTimeInput)
-    sendWaTimeInput.addEventListener("input", validateScheduleTimes);
-  if (toggleScheduleInput)
-    toggleScheduleInput.addEventListener("change", validateScheduleTimes);
 
   // Load saved settings from localStorage
   function loadSavedSettings() {
@@ -567,23 +616,56 @@ Occupancy Rate: 0%
       if (document.getElementById("scheduleToggle"))
         document.getElementById("scheduleToggle").checked =
           savedSettings.scheduleEnabled || false;
-      if (document.getElementById("fetchTime"))
-        document.getElementById("fetchTime").value =
+      if (document.getElementById("executionTime"))
+        document.getElementById("executionTime").value =
           savedSettings.fetchTime || "08:00";
-      if (document.getElementById("sendWaTime"))
-        document.getElementById("sendWaTime").value =
-          savedSettings.sendWaTime || "09:00";
+
       if (savedSettings.frequency === "weekdays")
         document.getElementById("freqWeekdays").checked = true;
+      else if (savedSettings.frequency === "custom")
+        document.getElementById("freqCustom").checked = true;
       else document.getElementById("freqDaily").checked = true;
+
+      // Restore Advanced Scheduling
+      if (document.getElementById("startDate") && savedSettings.startDate)
+        document.getElementById("startDate").value = savedSettings.startDate;
+      if (document.getElementById("endDate"))
+        document.getElementById("endDate").value = savedSettings.endDate || "";
+
+      if (savedSettings.customDays) {
+        document.querySelectorAll('input[name="customDay"]').forEach((el) => {
+          el.checked = savedSettings.customDays.includes(parseInt(el.value));
+        });
+      }
+
+      if (savedSettings.excludedDates && excludedDatesList) {
+        excludedDatesList.innerHTML = "";
+        savedSettings.excludedDates.forEach((dateStr) => {
+          const badge = document.createElement("div");
+          badge.className =
+            "flex items-center gap-1.5 px-3 py-1 bg-slate-100 text-slate-700 border border-outline rounded-full text-xs font-bold";
+          badge.innerHTML = `
+            <span>${dateStr}</span>
+            <button type="button" class="text-slate-400 hover:text-red-500 flex items-center">
+              <span class="material-symbols-outlined text-[14px]">close</span>
+            </button>
+          `;
+          badge.querySelector("button").addEventListener("click", () => {
+            badge.remove();
+          });
+          excludedDatesList.appendChild(badge);
+        });
+      }
+
       if (document.getElementById("targetNumber"))
         document.getElementById("targetNumber").value =
           savedSettings.targetNumber || "";
       if (savedSettings.scheduleEnabled) {
         updatePreviewUI(true);
       }
+
+      toggleCustomDays();
     }
-    validateScheduleTimes();
   }
 
   loadSavedSettings();
@@ -591,13 +673,6 @@ Occupancy Rate: 0%
   // Save settings — send to backend AND localStorage
   if (btnSaveSettings) {
     btnSaveSettings.addEventListener("click", async () => {
-      if (!validateScheduleTimes()) {
-        return showModal(
-          "Peringatan Jadwal",
-          "Waktu Tarik Data dan Kirim WA bentrok! Silakan beri jeda minimal 1 menit sebelum menyimpan pengaturan.",
-        );
-      }
-
       const formData = getFormData();
 
       if (!formData.api_key) {
@@ -619,6 +694,10 @@ Occupancy Rate: 0%
         fetchTime: formData.fetch_time,
         sendWaTime: formData.send_wa_time,
         frequency: formData.frequency,
+        startDate: formData.start_date,
+        endDate: formData.end_date,
+        customDays: formData.custom_days,
+        excludedDates: formData.excluded_dates,
         targetNumber: formData.target_number,
       };
       localStorage.setItem("connectApiSettings", JSON.stringify(localSettings));
@@ -682,7 +761,7 @@ Occupancy Rate: 0%
       if (selector.value) {
         localStorage.setItem("automationSelectedDevice", selector.value);
       }
-      pollStatus();
+      pollStatus(true);
     });
   }
 
