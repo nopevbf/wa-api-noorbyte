@@ -1,29 +1,110 @@
-/* Custom Scrollbar biar makin elegan */
-::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-}
-::-webkit-scrollbar-track {
-    background: transparent;
-}
-::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
-    border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8;
-}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Daily Report Automation | NoorByteAPI</title>
 
-/* Animasi khusus untuk modal/notifikasi (opsional) */
-.animate-fade-in {
-    animation: fadeIn 0.2s ease-out forwards;
-}
-@keyframes fadeIn {
-    from { opacity: 0; transform: scale(0.95); }
-    to { opacity: 1; transform: scale(1); }
-}
+    <link rel="stylesheet" href="/css/style.css" />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+      rel="stylesheet"
+    />
 
-lex items-center justify-between px-4 sm:px-8">
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-dim": "#f1f5f9",
+              "surface-container-highest": "#cbd5e1",
+              error: "#ef4444",
+              secondary: "#64748b",
+              "on-tertiary-container": "#1e1b4b",
+              "on-primary-container": "#ffffff",
+              "inverse-surface": "#1e293b",
+              "surface-container-high": "#e2e8f0",
+              "tertiary-fixed-dim": "#ddd6fe",
+              "surface-tint": "#136dec",
+              "on-primary-fixed": "#1e3a8a",
+              "on-error-container": "#7f1d1d",
+              "on-error": "#ffffff",
+              "on-tertiary-fixed-variant": "#5b21b6",
+              "on-secondary": "#ffffff",
+              "on-primary-fixed-variant": "#1d4ed8",
+              "secondary-fixed": "#f1f5f9",
+              "on-surface": "#0f172a",
+              "on-surface-variant": "#475569",
+              "on-tertiary-fixed": "#2e1065",
+              "tertiary-fixed": "#f5f3ff",
+              "surface-container": "#f1f5f9",
+              "inverse-primary": "#93c5fd",
+              "surface-container-lowest": "#ffffff",
+              "tertiary-container": "#ede9fe",
+              "inverse-on-surface": "#f8fafc",
+              "on-primary": "#ffffff",
+              "secondary-container": "#e2e8f0",
+              "error-container": "#fee2e2",
+              "on-secondary-container": "#1e293b",
+              "surface-variant": "#f8fafc",
+              outline: "#e2e8f0",
+              tertiary: "#7c3aed",
+              "surface-container-low": "#f8fafc",
+              "surface-bright": "#ffffff",
+              "primary-fixed-dim": "#bfdbfe",
+              surface: "#ffffff",
+              "on-background": "#0f172a",
+              "secondary-fixed-dim": "#e2e8f0",
+              "primary-container": "#136dec",
+              "outline-variant": "#cbd5e1",
+              "on-secondary-fixed-variant": "#334155",
+              "on-secondary-fixed": "#0f172a",
+              background: "#f6f7f8",
+              "on-tertiary": "#ffffff",
+              "primary-fixed": "#dbeafe",
+              primary: "#136dec",
+            },
+            fontFamily: {
+              display: ["Inter"],
+              headline: ["Inter"],
+              body: ["Inter"],
+              label: ["Inter"],
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      body {
+        font-family: "Inter", sans-serif;
+      }
+      .material-symbols-outlined {
+        font-variation-settings:
+          "FILL" 0,
+          "wght" 400,
+          "GRAD" 0,
+          "opsz" 24;
+      }
+    </style>
+  </head>
+  <body
+    class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100"
+  >
+    <div class="flex h-screen overflow-hidden">
+      <div id="sidebar-container" class="z-50 shrink-0"></div>
+
+      <main
+        class="flex-1 flex flex-col overflow-y-auto custom-scrollbar relative"
+      >
+        <header
+          class="h-16 border-b border-outline bg-surface/80 backdrop-blur-sm sticky top-0 z-10 flex items-center justify-between px-4 sm:px-8"
+        >
       <div class="flex items-center gap-3">
         <button id="toggleSidebarBtn" class="lg:hidden p-2 -ml-2 text-slate-500 hover:bg-slate-100 rounded-lg">
           <span class="material-symbols-outlined">menu</span>
@@ -358,6 +439,7 @@ lex items-center justify-between px-4 sm:px-8">
       </div>
     </div>
   </main>
+</div>
 
   <div id="globalModal"
     class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] hidden flex justify-center items-center transition-opacity">
