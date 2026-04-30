@@ -1,439 +1,450 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-    <title>Daily Report Automation | NoorByteAPI</title>
 
-    <link rel="stylesheet" href="/css/style.css" />
-    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
-      rel="stylesheet"
-    />
+<head>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+  <title>Daily Report Automation | NoorByteAPI</title>
 
-    <script id="tailwind-config">
-      tailwind.config = {
-        darkMode: "class",
-        theme: {
-          extend: {
-            colors: {
-              "surface-dim": "#f1f5f9",
-              "surface-container-highest": "#cbd5e1",
-              error: "#ef4444",
-              secondary: "#64748b",
-              "on-tertiary-container": "#1e1b4b",
-              "on-primary-container": "#ffffff",
-              "inverse-surface": "#1e293b",
-              "surface-container-high": "#e2e8f0",
-              "tertiary-fixed-dim": "#ddd6fe",
-              "surface-tint": "#136dec",
-              "on-primary-fixed": "#1e3a8a",
-              "on-error-container": "#7f1d1d",
-              "on-error": "#ffffff",
-              "on-tertiary-fixed-variant": "#5b21b6",
-              "on-secondary": "#ffffff",
-              "on-primary-fixed-variant": "#1d4ed8",
-              "secondary-fixed": "#f1f5f9",
-              "on-surface": "#0f172a",
-              "on-surface-variant": "#475569",
-              "on-tertiary-fixed": "#2e1065",
-              "tertiary-fixed": "#f5f3ff",
-              "surface-container": "#f1f5f9",
-              "inverse-primary": "#93c5fd",
-              "surface-container-lowest": "#ffffff",
-              "tertiary-container": "#ede9fe",
-              "inverse-on-surface": "#f8fafc",
-              "on-primary": "#ffffff",
-              "secondary-container": "#e2e8f0",
-              "error-container": "#fee2e2",
-              "on-secondary-container": "#1e293b",
-              "surface-variant": "#f8fafc",
-              outline: "#e2e8f0",
-              tertiary: "#7c3aed",
-              "surface-container-low": "#f8fafc",
-              "surface-bright": "#ffffff",
-              "primary-fixed-dim": "#bfdbfe",
-              surface: "#ffffff",
-              "on-background": "#0f172a",
-              "secondary-fixed-dim": "#e2e8f0",
-              "primary-container": "#136dec",
-              "outline-variant": "#cbd5e1",
-              "on-secondary-fixed-variant": "#334155",
-              "on-secondary-fixed": "#0f172a",
-              background: "#f6f7f8",
-              "on-tertiary": "#ffffff",
-              "primary-fixed": "#dbeafe",
-              primary: "#136dec",
-            },
-            fontFamily: {
-              display: ["Inter"],
-              headline: ["Inter"],
-              body: ["Inter"],
-              label: ["Inter"],
-            },
+  <link rel="stylesheet" href="/css/style.css" />
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+    rel="stylesheet" />
+
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "surface-dim": "#f1f5f9",
+            "surface-container-highest": "#cbd5e1",
+            error: "#ef4444",
+            secondary: "#64748b",
+            "on-tertiary-container": "#1e1b4b",
+            "on-primary-container": "#ffffff",
+            "inverse-surface": "#1e293b",
+            "surface-container-high": "#e2e8f0",
+            "tertiary-fixed-dim": "#ddd6fe",
+            "surface-tint": "#136dec",
+            "on-primary-fixed": "#1e3a8a",
+            "on-error-container": "#7f1d1d",
+            "on-error": "#ffffff",
+            "on-tertiary-fixed-variant": "#5b21b6",
+            "on-secondary": "#ffffff",
+            "on-primary-fixed-variant": "#1d4ed8",
+            "secondary-fixed": "#f1f5f9",
+            "on-surface": "#0f172a",
+            "on-surface-variant": "#475569",
+            "on-tertiary-fixed": "#2e1065",
+            "tertiary-fixed": "#f5f3ff",
+            "surface-container": "#f1f5f9",
+            "inverse-primary": "#93c5fd",
+            "surface-container-lowest": "#ffffff",
+            "tertiary-container": "#ede9fe",
+            "inverse-on-surface": "#f8fafc",
+            "on-primary": "#ffffff",
+            "secondary-container": "#e2e8f0",
+            "error-container": "#fee2e2",
+            "on-secondary-container": "#1e293b",
+            "surface-variant": "#f8fafc",
+            outline: "#e2e8f0",
+            tertiary: "#7c3aed",
+            "surface-container-low": "#f8fafc",
+            "surface-bright": "#ffffff",
+            "primary-fixed-dim": "#bfdbfe",
+            surface: "#ffffff",
+            "on-background": "#0f172a",
+            "secondary-fixed-dim": "#e2e8f0",
+            "primary-container": "#136dec",
+            "outline-variant": "#cbd5e1",
+            "on-secondary-fixed-variant": "#334155",
+            "on-secondary-fixed": "#0f172a",
+            background: "#f6f7f8",
+            "on-tertiary": "#ffffff",
+            "primary-fixed": "#dbeafe",
+            primary: "#136dec",
+          },
+          fontFamily: {
+            display: ["Inter"],
+            headline: ["Inter"],
+            body: ["Inter"],
+            label: ["Inter"],
           },
         },
-      };
-    </script>
-    <style>
-      body {
-        font-family: "Inter", sans-serif;
-      }
-      .material-symbols-outlined {
-        font-variation-settings:
-          "FILL" 0,
-          "wght" 400,
-          "GRAD" 0,
-          "opsz" 24;
-      }
-    </style>
-  </head>
-  <body
-    class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100"
-  >
-    <div class="flex h-screen overflow-hidden">
-      <div id="sidebar-container" class="z-50 shrink-0"></div>
+      },
+    };
+  </script>
+  <style>
+    body {
+      font-family: "Inter", sans-serif;
+    }
 
-      <main
-        class="flex-1 flex flex-col overflow-y-auto custom-scrollbar relative"
-      >
-        <header
-          class="h-16 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm flex items-center justify-between px-4 sm:px-8 sticky top-0 z-10 w-full"
-        >
-      <div class="flex items-center gap-4">
-        <button id="toggleSidebarBtn" class="lg:hidden p-2 -ml-2 text-slate-500 hover:bg-slate-100 rounded-lg">
-          <span class="material-symbols-outlined">menu</span>
-        </button>
-        <h2 id="navbar-page-name" class="text-lg font-semibold hidden sm:block">Daily Report Automation</h2>
-      </div>
-      <div class="flex items-center gap-4">
-        <div class="h-8 w-[1px] bg-slate-200 dark:border-slate-800 mx-2"></div>
-        <div class="flex items-center gap-3">
-          <div class="text-right hidden sm:block">
-            <p id="navbar-user-name" class="text-xs font-bold">Loading...</p>
-            <p id="navbar-user-role" class="text-[10px] text-slate-500">Access Granted</p>
-          </div>
-          <div id="navbar-user-avatar" class="size-9 rounded-full bg-primary/20 border-2 border-primary/10 flex items-center justify-center overflow-hidden font-bold text-primary text-xs">
-            ??
+    .material-symbols-outlined {
+      font-variation-settings:
+        "FILL" 0,
+        "wght" 400,
+        "GRAD" 0,
+        "opsz" 24;
+    }
+  </style>
+</head>
+
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100">
+  <div class="flex h-screen overflow-hidden">
+    <div id="sidebar-container" class="z-50 shrink-0"></div>
+
+    <main class="flex-1 overflow-y-auto custom-scrollbar relative">
+      <header
+        class="h-16 shrink-0 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm flex items-center justify-between px-4 sm:px-8 sticky top-0 z-10 w-full">
+        <div class="flex items-center gap-4">
+          <button id="toggleSidebarBtn" class="lg:hidden p-2 -ml-2 text-slate-500 hover:bg-slate-100 rounded-lg">
+            <span class="material-symbols-outlined">menu</span>
+          </button>
+          <h2 id="navbar-page-name" class="text-lg font-semibold hidden sm:block">Daily Report Automation</h2>
+        </div>
+        <div class="flex items-center gap-4">
+          <div class="h-8 w-[1px] bg-slate-200 dark:border-slate-800 mx-2"></div>
+          <div class="flex items-center gap-3">
+            <div class="text-right hidden sm:block">
+              <p id="navbar-user-name" class="text-xs font-bold">Loading...</p>
+              <p id="navbar-user-role" class="text-[10px] text-slate-500">Access Granted</p>
+            </div>
+            <div id="navbar-user-avatar"
+              class="size-9 rounded-full bg-primary/20 border-2 border-primary/10 flex items-center justify-center overflow-hidden font-bold text-primary text-xs">
+              ??
+            </div>
           </div>
         </div>
-      </div>
-    </header>
+      </header>
 
-    <div class="p-4 sm:p-8 space-y-8 max-w-7xl mx-auto w-full">
-      <div class="grid grid-cols-1 xl:grid-cols-12 gap-8">
-        <div class="xl:col-span-7 space-y-8">
-          <section class="bg-surface rounded-xl border border-outline shadow-sm overflow-hidden">
-            <div class="px-6 py-4 border-b border-outline bg-slate-50 flex items-center justify-between">
-              <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
-                  <span class="material-symbols-outlined">cloud_sync</span>
-                </div>
-                <h2 class="font-bold">DParagon API Configuration</h2>
-              </div>
-            </div>
-            <div class="p-6 space-y-4">
-              <div class="grid grid-cols-1 gap-4">
-                <div>
-                  <label
-                    class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5 flex items-center gap-2">Base
-                    API URL
-                    <span id="envBadge"
-                      class="hidden px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider"></span>
-                  </label>
-                  <input id="dpApiUrl"
-                    class="w-full px-4 py-2.5 bg-slate-100 border border-outline rounded-lg text-sm font-medium focus:border-primary outline-none cursor-not-allowed"
-                    type="text" value="" placeholder="Memuat konfigurasi..." readonly />
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1.5">Email
-                      Login</label>
-                    <input id="dpEmail"
-                      class="w-full px-4 py-2.5 bg-slate-50 border border-outline rounded-lg text-sm font-medium focus:border-primary outline-none"
-                      type="email" placeholder="firajitio@gmail.com" />
+      <div class="p-4 sm:p-8 space-y-8 max-w-7xl mx-auto w-full">
+        <div class="grid grid-cols-1 xl:grid-cols-12 gap-8">
+          <div class="xl:col-span-7 space-y-8">
+            <section class="bg-surface rounded-xl border border-outline shadow-sm overflow-hidden">
+              <div class="px-6 py-4 border-b border-outline bg-slate-50 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                    <span class="material-symbols-outlined">cloud_sync</span>
                   </div>
+                  <h2 class="font-bold">DParagon API Configuration</h2>
+                </div>
+              </div>
+              <div class="p-6 space-y-4">
+                <div class="grid grid-cols-1 gap-4">
                   <div>
-                    <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1.5">Account
-                      Password</label>
-                    <div class="relative">
-                      <input id="accountPassword"
-                        class="w-full pl-4 pr-10 py-2.5 bg-slate-50 border border-outline rounded-lg text-sm font-medium focus:border-primary outline-none"
-                        type="password" placeholder="********" />
-                      <button type="button" id="togglePasswordBtn"
-                        class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
-                        <span id="togglePasswordIcon" class="material-symbols-outlined text-sm">visibility_off</span>
-                      </button>
+                    <label
+                      class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5 flex items-center gap-2">Base
+                      API URL
+                      <span id="envBadge"
+                        class="hidden px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider"></span>
+                    </label>
+                    <input id="dpApiUrl"
+                      class="w-full px-4 py-2.5 bg-slate-100 border border-outline rounded-lg text-sm font-medium focus:border-primary outline-none cursor-not-allowed"
+                      type="text" value="" placeholder="Memuat konfigurasi..." readonly />
+                  </div>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1.5">Email
+                        Login</label>
+                      <input id="dpEmail"
+                        class="w-full px-4 py-2.5 bg-slate-50 border border-outline rounded-lg text-sm font-medium focus:border-primary outline-none"
+                        type="email" placeholder="firajitio@gmail.com" />
+                    </div>
+                    <div>
+                      <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1.5">Account
+                        Password</label>
+                      <div class="relative">
+                        <input id="accountPassword"
+                          class="w-full pl-4 pr-10 py-2.5 bg-slate-50 border border-outline rounded-lg text-sm font-medium focus:border-primary outline-none"
+                          type="password" placeholder="********" />
+                        <button type="button" id="togglePasswordBtn"
+                          class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
+                          <span id="togglePasswordIcon" class="material-symbols-outlined text-sm">visibility_off</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
-          </section>
+            </section>
 
-          <section class="bg-surface rounded-xl border border-outline shadow-sm overflow-hidden">
-            <div class="px-6 py-4 border-b border-outline bg-slate-50 flex items-center justify-between">
-              <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center text-purple-600">
-                  <span class="material-symbols-outlined">schedule</span>
-                </div>
-                <h2 class="font-bold">Automation Schedule</h2>
-              </div>
-              <div class="flex items-center gap-3">
-                <span class="text-[10px] font-bold uppercase text-slate-500">Enable Schedule</span>
-                <label class="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" id="scheduleToggle" class="sr-only peer" />
-                  <div
-                    class="w-11 h-6 bg-slate-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary">
+            <section class="bg-surface rounded-xl border border-outline shadow-sm overflow-hidden">
+              <div class="px-6 py-4 border-b border-outline bg-slate-50 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <div class="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center text-purple-600">
+                    <span class="material-symbols-outlined">schedule</span>
                   </div>
-                </label>
-              </div>
-            </div>
-            <div class="p-6 space-y-6">
-              <div class="mb-6 relative">
-                <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1.5">Jam Eksekusi Laporan (WIB)</label>
-                <div class="relative">
-                  <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">schedule</span>
-                  <input id="executionTime" class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-outline rounded-lg text-sm font-medium focus:border-primary outline-none transition-colors" type="time" value="08:00" />
+                  <h2 class="font-bold">Automation Schedule</h2>
                 </div>
-                <p class="mt-1.5 text-[10px] text-slate-400 italic">Sistem akan menarik data dan langsung mengirimkan laporan WhatsApp secara berurutan pada jam tersebut.</p>
+                <div class="flex items-center gap-3">
+                  <span class="text-[10px] font-bold uppercase text-slate-500">Enable Schedule</span>
+                  <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="scheduleToggle" class="sr-only peer" />
+                    <div
+                      class="w-11 h-6 bg-slate-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary">
+                    </div>
+                  </label>
+                </div>
               </div>
+              <div class="p-6 space-y-6">
+                <div class="mb-6 relative">
+                  <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1.5">Jam Eksekusi
+                    Laporan (WIB)</label>
+                  <div class="relative">
+                    <span
+                      class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">schedule</span>
+                    <input id="executionTime"
+                      class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-outline rounded-lg text-sm font-medium focus:border-primary outline-none transition-colors"
+                      type="time" value="08:00" />
+                  </div>
+                  <p class="mt-1.5 text-[10px] text-slate-400 italic">Sistem akan menarik data dan langsung mengirimkan
+                    laporan WhatsApp secara berurutan pada jam tersebut.</p>
+                </div>
 
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1.5">Mulai
+                      Tanggal</label>
+                    <input id="startDate"
+                      class="w-full px-4 py-2.5 bg-slate-50 border border-outline rounded-lg text-sm font-medium focus:border-primary outline-none"
+                      type="date" />
+                  </div>
+                  <div>
+                    <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1.5">Berakhir
+                      Tanggal (Opsional)</label>
+                    <input id="endDate"
+                      class="w-full px-4 py-2.5 bg-slate-50 border border-outline rounded-lg text-sm font-medium focus:border-primary outline-none"
+                      type="date" />
+                  </div>
+                </div>
+
                 <div>
-                  <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1.5">Mulai Tanggal</label>
-                  <input id="startDate" class="w-full px-4 py-2.5 bg-slate-50 border border-outline rounded-lg text-sm font-medium focus:border-primary outline-none" type="date" />
+                  <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1.5">Execution
+                    Frequency</label>
+                  <div class="flex flex-wrap gap-4">
+                    <label
+                      class="flex-1 min-w-[120px] flex items-center justify-center gap-2 px-4 py-3 bg-slate-50 border border-outline rounded-xl cursor-pointer hover:bg-slate-100 transition-colors"
+                      id="labelFreqDaily">
+                      <input id="freqDaily" class="text-primary focus:ring-primary w-4 h-4" name="frequency"
+                        value="daily" type="radio" checked />
+                      <span class="text-sm font-semibold text-slate-600">Daily</span>
+                    </label>
+                    <label
+                      class="flex-1 min-w-[120px] flex items-center justify-center gap-2 px-4 py-3 bg-slate-50 border border-outline rounded-xl cursor-pointer hover:bg-slate-100 transition-colors"
+                      id="labelFreqWeekdays">
+                      <input id="freqWeekdays" class="text-primary focus:ring-primary w-4 h-4" name="frequency"
+                        value="weekdays" type="radio" />
+                      <span class="text-sm font-semibold text-slate-600">Weekdays Only</span>
+                    </label>
+                    <label
+                      class="flex-1 min-w-[120px] flex items-center justify-center gap-2 px-4 py-3 bg-slate-50 border border-outline rounded-xl cursor-pointer hover:bg-slate-100 transition-colors"
+                      id="labelFreqCustom">
+                      <input id="freqCustom" class="text-primary focus:ring-primary w-4 h-4" name="frequency"
+                        value="custom" type="radio" />
+                      <span class="text-sm font-semibold text-slate-600">Custom</span>
+                    </label>
+                  </div>
                 </div>
+
+                <div id="customDaysContainer" class="hidden space-y-3 p-4 bg-slate-50 border border-outline rounded-xl">
+                  <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">Pilih Hari
+                    Eksekusi</label>
+                  <div class="flex flex-wrap gap-3">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" name="customDay" value="1" class="rounded text-primary focus:ring-primary">
+                      <span class="text-xs font-medium">Sen</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" name="customDay" value="2" class="rounded text-primary focus:ring-primary">
+                      <span class="text-xs font-medium">Sel</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" name="customDay" value="3" class="rounded text-primary focus:ring-primary">
+                      <span class="text-xs font-medium">Rab</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" name="customDay" value="4" class="rounded text-primary focus:ring-primary">
+                      <span class="text-xs font-medium">Kam</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" name="customDay" value="5" class="rounded text-primary focus:ring-primary">
+                      <span class="text-xs font-medium">Jum</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" name="customDay" value="6" class="rounded text-primary focus:ring-primary">
+                      <span class="text-xs font-medium">Sab</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" name="customDay" value="0" class="rounded text-primary focus:ring-primary">
+                      <span class="text-xs font-medium">Min</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="space-y-4">
+                  <div class="flex items-center justify-between">
+                    <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Tanggal yang
+                      Dikecualikan</label>
+                  </div>
+                  <div class="flex gap-2">
+                    <input id="excludedDateInput" type="date"
+                      class="flex-1 px-4 py-2 bg-slate-50 border border-outline rounded-lg text-sm font-medium focus:border-primary outline-none transition-colors" />
+                    <button type="button" id="btnAddExcludedDate"
+                      class="px-4 py-2 bg-primary text-white rounded-lg text-xs font-bold hover:bg-primary/90 transition-all flex items-center gap-1">
+                      <span class="material-symbols-outlined text-sm">add</span> Tambah
+                    </button>
+                  </div>
+                  <div id="excludedDatesList"
+                    class="flex flex-wrap gap-2 min-h-[32px] p-2 bg-slate-50 border border-dashed border-outline rounded-lg">
+                    <!-- Badges will appear here -->
+                  </div>
+                  <p class="text-[10px] text-slate-400 italic">Otomatisasi tidak akan berjalan pada tanggal-tanggal di
+                    atas.</p>
+                </div>
+              </div>
+            </section>
+
+            <section class="bg-surface rounded-xl border border-outline shadow-sm overflow-hidden">
+              <div class="px-6 py-4 border-b border-outline bg-slate-50 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <div class="w-8 h-8 rounded-lg bg-[#25D366]/10 flex items-center justify-center text-[#25D366]">
+                    <span class="material-symbols-outlined">send</span>
+                  </div>
+                  <h2 class="font-bold">WhatsApp Configuration</h2>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <span class="text-[10px] font-bold uppercase text-emerald-600">Ready</span>
+                </div>
+              </div>
+              <div class="p-6 space-y-4">
                 <div>
-                  <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1.5">Berakhir Tanggal (Opsional)</label>
-                  <input id="endDate" class="w-full px-4 py-2.5 bg-slate-50 border border-outline rounded-lg text-sm font-medium focus:border-primary outline-none" type="date" />
+                  <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1.5">Select
+                    Connected Device</label>
+                  <select id="deviceSelector"
+                    class="w-full px-4 py-2.5 bg-slate-50 border border-outline rounded-lg text-sm font-medium focus:border-primary outline-none appearance-none">
+                    <option value="">Memuat device...</option>
+                  </select>
+                </div>
+                <div class="grid grid-cols-1 gap-4">
+                  <div>
+                    <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1.5">Target
+                      (Nomor/Grup ID)</label>
+                    <input id="targetNumber"
+                      class="w-full px-4 py-2.5 bg-slate-50 border border-outline rounded-lg text-sm font-medium focus:border-primary outline-none"
+                      type="text" placeholder="628... atau @g.us" value="" />
+                  </div>
                 </div>
               </div>
+            </section>
+          </div>
 
-              <div>
-                <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1.5">Execution
-                  Frequency</label>
-                <div class="flex flex-wrap gap-4">
-                  <label
-                    class="flex-1 min-w-[120px] flex items-center justify-center gap-2 px-4 py-3 bg-slate-50 border border-outline rounded-xl cursor-pointer hover:bg-slate-100 transition-colors"
-                    id="labelFreqDaily">
-                    <input id="freqDaily" class="text-primary focus:ring-primary w-4 h-4" name="frequency" value="daily"
-                      type="radio" checked />
-                    <span class="text-sm font-semibold text-slate-600">Daily</span>
-                  </label>
-                  <label
-                    class="flex-1 min-w-[120px] flex items-center justify-center gap-2 px-4 py-3 bg-slate-50 border border-outline rounded-xl cursor-pointer hover:bg-slate-100 transition-colors"
-                    id="labelFreqWeekdays">
-                    <input id="freqWeekdays" class="text-primary focus:ring-primary w-4 h-4" name="frequency"
-                      value="weekdays" type="radio" />
-                    <span class="text-sm font-semibold text-slate-600">Weekdays Only</span>
-                  </label>
-                  <label
-                    class="flex-1 min-w-[120px] flex items-center justify-center gap-2 px-4 py-3 bg-slate-50 border border-outline rounded-xl cursor-pointer hover:bg-slate-100 transition-colors"
-                    id="labelFreqCustom">
-                    <input id="freqCustom" class="text-primary focus:ring-primary w-4 h-4" name="frequency"
-                      value="custom" type="radio" />
-                    <span class="text-sm font-semibold text-slate-600">Custom</span>
-                  </label>
+          <div class="xl:col-span-5 space-y-8">
+            <section
+              class="bg-[#0f172a] rounded-xl border border-slate-800 shadow-xl overflow-hidden flex flex-col h-[300px]">
+              <div class="px-6 py-3 border-b border-slate-800 bg-slate-900/50 flex justify-between items-center">
+                <h3 class="text-xs font-bold uppercase tracking-widest text-slate-400">
+                  Execution Log
+                </h3>
+                <div class="flex gap-1.5">
+                  <span class="w-2.5 h-2.5 rounded-full bg-slate-700"></span>
+                  <span class="w-2.5 h-2.5 rounded-full bg-slate-700"></span>
+                  <span class="w-2.5 h-2.5 rounded-full bg-slate-700"></span>
                 </div>
               </div>
-
-              <div id="customDaysContainer" class="hidden space-y-3 p-4 bg-slate-50 border border-outline rounded-xl">
-                <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">Pilih Hari Eksekusi</label>
-                <div class="flex flex-wrap gap-3">
-                  <label class="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" name="customDay" value="1" class="rounded text-primary focus:ring-primary">
-                    <span class="text-xs font-medium">Sen</span>
-                  </label>
-                  <label class="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" name="customDay" value="2" class="rounded text-primary focus:ring-primary">
-                    <span class="text-xs font-medium">Sel</span>
-                  </label>
-                  <label class="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" name="customDay" value="3" class="rounded text-primary focus:ring-primary">
-                    <span class="text-xs font-medium">Rab</span>
-                  </label>
-                  <label class="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" name="customDay" value="4" class="rounded text-primary focus:ring-primary">
-                    <span class="text-xs font-medium">Kam</span>
-                  </label>
-                  <label class="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" name="customDay" value="5" class="rounded text-primary focus:ring-primary">
-                    <span class="text-xs font-medium">Jum</span>
-                  </label>
-                  <label class="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" name="customDay" value="6" class="rounded text-primary focus:ring-primary">
-                    <span class="text-xs font-medium">Sab</span>
-                  </label>
-                  <label class="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" name="customDay" value="0" class="rounded text-primary focus:ring-primary">
-                    <span class="text-xs font-medium">Min</span>
-                  </label>
+              <div id="terminalLog" class="p-5 font-mono text-[12px] space-y-2 overflow-y-auto text-slate-300 h-full">
+                <div class="flex gap-3 border-l-2 border-primary pl-3 py-1 bg-primary/5">
+                  <span class="text-slate-500">[--:--:--]</span>
+                  <span class="text-primary font-bold">READY:</span>
+                  <span>Waiting for user execution trigger...</span>
                 </div>
               </div>
+            </section>
 
-              <div class="space-y-4">
-                <div class="flex items-center justify-between">
-                  <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Tanggal yang Dikecualikan</label>
+            <section class="bg-surface rounded-xl border border-outline shadow-sm overflow-hidden flex flex-col">
+              <div class="px-6 py-4 border-b border-outline bg-slate-50 flex items-center justify-between">
+                <h3 class="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                  Message Preview
+                </h3>
+              </div>
+              <div class="p-6 bg-[#f1f5f9] relative">
+                <div id="messagePreview"
+                  class="bg-white p-4 rounded-lg shadow-sm text-sm text-slate-700 leading-relaxed font-['Inter'] italic border border-slate-100 whitespace-pre-wrap">
+                  (Preview akan muncul disini)
                 </div>
-                <div class="flex gap-2">
-                  <input id="excludedDateInput" type="date" class="flex-1 px-4 py-2 bg-slate-50 border border-outline rounded-lg text-sm font-medium focus:border-primary outline-none transition-colors" />
-                  <button type="button" id="btnAddExcludedDate" class="px-4 py-2 bg-primary text-white rounded-lg text-xs font-bold hover:bg-primary/90 transition-all flex items-center gap-1">
-                    <span class="material-symbols-outlined text-sm">add</span> Tambah
+
+                <div class="mt-6 flex flex-col gap-3">
+                  <button id="btnRunAutomation"
+                    class="w-full py-3.5 bg-primary text-white rounded-xl font-bold text-sm shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all flex items-center justify-center gap-2 group">
+                    <span class="material-symbols-outlined text-lg group-hover:rotate-12 transition-transform"
+                      style="font-variation-settings: &quot;FILL&quot; 1">bolt</span>
+                    Run Automation Now
+                  </button>
+                  <!-- Tombol Batalkan Jadwal: hanya muncul saat status 'waiting' -->
+                  <button id="btnCancelAutomation"
+                    class="hidden w-full py-2.5 bg-red-50 text-red-600 border border-red-200 rounded-xl font-bold text-xs hover:bg-red-100 transition-all flex items-center justify-center gap-2">
+                    <span class="material-symbols-outlined text-sm">cancel_schedule_send</span>
+                    Batalkan Jadwal
+                  </button>
+                  <button id="btnSaveSettings"
+                    class="w-full py-2.5 bg-white text-slate-600 border border-outline rounded-xl font-semibold text-xs hover:bg-slate-50 transition-all flex items-center justify-center gap-2">
+                    <span class="material-symbols-outlined text-sm">save</span>
+                    Update Settings & Save
                   </button>
                 </div>
-                <div id="excludedDatesList" class="flex flex-wrap gap-2 min-h-[32px] p-2 bg-slate-50 border border-dashed border-outline rounded-lg">
-                  <!-- Badges will appear here -->
-                </div>
-                <p class="text-[10px] text-slate-400 italic">Otomatisasi tidak akan berjalan pada tanggal-tanggal di atas.</p>
-              </div>
-            </div>
-          </section>
 
-          <section class="bg-surface rounded-xl border border-outline shadow-sm overflow-hidden">
-            <div class="px-6 py-4 border-b border-outline bg-slate-50 flex items-center justify-between">
-              <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-lg bg-[#25D366]/10 flex items-center justify-center text-[#25D366]">
-                  <span class="material-symbols-outlined">send</span>
-                </div>
-                <h2 class="font-bold">WhatsApp Configuration</h2>
               </div>
-              <div class="flex items-center gap-2">
-                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span class="text-[10px] font-bold uppercase text-emerald-600">Ready</span>
-              </div>
-            </div>
-            <div class="p-6 space-y-4">
-              <div>
-                <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1.5">Select
-                  Connected Device</label>
-                <select id="deviceSelector"
-                  class="w-full px-4 py-2.5 bg-slate-50 border border-outline rounded-lg text-sm font-medium focus:border-primary outline-none appearance-none">
-                  <option value="">Memuat device...</option>
-                </select>
-              </div>
-              <div class="grid grid-cols-1 gap-4">
-                <div>
-                  <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1.5">Target
-                    (Nomor/Grup ID)</label>
-                  <input id="targetNumber"
-                    class="w-full px-4 py-2.5 bg-slate-50 border border-outline rounded-lg text-sm font-medium focus:border-primary outline-none"
-                    type="text" placeholder="628... atau @g.us" value="" />
-                </div>
-              </div>
-            </div>
-          </section>
+            </section>
+          </div>
         </div>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
 
-        <div class="xl:col-span-5 space-y-8">
-          <section
-            class="bg-[#0f172a] rounded-xl border border-slate-800 shadow-xl overflow-hidden flex flex-col h-[300px]">
-            <div class="px-6 py-3 border-b border-slate-800 bg-slate-900/50 flex justify-between items-center">
-              <h3 class="text-xs font-bold uppercase tracking-widest text-slate-400">
-                Execution Log
-              </h3>
-              <div class="flex gap-1.5">
-                <span class="w-2.5 h-2.5 rounded-full bg-slate-700"></span>
-                <span class="w-2.5 h-2.5 rounded-full bg-slate-700"></span>
-                <span class="w-2.5 h-2.5 rounded-full bg-slate-700"></span>
-              </div>
+          <div class="bg-surface p-4 rounded-xl border border-outline flex items-center gap-4">
+            <div class="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
+              <span class="material-symbols-outlined">history</span>
             </div>
-            <div id="terminalLog" class="p-5 font-mono text-[12px] space-y-2 overflow-y-auto text-slate-300 h-full">
-              <div class="flex gap-3 border-l-2 border-primary pl-3 py-1 bg-primary/5">
-                <span class="text-slate-500">[--:--:--]</span>
-                <span class="text-primary font-bold">READY:</span>
-                <span>Waiting for user execution trigger...</span>
-              </div>
+            <div>
+              <p class="text-[10px] font-bold text-slate-500 uppercase">Last Run</p>
+              <p id="metricLastRun" class="text-sm font-bold">-</p>
             </div>
-          </section>
+          </div>
 
-          <section class="bg-surface rounded-xl border border-outline shadow-sm overflow-hidden flex flex-col">
-            <div class="px-6 py-4 border-b border-outline bg-slate-50 flex items-center justify-between">
-              <h3 class="text-[10px] font-bold uppercase tracking-widest text-slate-500">
-                Message Preview
-              </h3>
+          <div class="bg-surface p-4 rounded-xl border border-outline flex items-center gap-4">
+            <div class="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <span class="material-symbols-outlined">check_circle</span>
             </div>
-            <div class="p-6 bg-[#f1f5f9] relative">
-              <div id="messagePreview"
-                class="bg-white p-4 rounded-lg shadow-sm text-sm text-slate-700 leading-relaxed font-['Inter'] italic border border-slate-100 whitespace-pre-wrap">
-                (Preview akan muncul disini)
-              </div>
-
-              <div class="mt-6 flex flex-col gap-3">
-                <button id="btnRunAutomation"
-                  class="w-full py-3.5 bg-primary text-white rounded-xl font-bold text-sm shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all flex items-center justify-center gap-2 group">
-                  <span class="material-symbols-outlined text-lg group-hover:rotate-12 transition-transform"
-                    style="font-variation-settings: &quot;FILL&quot; 1">bolt</span>
-                  Run Automation Now
-                </button>
-                <!-- Tombol Batalkan Jadwal: hanya muncul saat status 'waiting' -->
-                <button id="btnCancelAutomation"
-                  class="hidden w-full py-2.5 bg-red-50 text-red-600 border border-red-200 rounded-xl font-bold text-xs hover:bg-red-100 transition-all flex items-center justify-center gap-2">
-                  <span class="material-symbols-outlined text-sm">cancel_schedule_send</span>
-                  Batalkan Jadwal
-                </button>
-                <button id="btnSaveSettings"
-                  class="w-full py-2.5 bg-white text-slate-600 border border-outline rounded-xl font-semibold text-xs hover:bg-slate-50 transition-all flex items-center justify-center gap-2">
-                  <span class="material-symbols-outlined text-sm">save</span>
-                  Update Settings & Save
-                </button>
-              </div>
-
+            <div>
+              <p class="text-[10px] font-bold text-slate-500 uppercase">Success Rate</p>
+              <p id="metricSuccessRate" class="text-sm font-bold">-%</p>
             </div>
-          </section>
+          </div>
+
+          <div class="bg-surface p-4 rounded-xl border border-outline flex items-center gap-4">
+            <div class="w-10 h-10 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center">
+              <span class="material-symbols-outlined">speed</span>
+            </div>
+            <div>
+              <p class="text-[10px] font-bold text-slate-500 uppercase">Avg Latency</p>
+              <p id="metricLatency" class="text-sm font-bold">-</p>
+            </div>
+          </div>
+
+          <div class="bg-surface p-4 rounded-xl border border-outline flex items-center gap-4">
+            <div class="w-10 h-10 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center">
+              <span class="material-symbols-outlined">database</span>
+            </div>
+            <div>
+              <p class="text-[10px] font-bold text-slate-500 uppercase">Data Processed</p>
+              <p id="metricData" class="text-sm font-bold">-</p>
+            </div>
+          </div>
+
         </div>
       </div>
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-
-        <div class="bg-surface p-4 rounded-xl border border-outline flex items-center gap-4">
-          <div class="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
-            <span class="material-symbols-outlined">history</span>
-          </div>
-          <div>
-            <p class="text-[10px] font-bold text-slate-500 uppercase">Last Run</p>
-            <p id="metricLastRun" class="text-sm font-bold">-</p>
-          </div>
-        </div>
-
-        <div class="bg-surface p-4 rounded-xl border border-outline flex items-center gap-4">
-          <div class="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center">
-            <span class="material-symbols-outlined">check_circle</span>
-          </div>
-          <div>
-            <p class="text-[10px] font-bold text-slate-500 uppercase">Success Rate</p>
-            <p id="metricSuccessRate" class="text-sm font-bold">-%</p>
-          </div>
-        </div>
-
-        <div class="bg-surface p-4 rounded-xl border border-outline flex items-center gap-4">
-          <div class="w-10 h-10 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center">
-            <span class="material-symbols-outlined">speed</span>
-          </div>
-          <div>
-            <p class="text-[10px] font-bold text-slate-500 uppercase">Avg Latency</p>
-            <p id="metricLatency" class="text-sm font-bold">-</p>
-          </div>
-        </div>
-
-        <div class="bg-surface p-4 rounded-xl border border-outline flex items-center gap-4">
-          <div class="w-10 h-10 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center">
-            <span class="material-symbols-outlined">database</span>
-          </div>
-          <div>
-            <p class="text-[10px] font-bold text-slate-500 uppercase">Data Processed</p>
-            <p id="metricData" class="text-sm font-bold">-</p>
-          </div>
-        </div>
-
-      </div>
-    </div>
-  </main>
-</div>
+    </main>
+  </div>
 
   <div id="globalModal"
     class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] hidden flex justify-center items-center transition-opacity">
