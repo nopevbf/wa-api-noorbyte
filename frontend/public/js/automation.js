@@ -85,7 +85,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const addExcludedDateBadge = (dateStr) => {
     if (!dateStr) return;
-    
+
     // Avoid duplicates
     const existing = Array.from(excludedDatesList.querySelectorAll("span")).find(
       (s) => s.textContent === dateStr
@@ -108,7 +108,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     excludedDatesList.appendChild(badge);
   };
 
-      if (btnAddExcludedDate && excludedDateInput && excludedDatesList) {
+  if (btnAddExcludedDate && excludedDateInput && excludedDatesList) {
     btnAddExcludedDate.addEventListener("click", () => {
       const dateStr = excludedDateInput.value;
       if (!dateStr) {
@@ -243,7 +243,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     for (let i = currentLogIndex; i < logs.length; i++) {
       logQueue.push(logs[i]);
     }
-    
+
     currentLogIndex = logs.length;
 
     if (!isDisplayingLog && logQueue.length > 0) {
@@ -320,131 +320,131 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     if (confirmRunBtn) {
-    confirmRunBtn.addEventListener("click", async () => {
-    const selectedTime = runTimeInput.value;
-    if (!selectedTime) {
-      showModal({
-        title: "Peringatan",
-        message: "Silakan pilih jam eksekusi terlebih dahulu.",
-        type: "warning"
-      });
-      return;
-    }
+      confirmRunBtn.addEventListener("click", async () => {
+        const selectedTime = runTimeInput.value;
+        if (!selectedTime) {
+          showModal({
+            title: "Peringatan",
+            message: "Silakan pilih jam eksekusi terlebih dahulu.",
+            type: "warning"
+          });
+          return;
+        }
 
-    const formData = getFormData();
-    if (
-      !formData.api_key ||
-      !formData.dp_api_url ||
-      !formData.dp_email ||
-      !formData.dp_password
-    ) {
-      showModal({
-        title: "Peringatan",
-        message: "Lengkapi semua kredensial dan pilih device terlebih dahulu.",
-        type: "warning"
-      });
-      return;
-    }
+        const formData = getFormData();
+        if (
+          !formData.api_key ||
+          !formData.dp_api_url ||
+          !formData.dp_email ||
+          !formData.dp_password
+        ) {
+          showModal({
+            title: "Peringatan",
+            message: "Lengkapi semua kredensial dan pilih device terlebih dahulu.",
+            type: "warning"
+          });
+          return;
+        }
 
-    runModal.classList.add("hidden");
+        runModal.classList.add("hidden");
 
-    // Save selected device
-    localStorage.setItem("automationSelectedDevice", formData.api_key);
+        // Save selected device
+        localStorage.setItem("automationSelectedDevice", formData.api_key);
 
-    btnRun.disabled = true;
-    btnRun.innerHTML = `<span class="material-symbols-outlined animate-spin">autorenew</span> Menjadwalkan...`;
-    clearTerminal();
+        btnRun.disabled = true;
+        btnRun.innerHTML = `<span class="material-symbols-outlined animate-spin">autorenew</span> Menjadwalkan...`;
+        clearTerminal();
 
-    try {
-      const res = await fetch(`${API_URL}/automation/run-manual`, {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${localStorage.getItem("noorbyte_session") || formData.api_key}`
-        },
-        body: JSON.stringify({
-          api_key: formData.api_key,
-          run_time: selectedTime,
-          dp_api_url: formData.dp_api_url,
-          dp_email: formData.dp_email,
-          dp_password: formData.dp_password,
-          target_number: formData.target_number,
-        }),
-      });
+        try {
+          const res = await fetch(`${API_URL}/automation/run-manual`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${localStorage.getItem("noorbyte_session") || formData.api_key}`
+            },
+            body: JSON.stringify({
+              api_key: formData.api_key,
+              run_time: selectedTime,
+              dp_api_url: formData.dp_api_url,
+              dp_email: formData.dp_email,
+              dp_password: formData.dp_password,
+              target_number: formData.target_number,
+            }),
+          });
 
-      const result = await res.json();
-      if (result.status) {
-        await addLog("text-emerald-400", "SERVER", result.message);
-        await addLog(
-          "text-purple-400",
-          "INFO",
-          "Eksekusi akan berjalan di server. Anda bisa menutup browser.",
-        );
-        showModal({ title: "Terjadwal ✅", message: result.message, type: "success" });
-        // Start polling for status updates
-        startStatusPolling();
-      } else {
-        throw new Error(result.message);
-      }
-    } catch (err) {
-      await addLog("text-red-500", "ERROR", err.message);
-      showModal({ title: "Gagal", message: err.message, type: "error" });
-    }
+          const result = await res.json();
+          if (result.status) {
+            await addLog("text-emerald-400", "SERVER", result.message);
+            await addLog(
+              "text-purple-400",
+              "INFO",
+              "Eksekusi akan berjalan di server. Anda bisa menutup browser.",
+            );
+            showModal({ title: "Terjadwal ✅", message: result.message, type: "success" });
+            // Start polling for status updates
+            startStatusPolling();
+          } else {
+            throw new Error(result.message);
+          }
+        } catch (err) {
+          await addLog("text-red-500", "ERROR", err.message);
+          showModal({ title: "Gagal", message: err.message, type: "error" });
+        }
 
-    btnRun.disabled = false;
-    btnRun.innerHTML = `<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">bolt</span> Run Automation Now`;
-    });
-    }
-    }
-
-    // ==========================================
-    // TOMBOL BATALKAN JADWAL AUTOMATION
-    // ==========================================
-    const btnCancelAutomation = document.getElementById("btnCancelAutomation");
-    if (btnCancelAutomation) {
-    btnCancelAutomation.addEventListener("click", async () => {
-    const apiKey = (selector ? selector.value : "") || localStorage.getItem("automationSelectedDevice") || "";
-    if (!apiKey) {
-    showModal({ title: "Peringatan", message: "Pilih device terlebih dahulu sebelum membatalkan jadwal.", type: "warning" });
-    return;
-    }
-
-    btnCancelAutomation.disabled = true;
-    btnCancelAutomation.innerHTML = `<span class="material-symbols-outlined animate-spin text-sm">autorenew</span> Membatalkan...`;
-
-    try {
-    const res = await fetch(`${API_URL}/automation/cancel-manual`, {
-      method: "POST",
-      headers: { 
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${localStorage.getItem("noorbyte_session") || apiKey}`
-      },
-      body: JSON.stringify({ api_key: apiKey }),
-    });
-    const result = await res.json();
-
-    if (result.status) {
-      // Reset btnRun ke mode normal
-      if (btnRun) {
         btnRun.disabled = false;
         btnRun.innerHTML = `<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">bolt</span> Run Automation Now`;
-      }
-      btnCancelAutomation.classList.add("hidden");
-      await addLog("text-amber-400", "CANCELLED", result.message);
-      showModal({ title: "Jadwal Dibatalkan ✅", message: result.message, type: "success" });
-    } else {
+      });
+    }
+  }
 
-      showModal({ title: "Gagal Batalkan", message: result.message, type: "error" });
-      btnCancelAutomation.disabled = false;
-      btnCancelAutomation.innerHTML = `<span class="material-symbols-outlined text-sm">cancel_schedule_send</span> Batalkan Jadwal`;
-    }
-    } catch (err) {
-    showModal({ title: "Error", message: err.message, type: "error" });
-    btnCancelAutomation.disabled = false;
-    btnCancelAutomation.innerHTML = `<span class="material-symbols-outlined text-sm">cancel_schedule_send</span> Batalkan Jadwal`;
-    }
+  // ==========================================
+  // TOMBOL BATALKAN JADWAL AUTOMATION
+  // ==========================================
+  const btnCancelAutomation = document.getElementById("btnCancelAutomation");
+  if (btnCancelAutomation) {
+    btnCancelAutomation.addEventListener("click", async () => {
+      const apiKey = (selector ? selector.value : "") || localStorage.getItem("automationSelectedDevice") || "";
+      if (!apiKey) {
+        showModal({ title: "Peringatan", message: "Pilih device terlebih dahulu sebelum membatalkan jadwal.", type: "warning" });
+        return;
+      }
+
+      btnCancelAutomation.disabled = true;
+      btnCancelAutomation.innerHTML = `<span class="material-symbols-outlined animate-spin text-sm">autorenew</span> Membatalkan...`;
+
+      try {
+        const res = await fetch(`${API_URL}/automation/cancel-manual`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${localStorage.getItem("noorbyte_session") || apiKey}`
+          },
+          body: JSON.stringify({ api_key: apiKey }),
+        });
+        const result = await res.json();
+
+        if (result.status) {
+          // Reset btnRun ke mode normal
+          if (btnRun) {
+            btnRun.disabled = false;
+            btnRun.innerHTML = `<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">bolt</span> Run Automation Now`;
+          }
+          btnCancelAutomation.classList.add("hidden");
+          await addLog("text-amber-400", "CANCELLED", result.message);
+          showModal({ title: "Jadwal Dibatalkan ✅", message: result.message, type: "success" });
+        } else {
+
+          showModal({ title: "Gagal Batalkan", message: result.message, type: "error" });
+          btnCancelAutomation.disabled = false;
+          btnCancelAutomation.innerHTML = `<span class="material-symbols-outlined text-sm">cancel_schedule_send</span> Batalkan Jadwal`;
+        }
+      } catch (err) {
+        showModal({ title: "Error", message: err.message, type: "error" });
+        btnCancelAutomation.disabled = false;
+        btnCancelAutomation.innerHTML = `<span class="material-symbols-outlined text-sm">cancel_schedule_send</span> Batalkan Jadwal`;
+      }
     });
-    }
+  }
   // ==========================================
   // 5. POLLING STATUS DARI BACKEND
   // ==========================================
@@ -469,7 +469,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!apiKey) {
       apiKey = localStorage.getItem("automationSelectedDevice") || "";
     }
-    
+
     // Safety check: Don't poll if no key
     if (!apiKey) return;
 
@@ -684,11 +684,11 @@ Occupancy Rate: 0%
       el.addEventListener("blur", autoSaveLocal);
     }
   });
-  
+
   document.querySelectorAll('input[name="frequency"], input[name="customDay"]').forEach(el => {
     el.addEventListener("change", autoSaveLocal);
   });
-  
+
   if (typeof selector !== "undefined" && selector) {
     selector.addEventListener("change", autoSaveLocal);
   }
@@ -710,7 +710,7 @@ Occupancy Rate: 0%
         ) {
           e.target.checked = false; // Batalkan check
           updatePreviewUI(false);
-          
+
           if (typeof showModal === 'function') {
             showModal({
               title: "Validasi Gagal",
@@ -726,34 +726,34 @@ Occupancy Rate: 0%
 
       updatePreviewUI(isActive);
       autoSaveLocal(); // Simpan state terbaru ke localStorage
-      
+
       // Auto-save status to backend
       if (!formData.api_key) {
-          return; // Should not hit here if isActive is true due to validation, but safe to keep for isActive=false
+        return; // Should not hit here if isActive is true due to validation, but safe to keep for isActive=false
       }
 
       try {
-          const res = await fetch(`${API_URL}/automation/save-settings`, {
-              method: "POST",
-              headers: { 
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${localStorage.getItem("noorbyte_session") || formData.api_key}`
-              },
-              body: JSON.stringify(formData),
-          });
-          const result = await res.json();
-          if (result.status) {
-              if (typeof showToast === 'function') {
-                  showToast(isActive ? "Otomatisasi Aktif 🚀" : "Otomatisasi Dimatikan 🛑", "success");
-              }
-
-              if (isActive) startStatusPolling();
-              else stopStatusPolling();
-          } else {
-              if (typeof showToast === 'function') showToast("Gagal update status", "error");
+        const res = await fetch(`${API_URL}/automation/save-settings`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${localStorage.getItem("noorbyte_session") || formData.api_key}`
+          },
+          body: JSON.stringify(formData),
+        });
+        const result = await res.json();
+        if (result.status) {
+          if (typeof showToast === 'function') {
+            showToast(isActive ? "Otomatisasi Aktif 🚀" : "Otomatisasi Dimatikan 🛑", "success");
           }
+
+          if (isActive) startStatusPolling();
+          else stopStatusPolling();
+        } else {
+          if (typeof showToast === 'function') showToast("Gagal update status", "error");
+        }
       } catch (err) {
-          if (typeof showToast === 'function') showToast("Error koneksi", "error");
+        if (typeof showToast === 'function') showToast("Error koneksi", "error");
       }
     });
   }
@@ -874,7 +874,7 @@ Occupancy Rate: 0%
         // Send to backend for persistent execution
         const res = await fetch(`${API_URL}/automation/save-settings`, {
           method: "POST",
-          headers: { 
+          headers: {
             "Content-Type": "application/json",
             "Authorization": `Bearer ${localStorage.getItem("noorbyte_session") || formData.api_key}`
           },
@@ -952,6 +952,92 @@ Occupancy Rate: 0%
   const initialDevice = localStorage.getItem("automationSelectedDevice");
   if (initialDevice) {
     startStatusPolling();
+  }
+
+  // ==========================================
+  // 11. MANUAL TASK INPUT LOGIC
+  // ==========================================
+  const manualTaskModal = document.getElementById("manualTaskModal");
+  const btnOpenTaskModal = document.getElementById("btnOpenTaskModal");
+  const btnCloseTaskModal = document.getElementById("btnCloseTaskModal");
+  const btnSubmitTask = document.getElementById("btnSubmitTask");
+  const taskListContainer = document.getElementById("taskListContainer");
+  const taskDateInput = document.getElementById("taskDateInput");
+  const taskDescInput = document.getElementById("taskDescInput");
+
+  let manualTasks = JSON.parse(localStorage.getItem("manualTasks") || "[]");
+
+  function renderTasks() {
+    if (!taskListContainer) return;
+    if (manualTasks.length === 0) {
+      taskListContainer.innerHTML = '<div class="text-center py-4 text-slate-400 text-xs italic">Belum ada task manual.</div>';
+      return;
+    }
+
+    taskListContainer.innerHTML = manualTasks.map((task, index) => `
+      <div class="p-3 bg-slate-50 border border-outline rounded-lg flex justify-between items-start gap-3 group">
+        <div class="flex-1">
+          <p class="text-[10px] font-bold text-primary uppercase mb-0.5">${task.date}</p>
+          <p class="text-xs text-slate-600 leading-relaxed font-medium">${task.description}</p>
+        </div>
+        <button onclick="removeManualTask(${index})" class="text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100">
+          <span class="material-symbols-outlined text-lg">delete</span>
+        </button>
+      </div>
+    `).join("");
+  }
+
+  window.removeManualTask = (index) => {
+    manualTasks.splice(index, 1);
+    localStorage.setItem("manualTasks", JSON.stringify(manualTasks));
+    renderTasks();
+  };
+
+  if (btnOpenTaskModal) {
+    btnOpenTaskModal.addEventListener("click", () => {
+      manualTaskModal.classList.remove("hidden");
+
+      // Default date
+      const today = new Date();
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+
+      const formatDate = (date) => {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const d = String(date.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+      };
+
+      taskDateInput.value = `${formatDate(today)} - ${formatDate(tomorrow)}`;
+      renderTasks();
+    });
+  }
+
+  if (btnCloseTaskModal) {
+    btnCloseTaskModal.addEventListener("click", () => {
+      manualTaskModal.classList.add("hidden");
+    });
+  }
+
+  if (btnSubmitTask) {
+    btnSubmitTask.addEventListener("click", () => {
+      const date = taskDateInput.value.trim();
+      const description = taskDescInput.value.trim();
+
+      if (!date || !description) {
+        if (typeof showToast === 'function') showToast("Mohon isi semua field", "warning");
+        return;
+      }
+
+      manualTasks.push({ date, description });
+      localStorage.setItem("manualTasks", JSON.stringify(manualTasks));
+
+      taskDescInput.value = "";
+      renderTasks();
+
+      if (typeof showToast === 'function') showToast("Task berhasil ditambahkan", "success");
+    });
   }
 });
 
