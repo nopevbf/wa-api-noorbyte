@@ -1,4 +1,4 @@
-# WhatsApp API (wa-api-noorbyte) - v1.1.0
+# WhatsApp API (wa-api-noorbyte) - v1.2.0
 
 Proyek ini adalah API backend terintegrasi WhatsApp menggunakan `whiskeysockets/baileys` dengan antarmuka frontend (UI) modern yang terpadu dalam satu layanan Node.js.
 
@@ -61,19 +61,14 @@ wa-api-noorbyte/
    npx cloudflared tunnel --url http://localhost:4000
    ```
 
-## Versioning & Changelog
+## 📋 Changelog
 
-### v1.1.0 (Latest)
-- **Version Bump**: Pembaruan sistem version ke `1.1.0` menggunakan standar Semantic Versioning.
-- **App Description**: Menambahkan deskripsi aplikasi ("WhatsApp API Backend with Automation Engine & Baileys") yang diekspos melalui endpoint `/api/app-config` dan dirender pada Sidebar UI.
+Untuk riwayat perubahan versi selengkapnya, silakan lihat file [CHANGELOG.md](CHANGELOG.md).
 
-### v1.0.0
-- **Unified Service**: Penggabungan server backend dan frontend ke dalam satu proses Node.js.
-- **Simplified Structure**: Penghapusan redundansi file `package.json` dan folder `node_modules` di level frontend.
-- **Enhanced Security**: Pembaruan `.gitignore` untuk proteksi menyeluruh terhadap file sesi dan kredensial.
-- **Relocated Services**: Pemindahan logic scraping (`scapper.js`) ke backend services untuk konsistensi module resolution.
-- **Optimization**: Pembersihan dead code, file sementara (`scratch/`), dan legacy UI server script.
-- **Stability**: Perbaikan penanganan token Bearer dan auto-retry pada Cloudflare Challenge.
+### v1.2.0 (Latest)
+- **Frontend & Dashboard**: Penambahan halaman *automation*, *dashboard*, dan manajemen grup beserta implementasi penuh logika autentikasinya.
+- **Design System**: Implementasi *design system generator* dengan *automated reasoning*.
+- **Branding**: Pembaruan nama brand menjadi NoorByteAPI di *sidebar*.
 
 ## Troubleshooting & Known Warnings
 

@@ -142,7 +142,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   if (selector) {
     try {
-      const isAdmin = localStorage.getItem("connectApi_loggedIn") === "true";
+      const isAdmin = localStorage.getItem("noorbyte_loggedIn") === "true";
       const guestApiKey = localStorage.getItem("noorbyte_session");
       // [MOD] Ensure api_key is passed even for admin role
       const query = isAdmin
@@ -620,7 +620,7 @@ Occupancy Rate: 0%
       excludedDates: formData.excluded_dates,
       targetNumber: formData.target_number,
     };
-    localStorage.setItem("connectApiSettings", JSON.stringify(localSettings));
+    localStorage.setItem("noorbyteSettings", JSON.stringify(localSettings));
     if (formData.api_key) {
       localStorage.setItem("automationSelectedDevice", formData.api_key);
     }
@@ -711,7 +711,7 @@ Occupancy Rate: 0%
   // Load saved settings from localStorage
   function loadSavedSettings() {
     const savedSettings = JSON.parse(
-      localStorage.getItem("connectApiSettings"),
+      localStorage.getItem("noorbyteSettings"),
     );
     if (savedSettings) {
       if (document.getElementById("dpApiUrl") && savedSettings.dpApiUrl)
@@ -808,7 +808,7 @@ Occupancy Rate: 0%
         excludedDates: formData.excluded_dates,
         targetNumber: formData.target_number,
       };
-      localStorage.setItem("connectApiSettings", JSON.stringify(localSettings));
+      localStorage.setItem("noorbyteSettings", JSON.stringify(localSettings));
 
       const originalText = btnSaveSettings.innerHTML;
       btnSaveSettings.innerHTML = `<span class="material-symbols-outlined animate-spin text-sm">autorenew</span> Saving...`;
