@@ -206,9 +206,9 @@ async function loadSidebar() {
           localStorage.removeItem("jailbreak_pending");
           localStorage.removeItem("jailbreak_timestamp");
           if (typeof showToast === "function") {
-             showToast("Pengajuan akses dibatalkan", "info");
+            showToast("Pengajuan akses dibatalkan", "info");
           } else {
-             showToast("Akses dibatalkan", "info");
+            showToast("Akses dibatalkan", "info");
           }
           closeJailbreakModal();
         });
@@ -388,7 +388,7 @@ document.addEventListener("DOMContentLoaded", () => {
 function showToast(message, type = "info", duration = 3000) {
   const container = getToastContainer();
   const toast = createToastElement(message, type);
-  
+
   container.appendChild(toast);
 
   setTimeout(() => {
@@ -408,7 +408,7 @@ function getToastContainer() {
     }
     document.body.appendChild(container);
   }
-  
+
   container.className = baseClasses;
   return container;
 }
@@ -471,7 +471,7 @@ function showModal(options = {}) {
 
   // 2. Setup Icon & Color based on type
   iconContainer.className = 'mx-auto flex items-center justify-center h-20 w-20 rounded-2xl mb-6 shadow-inner transition-all duration-300';
-  
+
   if (type === 'success') {
     iconContainer.classList.add('bg-emerald-50', 'dark:bg-emerald-900/20', 'text-emerald-500');
     icon.innerText = 'check_circle';

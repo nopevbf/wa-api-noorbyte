@@ -7,8 +7,22 @@
   <title>Daily Report Automation | NoorByteAPI</title>
 
   <link rel="stylesheet" href="/css/style.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vanilla-calendar-pro/styles/index.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vanilla-calendar-pro/styles/themes/light.css">
+  <style>
+    #taskCalendarInline {
+      position: relative;
+      z-index: 101;
+    }
+
+    #taskCalendarInline .vanilla-calendar {
+      width: 100%;
+      max-width: 100%;
+    }
+  </style>
   <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap"
+    rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
     rel="stylesheet" />
 
@@ -536,17 +550,39 @@
           <div class="space-y-4">
             <div>
               <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1.5">Tanggal</label>
-              <div class="relative">
-                <span
-                  class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">calendar_today</span>
-                <input id="taskDateInput" type="text"
-                  class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-outline rounded-lg text-sm font-medium focus:border-primary outline-none transition-colors"
-                  placeholder="YYYY-MM-DD - YYYY-MM-DD" />
+              <div class="space-y-3">
+                <div class="relative">
+                  <span
+                    class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">
+                    calendar_today
+                  </span>
+
+                  <input id="taskDateInput" type="text"
+                    class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-outline rounded-lg text-sm font-medium focus:border-primary outline-none transition-colors"
+                    placeholder="YYYY-MM-DD - YYYY-MM-DD" readonly />
+                </div>
+
+                <div id="taskCalendarWrapper" class="hidden space-y-2">
+                  <div id="taskCalendarInline" class="relative z-[101]"></div>
+
+                  <div class="flex justify-end gap-2">
+                    <button type="button" id="btnTaskDateToday"
+                      class="px-3 py-1.5 text-xs font-bold rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors">
+                      Today
+                    </button>
+
+                    <button type="button" id="btnTaskDateReset"
+                      class="px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200 transition-colors">
+                      Reset
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
 
             <div>
-              <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1.5">Deskripsi</label>
+              <label
+                class="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1.5">Deskripsi</label>
               <textarea id="taskDescInput" rows="3"
                 class="w-full px-4 py-2.5 bg-slate-50 border border-outline rounded-lg text-sm font-medium focus:border-primary outline-none transition-colors resize-none"
                 placeholder="Tulis deskripsi task..."></textarea>
@@ -565,6 +601,10 @@
   <!-- END Modal Manual Task Input -->
 
 
+  <!-- Calendar Root for Manual Task -->
+  <div id="calendar-root"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/vanilla-calendar-pro"></script>
   <script src="/js/sidebar.js"></script>
   <script src="/js/automation.js"></script>
 </body>

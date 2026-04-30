@@ -965,6 +965,176 @@ Occupancy Rate: 0%
   const taskDateInput = document.getElementById("taskDateInput");
   const taskDescInput = document.getElementById("taskDescInput");
 
+  const taskCalendarInline = document.getElementById("taskCalendarInline");
+  const taskCalendarWrapper = document.getElementById("taskCalendarWrapper");
+  const btnTaskDateToday = document.getElementById("btnTaskDateToday");
+  const btnTaskDateReset = document.getElementById("btnTaskDateReset");
+
+  let taskCalendar = null;
+
+  if (taskCalendarInline && taskDateInput && typeof VanillaCalendarPro !== "undefined") {
+    try {
+      const formatDisplayDate = (date) => {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, "0");
+        const d = String(date.getDate()).padStart(2, "0");
+
+        return `${d}-${m}-${y}`;
+      };
+
+      const formatIsoDate = (date) => {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, "0");
+        const d = String(date.getDate()).padStart(2, "0");
+
+        return `${y}-${m}-${d}`;
+      };
+      taskCalendar = new VanillaCalendarPro.Calendar(taskCalendarInline, {
+        type: "multiple",
+
+        selectionDatesMode: "multiple-ranged",
+        enableEdgeDatesOnly: true,
+
+        settings: {
+          range: {
+            disablePast: false,
+          },
+          lang: "id-ID",
+        },
+
+
+        onClickDate(self) {
+          const dates = self.context?.selectedDates || self.selectedDates || [];
+
+          const formatDate = (value) => {
+            if (!value) return "";
+
+            if (typeof value === "string") {
+              return value.split("-").reverse().join("-");
+            }
+
+            const date = new Date(value);
+
+            if (Number.isNaN(date.getTime())) {
+              console.log("Invalid date value:", value);
+              return "";
+            }
+
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, "0");
+            const d = String(date.getDate()).padStart(2, "0");
+
+            return `${y}-${m}-${d}`;
+          };
+
+          if (dates.length === 0) {
+            taskDateInput.value = "";
+            return;
+          }
+
+          // Klik pertama: jadikan range tanggal yang sama
+          if (dates.length === 1) {
+            const sameDate = formatDate(dates[0]);
+            taskDateInput.value = `${sameDate} - ${sameDate}`;
+            return;
+          }
+
+          // Klik kedua: range normal
+          const sortedDates = [...dates].sort((a, b) => {
+            return new Date(a).getTime() - new Date(b).getTime();
+          });
+
+          const start = formatDate(sortedDates[0]);
+          const end = formatDate(sortedDates[sortedDates.length - 1]);
+
+          taskDateInput.value = `${start} - ${end}`;
+
+          taskCalendarWrapper.classList.add("hidden");
+        },
+      });
+
+      taskCalendar.init();
+      taskDateInput.addEventListener("click", () => {
+        taskCalendarWrapper.classList.remove("hidden");
+
+        requestAnimationFrame(() => {
+          taskCalendar?.update?.({
+            dates: false,
+            month: false,
+            year: false,
+          });
+        });
+      });
+
+      taskDateInput.addEventListener("focus", () => {
+        taskCalendarWrapper.classList.remove("hidden");
+
+        requestAnimationFrame(() => {
+          taskCalendar?.update?.({
+            dates: false,
+            month: false,
+            year: false,
+          });
+        });
+      });
+
+      btnTaskDateToday?.addEventListener("click", () => {
+        const today = new Date();
+        const displayToday = formatDisplayDate(today);
+        const isoToday = formatIsoDate(today);
+
+        taskDateInput.value = `${displayToday} - ${displayToday}`;
+
+        if (taskCalendar) {
+          taskCalendar.selectedDates = [isoToday];
+          taskCalendar.update?.({
+            dates: false,
+            month: false,
+            year: false,
+          });
+        }
+
+        taskCalendarWrapper.classList.add("hidden");
+      });
+
+      btnTaskDateReset?.addEventListener("click", () => {
+        taskDateInput.value = "";
+
+        if (taskCalendar) {
+          taskCalendar.selectedDates = [];
+          taskCalendar.update?.({
+            dates: true,
+            month: false,
+            year: false,
+          });
+        }
+
+        taskCalendarWrapper.classList.add("hidden");
+      });
+
+      document.addEventListener("click", (event) => {
+        const clickedInput = taskDateInput.contains(event.target);
+        const clickedCalendar = taskCalendarInline.contains(event.target);
+
+        if (!clickedInput && !clickedCalendar) {
+          taskCalendarWrapper.classList.add("hidden");
+        }
+      });
+
+      taskDateInput.addEventListener("focus", () => {
+        taskCalendarWrapper.classList.remove("hidden");
+
+        requestAnimationFrame(() => {
+          if (taskCalendar && taskCalendar.update) {
+            taskCalendar.update({ dates: false, month: false, year: false });
+          }
+        });
+      });
+    } catch (err) {
+      console.error("Vanilla Calendar Pro initialization failed:", err);
+    }
+  }
+
   let manualTasks = JSON.parse(localStorage.getItem("manualTasks") || "[]");
 
   function renderTasks() {
@@ -997,19 +1167,33 @@ Occupancy Rate: 0%
     btnOpenTaskModal.addEventListener("click", () => {
       manualTaskModal.classList.remove("hidden");
 
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          if (taskCalendar && taskCalendar.update) {
+            taskCalendar.update({
+              dates: false,
+              month: false,
+              year: false,
+            });
+          }
+
+          // paksa tetap hidden pas modal pertama dibuka
+          taskCalendarWrapper.classList.add("hidden");
+        }, 0);
+      });
+
       // Default date
       const today = new Date();
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-
       const formatDate = (date) => {
         const y = date.getFullYear();
-        const m = String(date.getMonth() + 1).padStart(2, '0');
-        const d = String(date.getDate()).padStart(2, '0');
+        const m = String(date.getMonth() + 1).padStart(2, "0");
+        const d = String(date.getDate()).padStart(2, "0");
         return `${y}-${m}-${d}`;
       };
 
-      taskDateInput.value = `${formatDate(today)} - ${formatDate(tomorrow)}`;
+      const todayStr = formatDate(today);
+      taskDateInput.value = `${todayStr} - ${todayStr}`;
+
       renderTasks();
     });
   }
