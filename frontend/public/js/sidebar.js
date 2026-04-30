@@ -386,44 +386,57 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function showToast(message, type = "info", duration = 3000) {
-  let container = document.getElementById("toastContainer");
-
-  if (!container || container.parentElement !== document.body) {
-    if (!container) {
-      container = document.createElement("div");
-      container.id = "toastContainer";
-    }
-    container.className = "fixed top-6 right-6 z-[999999] flex flex-col gap-3 pointer-events-none";
-    document.body.appendChild(container);
-  } else {
-    container.className = "fixed top-6 right-6 z-[999999] flex flex-col gap-3 pointer-events-none";
-  }
-
-  const toast = document.createElement("div");
-  toast.className = `toast-pill ${type}`;
-
-  let icon = "info";
-  if (type === "success") icon = "check_circle";
-  if (type === "error") icon = "error";
-  if (type === "warning") icon = "warning";
-
-  toast.innerHTML = `
-    <div class="flex items-center gap-3 px-4 py-3 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700 pointer-events-auto min-w-[280px]">
-      <div class="flex-shrink-0 size-10 rounded-xl flex items-center justify-center ${type === 'success' ? 'bg-emerald-50 text-emerald-500' : type === 'error' ? 'bg-red-50 text-red-500' : 'bg-blue-50 text-blue-500'}">
-        <span class="material-symbols-outlined">${icon}</span>
-      </div>
-      <div class="flex-1">
-        <p class="text-sm font-bold text-slate-900 dark:text-white">${message}</p>
-      </div>
-    </div>
-  `;
-
+  const container = getToastContainer();
+  const toast = createToastElement(message, type);
+  
   container.appendChild(toast);
 
   setTimeout(() => {
     toast.classList.add("toast-out");
     setTimeout(() => toast.remove(), 400);
   }, duration);
+}
+
+function getToastContainer() {
+  let container = document.getElementById("toastContainer");
+  const baseClasses = "fixed top-6 right-6 z-[999999] flex flex-col gap-3 pointer-events-none";
+
+  if (!container || container.parentElement !== document.body) {
+    if (!container) {
+      container = document.createElement("div");
+      container.id = "toastContainer";
+    }
+    document.body.appendChild(container);
+  }
+  
+  container.className = baseClasses;
+  return container;
+}
+
+function createToastElement(message, type) {
+  const toast = document.createElement("div");
+  // .toast-pill is defined in style.css. We add dark mode and interaction classes here.
+  toast.className = `toast-pill ${type} dark:bg-slate-900 dark:border-slate-800 dark:text-white pointer-events-auto transition-all duration-300`;
+
+  const config = {
+    success: { icon: 'check_circle', color: 'text-emerald-500', bg: 'bg-emerald-50' },
+    error: { icon: 'error', color: 'text-red-500', bg: 'bg-red-50' },
+    warning: { icon: 'warning', color: 'text-amber-500', bg: 'bg-amber-50' },
+    info: { icon: 'info', color: 'text-blue-500', bg: 'bg-blue-50' }
+  }[type] || { icon: 'info', color: 'text-blue-500', bg: 'bg-blue-50' };
+
+  toast.innerHTML = `
+    <div class="flex items-center gap-4">
+      <div class="flex-shrink-0 size-10 rounded-2xl flex items-center justify-center ${config.bg} ${config.color} dark:bg-opacity-10 shadow-sm">
+        <span class="material-symbols-outlined !text-[22px] font-bold">${config.icon}</span>
+      </div>
+      <div class="flex-1 pr-2">
+        <p class="text-[13px] font-extrabold tracking-tight leading-tight">${message}</p>
+      </div>
+    </div>
+  `;
+
+  return toast;
 }
 
 /**
