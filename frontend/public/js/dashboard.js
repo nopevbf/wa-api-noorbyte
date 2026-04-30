@@ -6,8 +6,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   try {
     const isAdmin = localStorage.getItem('connectApi_loggedIn') === 'true';
     const guestApiKey = localStorage.getItem('noorbyte_session');
-    const query = isAdmin ? '?role=admin' : (guestApiKey ? `?api_key=${guestApiKey}` : '');
-    const devRes = await fetch(`${API_URL}/get-devices${query}`);
+    
+    const queryParams = new URLSearchParams();
+    if (isAdmin) queryParams.append('role', 'admin');
+    if (guestApiKey) queryParams.append('api_key', guestApiKey);
+    
+    const devRes = await fetch(`${API_URL}/get-devices?${queryParams.toString()}`);
     const devResult = await devRes.json();
 
     const tbody = document.getElementById("dashboardDeviceList");
@@ -60,12 +64,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   try {
     const isAdminStats = localStorage.getItem('connectApi_loggedIn') === 'true';
     const guestApiKeyStats = localStorage.getItem('noorbyte_session');
-    // [MOD] Ensure api_key is passed even for admin role
-    const statsQuery = isAdminStats 
-      ? `?role=admin&api_key=${guestApiKeyStats || ''}` 
-      : (guestApiKeyStats ? `?api_key=${guestApiKeyStats}` : '');
     
-    const statRes = await fetch(`${API_URL}/dashboard-stats${statsQuery}`);
+    const statsParams = new URLSearchParams();
+    if (isAdminStats) statsParams.append('role', 'admin');
+    if (guestApiKeyStats) statsParams.append('api_key', guestApiKeyStats);
+    
+    const statRes = await fetch(`${API_URL}/dashboard-stats?${statsParams.toString()}`);
     const statResult = await statRes.json();
 
     if (statResult.status) {
