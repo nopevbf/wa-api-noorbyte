@@ -993,6 +993,38 @@ Occupancy Rate: 0%
     renderTasks();
   };
 
+  // Initialize AirDatepicker (Optional Enhancement)
+  let taskDatePicker;
+  if (taskDateInput && typeof AirDatepicker !== 'undefined') {
+    try {
+      // English locale object definition (Manual fallback to avoid 'exports is not defined' error)
+      const localeEn = {
+        days: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+        daysShort: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+        daysMin: ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'],
+        months: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+        monthsShort: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+        today: 'Today',
+        clear: 'Clear',
+        dateFormat: 'yyyy-MM-dd',
+        timeFormat: 'hh:mm aa',
+        firstDay: 0
+      };
+
+      taskDatePicker = new AirDatepicker(taskDateInput, {
+        locale: localeEn,
+        range: true,
+        multipleDatesSeparator: " - ",
+        dateFormat: "yyyy-MM-dd",
+        autoClose: true,
+        // Positioning fix for modals
+        position: 'bottom center',
+      });
+    } catch (e) {
+      console.warn("Gagal inisialisasi AirDatepicker:", e);
+    }
+  }
+
   if (btnOpenTaskModal) {
     btnOpenTaskModal.addEventListener("click", () => {
       manualTaskModal.classList.remove("hidden");
@@ -1002,14 +1034,14 @@ Occupancy Rate: 0%
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
 
-      const formatDate = (date) => {
-        const y = date.getFullYear();
-        const m = String(date.getMonth() + 1).padStart(2, '0');
-        const d = String(date.getDate()).padStart(2, '0');
-        return `${y}-${m}-${d}`;
-      };
+      if (taskDatePicker) {
+        taskDatePicker.selectDate([today, tomorrow]);
+      } else {
+        // Fallback if datepicker fails
+        const formatDate = (date) => date.toISOString().split('T')[0];
+        taskDateInput.value = `${formatDate(today)} - ${formatDate(tomorrow)}`;
+      }
 
-      taskDateInput.value = `${formatDate(today)} - ${formatDate(tomorrow)}`;
       renderTasks();
     });
   }
@@ -1034,6 +1066,11 @@ Occupancy Rate: 0%
       localStorage.setItem("manualTasks", JSON.stringify(manualTasks));
 
       taskDescInput.value = "";
+      if (taskDatePicker) {
+        taskDatePicker.clear();
+      } else {
+        taskDateInput.value = "";
+      }
       renderTasks();
 
       if (typeof showToast === 'function') showToast("Task berhasil ditambahkan", "success");

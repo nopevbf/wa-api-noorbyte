@@ -7,6 +7,7 @@
   <title>Daily Report Automation | NoorByteAPI</title>
 
   <link rel="stylesheet" href="/css/style.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/air-datepicker@3.6.0/air-datepicker.css">
   <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
@@ -87,6 +88,11 @@
         "wght" 400,
         "GRAD" 0,
         "opsz" 24;
+    }
+
+    /* Fix Air Datepicker z-index to show on top of modals */
+    .air-datepicker {
+      z-index: 9999 !important;
     }
   </style>
 </head>
@@ -566,6 +572,7 @@
 
 
   <script src="/js/sidebar.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/air-datepicker@3.6.0/air-datepicker.js"></script>
   <script src="/js/automation.js"></script>
 </body>
 
