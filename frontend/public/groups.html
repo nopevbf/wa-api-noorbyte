@@ -3,98 +3,133 @@
 <head>
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-    <title>WhatsApp Groups - API Provider</title>
+    <title>WhatsApp Groups | NoorByteAPI</title>
     
     <link rel="stylesheet" href="/css/style.css">
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
     
     <script id="tailwind-config">
-        tailwind.config = { darkMode: "class", theme: { extend: { colors: { "primary": "#136dec", "background-light": "#f6f7f8", "background-dark": "#101822" }, fontFamily: { "display": ["Inter"] } } } }
+        tailwind.config = { 
+            darkMode: "class", 
+            theme: { 
+                extend: { 
+                    colors: { 
+                        primary: "#6366f1", 
+                        "background-light": "#f5f3ff", 
+                        "background-dark": "#0f172a",
+                        surface: "#ffffff",
+                        outline: "#e2e8f0"
+                    }, 
+                    fontFamily: { 
+                        display: ["Plus Jakarta Sans", "Inter", "sans-serif"],
+                        body: ["Plus Jakarta Sans", "Inter", "sans-serif"]
+                    } 
+                } 
+            } 
+        }
     </script>
-    <style> body { font-family: 'Inter', sans-serif; } .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; } </style>
+    <style> body { font-family: 'Plus Jakarta Sans', sans-serif; } .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; } </style>
 </head>
 <body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 font-display">
-<div class="flex min-h-screen">
+<div class="flex h-screen overflow-hidden">
     
-    <div id="sidebar-container"></div>
+    <div id="sidebar-container" class="z-50 shrink-0"></div>
     
     <main class="flex-1 overflow-y-auto relative custom-scrollbar">
-        <header class="h-16 shrink-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 sm:px-8 sticky top-0 z-10">
+        <header class="h-16 shrink-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200/60 dark:border-slate-800/60 flex items-center justify-between px-4 sm:px-8 sticky top-0 z-10">
             <div class="flex items-center gap-4">
-                <button id="toggleSidebarBtn" class="lg:hidden p-2 -ml-2 text-slate-500 hover:bg-slate-100 rounded-lg">
+                <button id="toggleSidebarBtn" class="lg:hidden p-2 -ml-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-colors">
                     <span class="material-symbols-outlined">menu</span>
                 </button>
                 <div class="flex items-center gap-2">
-                    <span class="text-slate-400 hidden sm:inline">Pages</span> <span class="text-slate-400 hidden sm:inline">/</span> <span class="text-slate-900 dark:text-slate-100 font-medium">WhatsApp Groups</span>
+                    <span class="text-slate-400 hidden sm:inline font-medium">Pages</span> 
+                    <span class="text-slate-300 dark:text-slate-700 hidden sm:inline">/</span> 
+                    <h2 id="navbar-page-name" class="text-slate-900 dark:text-slate-100 font-bold tracking-tight">WhatsApp Groups</h2>
+                </div>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="h-8 w-[1px] bg-slate-200/60 dark:bg-slate-800/60 mx-2"></div>
+                <div class="flex items-center gap-3">
+                    <div class="text-right hidden sm:block">
+                        <p id="navbar-user-name" class="text-xs font-extrabold text-slate-900 dark:text-white">Admin User</p>
+                        <p id="navbar-user-role" class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Master Access</p>
+                    </div>
+                    <div id="navbar-user-avatar" class="size-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center overflow-hidden font-bold text-primary text-xs shadow-sm shadow-primary/5">
+                        JD
+                    </div>
                 </div>
             </div>
         </header>
 
-        <div class="p-8 space-y-8 max-w-6xl mx-auto w-full">
+        <div class="p-4 sm:p-8 space-y-8 max-w-7xl mx-auto w-full">
             <div class="flex flex-col gap-1">
-                <h2 class="text-3xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">WhatsApp Groups</h2>
-                <p class="text-slate-500 text-lg">Manage and sync groups from your connected devices.</p>
+                <h2 class="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">WhatsApp Groups</h2>
+                <p class="text-slate-500 text-sm font-medium">Manage and sync groups from your connected devices.</p>
             </div>
 
-            <div class="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-wrap items-end gap-6">
+            <section class="bg-surface dark:bg-slate-900/60 p-6 rounded-2xl border border-outline dark:border-slate-800 shadow-sm backdrop-blur-sm flex flex-wrap items-end gap-6">
                 <div class="flex-1 min-w-[300px] space-y-2">
-                    <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300">Select Connected Device</label>
+                    <label class="block text-[11px] font-bold uppercase tracking-widest text-slate-500">Select Connected Device</label>
                     <div class="relative">
-                        <select id="deviceSelector" class="w-full pl-4 pr-10 py-3 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 focus:ring-primary focus:border-primary transition-all appearance-none">
+                        <select id="deviceSelector" class="w-full pl-4 pr-10 py-3 bg-slate-50 dark:bg-slate-800/50 border border-outline dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm font-semibold focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all appearance-none outline-none">
                             <option value="">Loading devices...</option>
                         </select>
                         <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">keyboard_arrow_down</span>
                     </div>
                 </div>
-                <button id="btnFetch" onclick="fetchGroups()" class="px-8 py-3.5 bg-primary hover:bg-primary/90 text-white font-bold rounded-lg transition-all flex items-center gap-2 shadow-lg shadow-primary/20">
+                <button id="btnFetch" onclick="fetchGroups()" class="px-8 py-3.5 bg-primary hover:bg-primary/90 text-white font-bold rounded-xl transition-all flex items-center gap-2 shadow-lg shadow-primary/20 active:scale-[0.98]">
                     <span id="btnIcon" class="material-symbols-outlined">sync</span>
                     <span id="btnText">Fetch Groups</span>
                 </button>
-            </div>
+            </section>
 
-            <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
+            <section class="bg-surface dark:bg-slate-900/60 rounded-2xl border border-outline dark:border-slate-800 overflow-hidden shadow-sm backdrop-blur-sm">
                 <div id="emptyState" class="p-20 flex flex-col items-center justify-center text-center space-y-4">
-                    <div class="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center text-primary mb-2">
-                        <span class="material-symbols-outlined !text-4xl">devices_other</span>
+                    <div class="w-20 h-20 bg-primary/10 rounded-2xl flex items-center justify-center text-primary mb-2 shadow-inner">
+                        <span class="material-symbols-outlined !text-4xl" style="font-variation-settings: 'FILL' 1;">devices_other</span>
                     </div>
-                    <h3 class="text-xl font-bold text-slate-900 dark:text-slate-100">No Device Selected</h3>
-                    <p class="text-slate-500 max-w-sm mx-auto">Please select a connected WhatsApp device and click Fetch.</p>
+                    <h3 class="text-xl font-bold text-slate-900 dark:text-white tracking-tight">No Device Selected</h3>
+                    <p class="text-slate-500 text-sm font-medium max-w-sm mx-auto">Please select a connected WhatsApp device and click Fetch to view groups.</p>
                 </div>
 
                 <div id="tableState" class="hidden overflow-x-auto">
                     <table class="w-full text-left border-collapse">
-                        <thead class="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800">
+                        <thead class="bg-slate-50/50 dark:bg-slate-800/50 border-b border-outline dark:border-slate-800">
                             <tr>
-                                <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Group Name</th>
-                                <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Group ID</th>
-                                <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Participants</th>
-                                <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Action</th>
+                                <th class="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Group Name</th>
+                                <th class="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Group ID</th>
+                                <th class="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-center">Participants</th>
+                                <th class="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-right">Action</th>
                             </tr>
                         </thead>
-                        <tbody id="groupTableBody" class="divide-y divide-slate-200 dark:divide-slate-800">
+                        <tbody id="groupTableBody" class="divide-y divide-slate-100 dark:divide-slate-800">
                             </tbody>
                     </table>
                 </div>
-            </div>
+            </section>
             
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div class="p-6 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 flex items-start gap-4">
-                    <div class="p-3 bg-blue-100 text-blue-600 rounded-lg"><span class="material-symbols-outlined">info</span></div>
-                    <div><h4 class="font-bold">Sync Info</h4><p class="text-sm text-slate-500">Klik Fetch untuk update data grup terbaru dari WA.</p></div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="p-6 bg-indigo-50/50 dark:bg-indigo-900/20 rounded-2xl border border-indigo-100 dark:border-indigo-800/30 flex items-start gap-4">
+                    <div class="p-3 bg-indigo-100 dark:bg-indigo-800/40 text-indigo-600 dark:text-indigo-300 rounded-xl shadow-sm"><span class="material-symbols-outlined">info</span></div>
+                    <div><h4 class="font-bold text-slate-900 dark:text-white tracking-tight">Sync Info</h4><p class="text-sm text-slate-500 font-medium">Klik Fetch untuk update data grup terbaru dari WhatsApp secara real-time.</p></div>
                 </div>
-                <div class="p-6 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 flex items-start gap-4">
-                    <div class="p-3 bg-amber-100 text-amber-600 rounded-lg"><span class="material-symbols-outlined">api</span></div>
-                    <div><h4 class="font-bold">API Access</h4><p class="text-sm text-slate-500">Gunakan Group ID (@g.us) sebagai target_number untuk kirim pesan broadcast.</p></div>
+                <div class="p-6 bg-emerald-50/50 dark:bg-emerald-900/20 rounded-2xl border border-emerald-100 dark:border-emerald-800/30 flex items-start gap-4">
+                    <div class="p-3 bg-emerald-100 dark:bg-emerald-800/40 text-emerald-600 dark:text-emerald-300 rounded-xl shadow-sm"><span class="material-symbols-outlined">api</span></div>
+                    <div><h4 class="font-bold text-slate-900 dark:text-white tracking-tight">API Access</h4><p class="text-sm text-slate-500 font-medium font-mono">Gunakan Group ID (@g.us) sebagai target_number untuk kirim pesan broadcast.</p></div>
                 </div>
             </div>
         </div>
     </main>
 </div>
 
-<div id="globalModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] hidden flex justify-center items-center transition-opacity">
-    <div class="bg-white rounded-xl shadow-2xl p-6 text-center max-w-sm"><h3 id="modalTitle" class="font-bold text-lg mb-2"></h3><p id="modalMessage" class="text-sm text-slate-500 mb-4"></p><button onclick="document.getElementById('globalModal').classList.add('hidden')" class="bg-primary text-white px-4 py-2 rounded-lg w-full">Tutup</button></div>
+<div id="globalModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] hidden flex justify-center items-center transition-all duration-300 opacity-0">
+    <div class="bg-white/90 dark:bg-slate-900/90 backdrop-blur-lg rounded-2xl shadow-2xl p-8 text-center max-w-sm border border-outline dark:border-slate-800 transform scale-95 transition-all duration-300">
+        <h3 id="modalTitle" class="font-extrabold text-xl mb-2 text-slate-900 dark:text-white"></h3>
+        <p id="modalMessage" class="text-sm text-slate-500 dark:text-slate-400 mb-6 font-medium"></p>
+        <button onclick="document.getElementById('globalModal').classList.add('hidden')" class="bg-primary text-white px-6 py-3 rounded-xl w-full font-bold shadow-lg shadow-primary/20 transition-all active:scale-[0.98]">Tutup</button>
+    </div>
 </div>
 <script src="/js/sidebar.js?v=2"></script>
 <script src="/js/groups.js?v=2"></script>
