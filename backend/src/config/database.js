@@ -12,7 +12,8 @@ db.exec(`
     phone TEXT,
     api_key TEXT UNIQUE,
     webhook_url TEXT,
-    status TEXT DEFAULT 'Disconnected'
+    status TEXT DEFAULT 'Disconnected',
+    role TEXT DEFAULT 'user'
   );
 
   CREATE TABLE IF NOT EXISTS message_logs (
@@ -42,10 +43,20 @@ db.exec(`
     manual_run_status TEXT DEFAULT 'idle',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
+
+  CREATE TABLE IF NOT EXISTS magic_links (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    phone TEXT,
+    token TEXT UNIQUE,
+    expires_at INTEGER,
+    used INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
 `);
 
 // Migrasi Database: Tambahkan kolom baru jika belum ada
 const migrationColumns = [
+  "ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user'",
   "ALTER TABLE automation_schedules ADD COLUMN start_date TEXT",
   "ALTER TABLE automation_schedules ADD COLUMN end_date TEXT",
   "ALTER TABLE automation_schedules ADD COLUMN custom_days TEXT",

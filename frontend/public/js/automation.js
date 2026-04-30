@@ -144,8 +144,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     try {
       const isAdmin = localStorage.getItem("connectApi_loggedIn") === "true";
       const guestApiKey = localStorage.getItem("noorbyte_session");
+      // [MOD] Ensure api_key is passed even for admin role
       const query = isAdmin
-        ? "?role=admin"
+        ? `?role=admin&api_key=${guestApiKey || ''}`
         : guestApiKey
           ? `?api_key=${guestApiKey}`
           : "";

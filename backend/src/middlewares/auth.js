@@ -14,6 +14,18 @@ const checkApiKey = (req, res, next) => {
         apiKey = req.headers['x-api-key'] || req.body.api_key || req.query.api_key;
     }
 
+    // [FIX] Bila tidak ada device sama sekali, izinkan bypass API Key untuk pendaftaran pertama
+    // Ini ditaruh sebelum pengecekan !apiKey agar pendaftaran pertama tidak terblokir
+    try {
+        const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get().count;
+        if (userCount === 0) {
+            req.user = { username: 'Guest', role: 'guest' };
+            return next();
+        }
+    } catch (dbError) {
+        console.error("[AUTH] Gagal cek user count:", dbError.message);
+    }
+
     // Kalau bener-bener kosong
     if (!apiKey) {
         return res.status(401).json({ status: false, message: 'API Key tidak ditemukan di header (Format: Bearer <token>).' });
@@ -21,6 +33,12 @@ const checkApiKey = (req, res, next) => {
 
     // Cek ke database apakah API Key valid
     try {
+        // [MOD] Support Admin API Key bypass
+        if (process.env.ADMIN_API_KEY && apiKey === process.env.ADMIN_API_KEY) {
+            req.user = { username: 'Admin', role: 'admin' };
+            return next();
+        }
+
         const user = db.prepare('SELECT * FROM users WHERE api_key = ?').get(apiKey);
         
         if (!user) {

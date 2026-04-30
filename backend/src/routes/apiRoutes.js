@@ -56,7 +56,8 @@ router.get("/dashboard-stats", (req, res) => {
     let totalMsg = 0, successMsg = 0, recentLogs = [];
 
     if (role === 'admin') {
-      if (!process.env.ADMIN_API_KEY || api_key !== process.env.ADMIN_API_KEY) {
+      const masterKey = process.env.ADMIN_API_KEY;
+      if (!masterKey || api_key !== masterKey) {
         return res.status(401).json({ status: false, message: "Unauthorized: Kredensial admin tidak valid." });
       }
       const totalResult = db.prepare("SELECT COUNT(*) as count FROM message_logs").get();
@@ -91,14 +92,25 @@ router.get("/dashboard-stats", (req, res) => {
 router.get("/get-devices", (req, res) => {
   try {
     const { role, api_key } = req.query;
+    
+    // [FIX] Cek jika database kosong, selalu kembalikan array kosong agar user bisa menambah device
+    const userCount = db.prepare("SELECT COUNT(*) as count FROM users").get().count;
+    if (userCount === 0) {
+      return res.status(200).json({ status: true, data: [] });
+    }
+
     let devices = [];
-    if (role === 'admin') {
-      if (!process.env.ADMIN_API_KEY || api_key !== process.env.ADMIN_API_KEY) {
+    const effectiveRole = req.user?.role || role;
+
+    if (effectiveRole === 'admin') {
+      const masterKey = process.env.ADMIN_API_KEY;
+      if (!masterKey || (req.user?.role !== 'admin' && api_key !== masterKey)) {
         return res.status(401).json({ status: false, message: "Unauthorized: Kredensial admin tidak valid." });
       }
-      devices = db.prepare("SELECT username, phone, api_key, status FROM users").all();
-    } else if (api_key) {
-      devices = db.prepare("SELECT username, phone, api_key, status FROM users WHERE api_key = ?").all(api_key);
+      devices = db.prepare("SELECT username, phone, api_key, status, role FROM users").all();
+    } else if (api_key || req.user?.api_key) {
+      const targetApiKey = api_key || req.user?.api_key;
+      devices = db.prepare("SELECT username, phone, api_key, status, role FROM users WHERE api_key = ?").all(targetApiKey);
     } else {
       return res.status(401).json({ status: false, message: "Unauthorized: Silakan login terlebih dahulu." });
     }
@@ -113,7 +125,11 @@ router.post("/add-device", sensitiveLimiter, checkApiKey, (req, res) => {
   if (!name || !phone) return res.status(400).json({ status: false, message: "Nama dan Nomor WA wajib diisi." });
   const token = "DEV-" + crypto.randomBytes(4).toString("hex").toUpperCase();
   try {
-    db.prepare("INSERT INTO users (username, phone, api_key, status) VALUES (?, ?, ?, ?)").run(name, phone, token, "Disconnected");
+    // [FIX] Cek jumlah user untuk menentukan role pertama sebagai admin
+    const userCount = db.prepare("SELECT COUNT(*) as count FROM users").get().count;
+    const role = userCount === 0 ? 'admin' : 'user';
+
+    db.prepare("INSERT INTO users (username, phone, api_key, status, role) VALUES (?, ?, ?, ?, ?)").run(name, phone, token, "Disconnected", role);
     res.status(200).json({ status: true, message: "Device berhasil ditambahkan!", token: token });
   } catch (error) {
     res.status(500).json({ status: false, message: "Gagal menambah device.", error: error.message });
@@ -193,6 +209,24 @@ router.get("/groups/:apiKey", async (req, res) => {
   } catch (error) {
     res.status(500).json({ status: false, message: "Gagal mengambil daftar grup.", error: error.message });
   }
+});
+
+router.post("/auth/admin-login", sensitiveLimiter, (req, res) => {
+  const { password } = req.body;
+  if (!password) return res.status(400).json({ status: false, message: "Password wajib diisi." });
+
+  const adminPassword = process.env.ADMIN_PASSWORD;
+  const adminApiKey = process.env.ADMIN_API_KEY;
+
+  if (!adminPassword || !adminApiKey) {
+    return res.status(503).json({ status: false, message: "Admin login belum dikonfigurasi di server." });
+  }
+
+  if (password !== adminPassword) {
+    return res.status(401).json({ status: false, message: "Password salah." });
+  }
+
+  return res.status(200).json({ status: true, message: "Login admin berhasil.", api_key: adminApiKey });
 });
 
 router.post("/auth/magic-link", async (req, res) => {
