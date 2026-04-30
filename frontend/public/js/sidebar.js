@@ -388,11 +388,15 @@ document.addEventListener("DOMContentLoaded", () => {
 function showToast(message, type = "info", duration = 3000) {
   let container = document.getElementById("toastContainer");
 
-  if (!container) {
-    container = document.createElement("div");
-    container.id = "toastContainer";
-    container.className = "fixed top-6 right-6 z-[9999] flex flex-col gap-3 pointer-events-none";
+  if (!container || container.parentElement !== document.body) {
+    if (!container) {
+      container = document.createElement("div");
+      container.id = "toastContainer";
+    }
+    container.className = "fixed top-6 right-6 z-[999999] flex flex-col gap-3 pointer-events-none";
     document.body.appendChild(container);
+  } else {
+    container.className = "fixed top-6 right-6 z-[999999] flex flex-col gap-3 pointer-events-none";
   }
 
   const toast = document.createElement("div");
@@ -404,13 +408,18 @@ function showToast(message, type = "info", duration = 3000) {
   if (type === "warning") icon = "warning";
 
   toast.innerHTML = `
-    <span class="material-symbols-outlined ${type === 'success' ? 'text-emerald-500' : type === 'error' ? 'text-red-500' : type === 'warning' ? 'text-amber-500' : 'text-blue-500'}">${icon}</span>
-    <span>${message}</span>
+    <div class="flex items-center gap-3 px-4 py-3 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700 pointer-events-auto min-w-[280px]">
+      <div class="flex-shrink-0 size-10 rounded-xl flex items-center justify-center ${type === 'success' ? 'bg-emerald-50 text-emerald-500' : type === 'error' ? 'bg-red-50 text-red-500' : 'bg-blue-50 text-blue-500'}">
+        <span class="material-symbols-outlined">${icon}</span>
+      </div>
+      <div class="flex-1">
+        <p class="text-sm font-bold text-slate-900 dark:text-white">${message}</p>
+      </div>
+    </div>
   `;
 
   container.appendChild(toast);
 
-  // Auto remove
   setTimeout(() => {
     toast.classList.add("toast-out");
     setTimeout(() => toast.remove(), 400);
