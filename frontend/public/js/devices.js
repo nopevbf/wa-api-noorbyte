@@ -76,7 +76,10 @@ async function loadDevices() {
     try {
         const isAdmin = localStorage.getItem('connectApi_loggedIn') === 'true';
         const guestApiKey = localStorage.getItem('noorbyte_session');
-        const query = isAdmin ? '?role=admin' : (guestApiKey ? `?api_key=${guestApiKey}` : '');
+        // [MOD] Ensure api_key is passed even for admin role
+        const query = isAdmin 
+            ? `?role=admin&api_key=${guestApiKey || ''}` 
+            : (guestApiKey ? `?api_key=${guestApiKey}` : '');
         const response = await fetch(`/api/get-devices${query}`); // Mengambil data melalui proxy
         const result = await response.json();
 
@@ -228,8 +231,13 @@ document.getElementById('addDeviceForm').addEventListener('submit', async (e) =>
     e.preventDefault();
     const btn = document.getElementById('btnSubmit'); btn.innerText = 'Wait...'; btn.disabled = true;
     try {
+        const apiKey = localStorage.getItem('noorbyte_session') || '';
         const res = await fetch('/api/add-device', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            method: 'POST', 
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+            },
             body: JSON.stringify({ name: document.getElementById('deviceName').value, phone: document.getElementById('devicePhone').value })
         });
         const data = await res.json();

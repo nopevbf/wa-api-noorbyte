@@ -9,7 +9,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     try {
         const isAdmin = localStorage.getItem('connectApi_loggedIn') === 'true';
         const guestApiKey = localStorage.getItem('noorbyte_session');
-        const query = isAdmin ? '?role=admin' : (guestApiKey ? `?api_key=${guestApiKey}` : '');
+        // [MOD] Ensure api_key is passed even for admin role
+        const query = isAdmin 
+            ? `?role=admin&api_key=${guestApiKey || ''}` 
+            : (guestApiKey ? `?api_key=${guestApiKey}` : '');
         const response = await fetch(`${API_URL}/get-devices${query}`);
         const result = await response.json();
 

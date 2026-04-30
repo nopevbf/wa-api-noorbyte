@@ -60,7 +60,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   try {
     const isAdminStats = localStorage.getItem('connectApi_loggedIn') === 'true';
     const guestApiKeyStats = localStorage.getItem('noorbyte_session');
-    const statsQuery = isAdminStats ? '?role=admin' : (guestApiKeyStats ? `?api_key=${guestApiKeyStats}` : '');
+    // [MOD] Ensure api_key is passed even for admin role
+    const statsQuery = isAdminStats 
+      ? `?role=admin&api_key=${guestApiKeyStats || ''}` 
+      : (guestApiKeyStats ? `?api_key=${guestApiKeyStats}` : '');
     
     const statRes = await fetch(`${API_URL}/dashboard-stats${statsQuery}`);
     const statResult = await statRes.json();

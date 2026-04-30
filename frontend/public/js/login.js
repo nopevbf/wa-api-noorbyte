@@ -177,6 +177,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
         setTimeout(() => {
           localStorage.setItem("connectApi_loggedIn", "true");
+          // [MOD] Set default admin session key
+          localStorage.setItem("noorbyte_session", "admin_master_key_123");
           window.location.href = "/dashboard";
         }, 800);
       } else {
