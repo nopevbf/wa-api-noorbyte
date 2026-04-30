@@ -311,7 +311,7 @@ router.post("/automation/save-settings", checkApiKey, (req, res) => {
 
 router.post("/automation/run-manual", sensitiveLimiter, checkApiKey, (req, res) => {
   const { run_time, dp_api_url, dp_email, dp_password, target_number } = req.body;
-  const api_key = req.user.api_key;
+  const api_key = req.body.api_key || req.user.api_key;
   if (!api_key || !run_time) return res.status(400).json({ status: false, message: "API Key dan waktu wajib diisi." });
   try {
     const existing = db.prepare("SELECT id FROM automation_schedules WHERE api_key = ?").get(api_key);
@@ -328,7 +328,7 @@ router.post("/automation/run-manual", sensitiveLimiter, checkApiKey, (req, res) 
 });
 
 router.post("/automation/cancel-manual", checkApiKey, (req, res) => {
-  const api_key = req.user.api_key;
+  const api_key = req.body.api_key || req.user.api_key;
   if (!api_key) return res.status(400).json({ status: false, message: "API Key wajib diisi." });
   try {
     db.prepare(`UPDATE automation_schedules SET manual_run_time = NULL, manual_run_status = NULL WHERE api_key = ?`).run(api_key);
@@ -339,7 +339,7 @@ router.post("/automation/cancel-manual", checkApiKey, (req, res) => {
 });
 
 router.get("/automation/status", checkApiKey, (req, res) => {
-  const api_key = req.user.api_key;
+  const api_key = req.query.api_key || req.user.api_key;
   if (!api_key) return res.status(400).json({ status: false, message: "API Key wajib diisi." });
   try {
     const schedule = db.prepare("SELECT * FROM automation_schedules WHERE api_key = ?").get(api_key);
@@ -356,7 +356,7 @@ router.get("/automation/status", checkApiKey, (req, res) => {
 
 router.post('/rename-device', sensitiveLimiter, checkApiKey, async (req, res) => {
   const { new_name } = req.body;
-  const api_key = req.user.api_key;
+  const api_key = req.body.api_key || req.user.api_key;
   if (!api_key || !new_name) return res.status(400).json({ status: false, message: "Data tidak lengkap." });
   try {
     db.prepare("UPDATE users SET username = ? WHERE api_key = ?").run(new_name, api_key);
@@ -367,7 +367,7 @@ router.post('/rename-device', sensitiveLimiter, checkApiKey, async (req, res) =>
 });
 
 router.get("/automation/kpi", checkApiKey, (req, res) => {
-  const api_key = req.user.api_key;
+  const api_key = req.query.api_key || req.user.api_key;
   if (!api_key) return res.status(400).json({ status: false, message: "API Key wajib diisi." });
   try {
     const totalResult = db.prepare("SELECT COUNT(*) as count FROM message_logs WHERE api_key = ?").get(api_key);

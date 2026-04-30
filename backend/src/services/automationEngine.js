@@ -143,6 +143,7 @@ async function processFetch(schedule) {
       schedule.dp_api_url,
       schedule.dp_email,
       schedule.dp_password,
+      (label, text, color) => addScheduleLog(schedule.id, color, label, text)
     );
 
     const dataSizeMB = (
@@ -269,16 +270,11 @@ async function processManualRuns() {
 
       try {
         // Step 1-5: Fetch data
-        addScheduleLog(
-          schedule.id,
-          "text-blue-400",
-          "STEP 1-5",
-          "Menjalankan fetch data DParagon...",
-        );
         const message = await fetchDparagonReport(
           schedule.dp_api_url,
           schedule.dp_email,
           schedule.dp_password,
+          (label, text, color) => addScheduleLog(schedule.id, color, label, text)
         );
 
         const dataSizeMB = (

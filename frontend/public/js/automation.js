@@ -1,4 +1,4 @@
-﻿const API_URL = "/api";
+const API_URL = "/api";
 
 // Variabel global untuk menyimpan default DParagon URL dari backend config
 let defaultDparagonApiUrl = "";
@@ -184,18 +184,47 @@ document.addEventListener("DOMContentLoaded", async () => {
   // 2. FUNGSI TERMINAL LOG
   // ==========================================
   const terminal = document.getElementById("terminalLog");
+  let currentLogIndex = 0;
+  let logQueue = [];
+  let isDisplayingLog = false;
+  let logTimeoutId = null;
 
-  const addLog = (colorClass, label, text) => {
-    const time = new Date().toLocaleTimeString("en-US", { hour12: false });
+  function processLogQueue() {
+    if (logQueue.length === 0) {
+      isDisplayingLog = false;
+      return;
+    }
+    isDisplayingLog = true;
+    const log = logQueue.shift();
     if (terminal) {
       terminal.innerHTML += `
-                <div class="flex gap-3">
-                    <span class="text-slate-500">[${time}]</span>
-                    <span class="${colorClass} font-bold">${label}:</span>
-                    <span class="break-words flex-1">${text}</span>
+                <div class="flex gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                    <span class="text-slate-500">[${log.time}]</span>
+                    <span class="${log.colorClass} font-bold">${log.label}:</span>
+                    <span class="break-words flex-1">${log.text}</span>
                 </div>
             `;
       terminal.scrollTop = terminal.scrollHeight;
+    }
+    logTimeoutId = setTimeout(processLogQueue, 1000);
+  }
+
+  function clearTerminal() {
+    if (terminal) terminal.innerHTML = "";
+    currentLogIndex = 0;
+    logQueue = [];
+    isDisplayingLog = false;
+    if (logTimeoutId) {
+      clearTimeout(logTimeoutId);
+      logTimeoutId = null;
+    }
+  }
+
+  const addLog = (colorClass, label, text) => {
+    const time = new Date().toLocaleTimeString("en-US", { hour12: false });
+    logQueue.push({ time, colorClass, label, text });
+    if (!isDisplayingLog) {
+      processLogQueue();
     }
     return Promise.resolve();
   };
@@ -203,18 +232,23 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Render backend logs into terminal
   function renderBackendLogs(logs) {
     if (!terminal) return;
-    terminal.innerHTML = "";
     if (!logs || logs.length === 0) return;
-    logs.forEach((log) => {
-      terminal.innerHTML += `
-                <div class="flex gap-3">
-                    <span class="text-slate-500">[${log.time}]</span>
-                    <span class="${log.colorClass} font-bold">${log.label}:</span>
-                    <span class="break-words flex-1">${log.text}</span>
-                </div>
-            `;
-    });
-    terminal.scrollTop = terminal.scrollHeight;
+
+    // Jika log dari backend lebih sedikit dari index kita (artinya reset)
+    if (logs.length < currentLogIndex) {
+      clearTerminal();
+    }
+
+    // Tambahkan log baru ke antrean
+    for (let i = currentLogIndex; i < logs.length; i++) {
+      logQueue.push(logs[i]);
+    }
+    
+    currentLogIndex = logs.length;
+
+    if (!isDisplayingLog && logQueue.length > 0) {
+      processLogQueue();
+    }
   }
 
   let cachedMessage = null;
@@ -319,7 +353,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     btnRun.disabled = true;
     btnRun.innerHTML = `<span class="material-symbols-outlined animate-spin">autorenew</span> Menjadwalkan...`;
-    if (terminal) terminal.innerHTML = "";
+    clearTerminal();
 
     try {
       const res = await fetch(`${API_URL}/automation/run-manual`, {
