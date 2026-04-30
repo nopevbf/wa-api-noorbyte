@@ -1,6 +1,6 @@
 
 function getNavbarData(path) {
-    const isAdmin = localStorage.getItem('noorbyte_loggedIn') === 'true';
+    const isAdmin = localStorage.getItem('connectApi_loggedIn') === 'true';
     const guestUsername = localStorage.getItem('noorbyte_username');
     
     let username = 'Guest';

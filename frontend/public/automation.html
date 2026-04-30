@@ -446,19 +446,6 @@
     </main>
   </div>
 
-  <div id="globalModal"
-    class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] hidden flex justify-center items-center transition-opacity">
-    <div class="bg-white rounded-xl shadow-2xl p-6 text-center max-w-sm border border-slate-200">
-      <h3 id="modalTitle" class="font-bold text-lg mb-2"></h3>
-      <p id="modalMessage" class="text-sm text-slate-500 mb-4"></p>
-      <button onclick="
-            document.getElementById('globalModal').classList.add('hidden')
-          " class="bg-primary text-white px-4 py-2 rounded-lg w-full font-bold">
-        Tutup
-      </button>
-    </div>
-  </div>
-
   <!-- START Modal Run Automation Custom -->
   <div id="runAutomationModal"
     class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] hidden flex justify-center items-center transition-opacity p-4">
@@ -504,8 +491,6 @@
   </div>
   <!-- END Modal Run Automation Custom -->
 
-  <!-- Toast Container -->
-  <div id="toastContainer" class="fixed top-6 right-6 z-[9999] flex flex-col gap-3 pointer-events-none"></div>
 
   <script src="/js/sidebar.js"></script>
   <script src="/js/automation.js"></script>
