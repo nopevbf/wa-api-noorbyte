@@ -165,24 +165,38 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Proses Verifikasi Password Admin
   if (btnSubmitAdmin) {
-    const processAdminLogin = () => {
+    const processAdminLogin = async () => {
       const pwd = adminPasswordInput.value;
 
-      if (pwd === "grupturok22") {
-        // Password Benar -> Efek Sukses & Redirect
-        adminErrorMsg.classList.add("hidden");
-        btnSubmitAdmin.disabled = true;
-        btnSubmitAdmin.innerHTML = `<span class="material-symbols-outlined animate-spin text-[20px]">autorenew</span>`;
-        btnSubmitAdmin.classList.replace("bg-slate-900", "bg-green-500");
+      btnSubmitAdmin.disabled = true;
+      btnSubmitAdmin.innerHTML = `<span class="material-symbols-outlined animate-spin text-[20px]">autorenew</span>`;
 
-        setTimeout(() => {
-          localStorage.setItem("connectApi_loggedIn", "true");
-          // [MOD] Set default admin session key
-          localStorage.setItem("noorbyte_session", "admin_master_key_123");
-          window.location.href = "/dashboard";
-        }, 800);
-      } else {
-        // Password Salah -> Efek Error Merah
+      try {
+        const response = await fetch("/api/auth/admin-login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ password: pwd }),
+        });
+        const result = await response.json();
+
+        if (response.ok && result.status) {
+          // Password Benar -> Efek Sukses & Redirect
+          adminErrorMsg.classList.add("hidden");
+          btnSubmitAdmin.classList.replace("bg-slate-900", "bg-green-500");
+
+          setTimeout(() => {
+            localStorage.setItem("connectApi_loggedIn", "true");
+            localStorage.setItem("noorbyte_session", result.api_key);
+            window.location.href = "/dashboard";
+          }, 800);
+        } else {
+          throw new Error(result.message || "Login gagal. Silakan coba lagi.");
+        }
+      } catch (error) {
+        // Password Salah / Error -> Efek Error Merah
+        btnSubmitAdmin.disabled = false;
+        btnSubmitAdmin.innerHTML = `Otorisasi`;
+        adminErrorMsg.textContent = error.message || "Login gagal. Silakan coba lagi.";
         adminErrorMsg.classList.remove("hidden");
         adminPasswordInput.classList.add(
           "border-red-500",

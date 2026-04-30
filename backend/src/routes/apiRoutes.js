@@ -56,8 +56,8 @@ router.get("/dashboard-stats", (req, res) => {
     let totalMsg = 0, successMsg = 0, recentLogs = [];
 
     if (role === 'admin') {
-      const masterKey = process.env.ADMIN_API_KEY || 'admin_master_key_123';
-      if (api_key !== masterKey) {
+      const masterKey = process.env.ADMIN_API_KEY;
+      if (!masterKey || api_key !== masterKey) {
         return res.status(401).json({ status: false, message: "Unauthorized: Kredensial admin tidak valid." });
       }
       const totalResult = db.prepare("SELECT COUNT(*) as count FROM message_logs").get();
@@ -103,8 +103,8 @@ router.get("/get-devices", (req, res) => {
     const effectiveRole = req.user?.role || role;
 
     if (effectiveRole === 'admin') {
-      const masterKey = process.env.ADMIN_API_KEY || 'admin_master_key_123';
-      if (req.user?.role !== 'admin' && api_key !== masterKey) {
+      const masterKey = process.env.ADMIN_API_KEY;
+      if (!masterKey || (req.user?.role !== 'admin' && api_key !== masterKey)) {
         return res.status(401).json({ status: false, message: "Unauthorized: Kredensial admin tidak valid." });
       }
       devices = db.prepare("SELECT username, phone, api_key, status, role FROM users").all();
@@ -209,6 +209,24 @@ router.get("/groups/:apiKey", async (req, res) => {
   } catch (error) {
     res.status(500).json({ status: false, message: "Gagal mengambil daftar grup.", error: error.message });
   }
+});
+
+router.post("/auth/admin-login", sensitiveLimiter, (req, res) => {
+  const { password } = req.body;
+  if (!password) return res.status(400).json({ status: false, message: "Password wajib diisi." });
+
+  const adminPassword = process.env.ADMIN_PASSWORD;
+  const adminApiKey = process.env.ADMIN_API_KEY;
+
+  if (!adminPassword || !adminApiKey) {
+    return res.status(503).json({ status: false, message: "Admin login belum dikonfigurasi di server." });
+  }
+
+  if (password !== adminPassword) {
+    return res.status(401).json({ status: false, message: "Password salah." });
+  }
+
+  return res.status(200).json({ status: true, message: "Login admin berhasil.", api_key: adminApiKey });
 });
 
 router.post("/auth/magic-link", async (req, res) => {
