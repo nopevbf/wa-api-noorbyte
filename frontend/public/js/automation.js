@@ -324,7 +324,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     try {
       const res = await fetch(`${API_URL}/automation/run-manual`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem("noorbyte_session") || formData.api_key}`
+        },
         body: JSON.stringify({
           api_key: formData.api_key,
           run_time: selectedTime,
@@ -378,7 +381,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     try {
     const res = await fetch(`${API_URL}/automation/cancel-manual`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { 
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${localStorage.getItem("noorbyte_session") || apiKey}`
+      },
       body: JSON.stringify({ api_key: apiKey }),
     });
     const result = await res.json();
@@ -424,21 +430,29 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   async function pollStatus(isInitial = false) {
-    // Try selector value first, fallback to localStorage
+    // Priority: 1. Selector value, 2. localStorage (only if authenticated)
     let apiKey = selector ? selector.value : "";
     if (!apiKey) {
       apiKey = localStorage.getItem("automationSelectedDevice") || "";
     }
+    
+    // Safety check: Don't poll if no key
     if (!apiKey) return;
 
+    // Bearer token from session
+    const sessionToken = localStorage.getItem("noorbyte_session") || apiKey;
+
     try {
-      const res = await fetch(`${API_URL}/automation/status?api_key=${apiKey}`);
+      const res = await fetch(`${API_URL}/automation/status?api_key=${apiKey}`, {
+        headers: { "Authorization": `Bearer ${sessionToken}` }
+      });
       const result = await res.json();
 
       let kpiData = null;
       try {
         const kpiRes = await fetch(
           `${API_URL}/automation/kpi?api_key=${apiKey}`,
+          { headers: { "Authorization": `Bearer ${sessionToken}` } }
         );
         const kpiResult = await kpiRes.json();
         if (kpiResult.status && kpiResult.data) {
@@ -687,7 +701,10 @@ Occupancy Rate: 0%
       try {
           const res = await fetch(`${API_URL}/automation/save-settings`, {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers: { 
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${localStorage.getItem("noorbyte_session") || formData.api_key}`
+              },
               body: JSON.stringify(formData),
           });
           const result = await res.json();
@@ -823,7 +840,10 @@ Occupancy Rate: 0%
         // Send to backend for persistent execution
         const res = await fetch(`${API_URL}/automation/save-settings`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { 
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${localStorage.getItem("noorbyte_session") || formData.api_key}`
+          },
           body: JSON.stringify(formData),
         });
 

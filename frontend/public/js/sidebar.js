@@ -290,6 +290,7 @@ async function loadSidebar() {
           localStorage.removeItem("noorbyte_username");
           localStorage.removeItem("noorbyte_phone");
           localStorage.removeItem("connectApi_loggedIn");
+          localStorage.removeItem("automationSelectedDevice");
 
           // ==========================================
           // SQA INJECTION: SAPU BERSIH KREDENSIAL TARGET

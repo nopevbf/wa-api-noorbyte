@@ -2,7 +2,7 @@ const db = require('../config/database');
 
 const checkApiKey = (req, res, next) => {
     // 1. Cek dari Header Authorization (Format: Bearer <token>)
-    const authHeader = req.headers.authorization;
+    const authHeader = req.headers?.authorization;
     let apiKey = '';
 
     if (authHeader && authHeader.startsWith('Bearer ')) {
