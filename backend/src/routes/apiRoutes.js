@@ -362,7 +362,7 @@ router.post('/rename-device', sensitiveLimiter, checkApiKey, async (req, res) =>
   }
 });
 
-router.get("/automation/kpi", sensitiveLimiter, (req, res) => {
+router.get("/automation/kpi", (req, res) => {
   const { api_key } = req.query;
   if (!api_key) return res.status(400).json({ status: false, message: "API Key wajib diisi." });
   try {
