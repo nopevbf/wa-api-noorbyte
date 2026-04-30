@@ -198,57 +198,6 @@
             </div>
         </div>
 
-        <div id="globalModal"
-            class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] hidden flex justify-center items-center transition-all duration-300 opacity-0">
-            <div
-                class="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden transform scale-95 transition-all duration-300 border border-outline dark:border-slate-800">
-                <div class="p-10 text-center">
-                    <div id="modalIconContainer"
-                        class="mx-auto flex items-center justify-center h-20 w-20 rounded-2xl bg-indigo-50 dark:bg-indigo-900/20 text-primary mb-6 shadow-inner">
-                        <span id="modalIcon" class="material-symbols-outlined !text-4xl">info</span>
-                    </div>
-                    <h3 id="modalTitle" class="text-2xl font-extrabold text-slate-900 dark:text-white mb-2 tracking-tight">Title</h3>
-                    <p id="modalMessage" class="text-sm text-slate-500 dark:text-slate-400 break-words font-medium leading-relaxed">Message</p>
-                </div>
-                <div id="modalActions" class="px-8 pb-10 flex gap-3 justify-center">
-                </div>
-            </div>
-        </div>
-
-        <div id="renameDeviceModal"
-            class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm transition-all duration-300 opacity-0">
-            <div id="renameDeviceBox"
-                class="bg-white dark:bg-slate-900 border border-outline dark:border-slate-800 rounded-3xl w-full max-w-sm p-10 shadow-2xl transform scale-95 transition-all relative backdrop-blur-lg">
-
-                <h3 class="text-slate-900 dark:text-white font-extrabold text-xl mb-6 flex items-center gap-3 tracking-tight">
-                    <div class="p-2 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg">
-                        <span class="material-symbols-outlined text-emerald-600 dark:text-emerald-400">edit_note</span> 
-                    </div>
-                    Rename Device
-                </h3>
-
-                <input type="hidden" id="renameSessionId">
-
-                <div class="mb-10">
-                    <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest block mb-3">Nama Device Baru</label>
-                    <input type="text" id="renameInput"
-                        class="w-full bg-slate-50 dark:bg-slate-800/50 border border-outline dark:border-slate-700 text-slate-900 dark:text-white text-sm font-bold rounded-xl p-4 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all shadow-inner"
-                        placeholder="Contoh: CS Marketing 01" autocomplete="off">
-                </div>
-
-                <div class="flex gap-3">
-                    <button id="btnCancelRename"
-                        class="flex-1 py-3.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-sm font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-[0.98]">BATAL</button>
-                    <button id="btnSubmitRename"
-                        class="flex-[1.5] py-3.5 rounded-xl bg-emerald-600 text-white text-sm font-bold shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 transition-all active:scale-[0.98] flex items-center justify-center gap-2">
-                        <span class="material-symbols-outlined text-sm hidden" id="renameSpinner">autorenew</span>
-                        SIMPAN
-                    </button>
-                </div>
-
-            </div>
-        </div>
-
     </div>
 
     <script src="/js/sidebar.js?v=2"></script>

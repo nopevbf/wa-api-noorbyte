@@ -61,7 +61,7 @@ async function fetchGroups() {
     const btnIcon = document.getElementById('btnIcon');
 
     if (!apiKey) {
-        showModal('Pilih Device', 'Silakan pilih device yang berstatus Online terlebih dahulu.');
+        showModal({ title: 'Pilih Device', message: 'Silakan pilih device yang berstatus Online terlebih dahulu.' });
         return;
     }
 
@@ -77,10 +77,10 @@ async function fetchGroups() {
         if (result.status) {
             renderGroupTable(result.data);
         } else {
-            showModal('Gagal', result.message);
+            showModal({ title: 'Gagal', message: result.message, type: 'error' });
         }
     } catch (error) {
-        showModal('Error Server', 'Gagal menghubungi server Backend.');
+        showModal({ title: 'Error Server', message: 'Gagal menghubungi server Backend.', type: 'error' });
     } finally {
         // Kembalikan tombol ke semula
         btnText.innerText = 'Fetch Groups';
@@ -147,15 +147,12 @@ function renderGroupTable(groups) {
 
 function copyId(id) {
     navigator.clipboard.writeText(id).then(() => {
-        showModal('Disalin!', `Group ID <b>${id}</b> berhasil disalin. Bisa dipakai buat target nomor kirim pesan.`);
+        showModal({ title: 'Disalin!', message: `Group ID <b>${id}</b> berhasil disalin. Bisa dipakai buat target nomor kirim pesan.`, type: 'success' });
     });
 }
 
-function showModal(title, message) {
-    document.getElementById('modalTitle').innerText = title;
-    document.getElementById('modalMessage').innerHTML = message;
-    document.getElementById('globalModal').classList.remove('hidden');
-}
+
+// showModal is now provided globally by sidebar.js
 
 // Jalankan load dropdown saat buka halaman
 window.onload = loadDevicesForDropdown;

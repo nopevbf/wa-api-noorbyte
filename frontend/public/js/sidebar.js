@@ -1,4 +1,4 @@
-// ==========================================
+﻿// ==========================================
 // AUTH GUARD: Cek session sebelum memuat halaman
 // ==========================================
 const isAdmin = localStorage.getItem("connectApi_loggedIn") === "true";
@@ -205,7 +205,11 @@ async function loadSidebar() {
         btnRevokeRequest.addEventListener("click", () => {
           localStorage.removeItem("jailbreak_pending");
           localStorage.removeItem("jailbreak_timestamp");
-          alert("Pengajuan akses dibatalkan.");
+          if (typeof showToast === "function") {
+             showToast("Pengajuan akses dibatalkan", "info");
+          } else {
+             showToast("Akses dibatalkan", "info");
+          }
           closeJailbreakModal();
         });
       }
@@ -379,3 +383,126 @@ document.addEventListener("DOMContentLoaded", () => {
   loadSidebar();
   loadNavbar();
 });
+
+function showToast(message, type = "info", duration = 3000) {
+  let container = document.getElementById("toastContainer");
+
+  if (!container) {
+    container = document.createElement("div");
+    container.id = "toastContainer";
+    container.className = "fixed top-6 right-6 z-[9999] flex flex-col gap-3 pointer-events-none";
+    document.body.appendChild(container);
+  }
+
+  const toast = document.createElement("div");
+  toast.className = `toast-pill ${type}`;
+
+  let icon = "info";
+  if (type === "success") icon = "check_circle";
+  if (type === "error") icon = "error";
+  if (type === "warning") icon = "warning";
+
+  toast.innerHTML = `
+    <span class="material-symbols-outlined ${type === 'success' ? 'text-emerald-500' : type === 'error' ? 'text-red-500' : type === 'warning' ? 'text-amber-500' : 'text-blue-500'}">${icon}</span>
+    <span>${message}</span>
+  `;
+
+  container.appendChild(toast);
+
+  // Auto remove
+  setTimeout(() => {
+    toast.classList.add("toast-out");
+    setTimeout(() => toast.remove(), 400);
+  }, duration);
+}
+
+/**
+ * GLOBAL MODAL SYSTEM
+ * @param {Object} options - { title, message, type, onConfirm, onClose, confirmText, cancelText }
+ */
+function showModal(options = {}) {
+  const {
+    title = "Pemberitahuan",
+    message = "",
+    type = "info", // info, success, error, confirm, warning
+    onConfirm = null,
+    onClose = null,
+    confirmText = "Ya, Lanjutkan",
+    cancelText = "Tutup"
+  } = options;
+
+  const modal = document.getElementById('globalModal');
+  const modalContent = document.getElementById('globalModalContent');
+  const iconContainer = document.getElementById('modalIconContainer');
+  const icon = document.getElementById('modalIcon');
+  const titleEl = document.getElementById('modalTitle');
+  const messageEl = document.getElementById('modalMessage');
+  const actionsEl = document.getElementById('modalActions');
+
+  if (!modal || !modalContent) return;
+
+  // 1. Reset & Setup Content
+  titleEl.innerText = title;
+  messageEl.innerHTML = message;
+  actionsEl.innerHTML = '';
+
+  // 2. Setup Icon & Color based on type
+  iconContainer.className = 'mx-auto flex items-center justify-center h-20 w-20 rounded-2xl mb-6 shadow-inner transition-all duration-300';
+  
+  if (type === 'success') {
+    iconContainer.classList.add('bg-emerald-50', 'dark:bg-emerald-900/20', 'text-emerald-500');
+    icon.innerText = 'check_circle';
+  } else if (type === 'error') {
+    iconContainer.classList.add('bg-red-50', 'dark:bg-red-900/20', 'text-red-500');
+    icon.innerText = 'error';
+  } else if (type === 'warning' || type === 'confirm') {
+    iconContainer.classList.add('bg-amber-50', 'dark:bg-amber-900/20', 'text-amber-500');
+    icon.innerText = 'warning';
+  } else {
+    iconContainer.classList.add('bg-indigo-50', 'dark:bg-indigo-900/20', 'text-primary');
+    icon.innerText = 'info';
+  }
+
+  // 3. Setup Actions
+  const closeModal = () => {
+    modal.classList.add('opacity-0');
+    modalContent.classList.add('scale-95');
+    setTimeout(() => {
+      modal.classList.add('hidden');
+      if (onClose) onClose();
+    }, 300);
+  };
+
+  if (type === 'confirm') {
+    const btnCancel = document.createElement('button');
+    btnCancel.className = 'flex-1 px-4 py-3 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 rounded-xl font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-all';
+    btnCancel.innerText = cancelText;
+    btnCancel.onclick = closeModal;
+
+    const btnOk = document.createElement('button');
+    btnOk.className = 'flex-[1.5] px-4 py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all active:scale-[0.98]';
+    btnOk.innerText = confirmText;
+    btnOk.onclick = () => {
+      closeModal();
+      if (onConfirm) onConfirm();
+    };
+
+    actionsEl.appendChild(btnCancel);
+    actionsEl.appendChild(btnOk);
+  } else {
+    const btnOk = document.createElement('button');
+    btnOk.className = 'w-full px-4 py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all active:scale-[0.98]';
+    btnOk.innerText = cancelText;
+    btnOk.onclick = closeModal;
+    actionsEl.appendChild(btnOk);
+  }
+
+  // 4. Show Modal with Animation
+  modal.classList.remove('hidden');
+  setTimeout(() => {
+    modal.classList.remove('opacity-0');
+    modal.classList.add('flex');
+    modalContent.classList.remove('scale-95');
+  }, 10);
+}
+

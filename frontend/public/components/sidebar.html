@@ -1,4 +1,4 @@
-<aside id="app-sidebar"
+﻿<aside id="app-sidebar"
   class="w-64 h-full border-r border-slate-200/60 dark:border-slate-800/60 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md flex flex-col fixed inset-y-0 left-0 z-50 transform -translate-x-full lg:translate-x-0 lg:static transition-transform duration-300 ease-in-out">
   <div class="p-6 flex flex-col gap-6 flex-1">
     <div class="flex items-center gap-3">
@@ -229,6 +229,27 @@
     </div>
     <div class="h-1 w-full bg-gradient-to-r from-blue-400 via-primary to-blue-600"></div>
   </div>
+</div>
+
+<!-- Toast Container -->
+<div id="toastContainer" class="fixed top-6 right-6 z-[9999] flex flex-col gap-3 pointer-events-none"></div>
+
+<!-- Global Modal -->
+<div id="globalModal"
+    class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] hidden flex justify-center items-center transition-all duration-300 opacity-0">
+    <div id="globalModalContent"
+        class="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden transform scale-95 transition-all duration-300 border border-slate-200 dark:border-slate-800">
+        <div class="p-10 text-center">
+            <div id="modalIconContainer"
+                class="mx-auto flex items-center justify-center h-20 w-20 rounded-2xl bg-indigo-50 dark:bg-indigo-900/20 text-primary mb-6 shadow-inner transition-all duration-300">
+                <span id="modalIcon" class="material-symbols-outlined !text-4xl">info</span>
+            </div>
+            <h3 id="modalTitle" class="text-2xl font-extrabold text-slate-900 dark:text-white mb-2 tracking-tight">Title</h3>
+            <p id="modalMessage" class="text-sm text-slate-500 dark:text-slate-400 break-words font-medium leading-relaxed">Message</p>
+        </div>
+        <div id="modalActions" class="px-8 pb-10 flex gap-3 justify-center">
+        </div>
+    </div>
 </div>
 
 <!-- Backdrop transparan untuk mode mobile -->

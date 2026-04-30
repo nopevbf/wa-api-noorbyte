@@ -9,59 +9,6 @@ socket.on('connect', () => console.log('✅ WebSocket Connected ke Backend'));
 // =========================================
 // SISTEM CUSTOM MODAL PENGGANTI ALERT
 // =========================================
-function showCustomModal(type, title, message, onConfirm = null) {
-    const modal = document.getElementById('globalModal');
-    const iconContainer = document.getElementById('modalIconContainer');
-    const icon = document.getElementById('modalIcon');
-    const titleEl = document.getElementById('modalTitle');
-    const messageEl = document.getElementById('modalMessage');
-    const actionsEl = document.getElementById('modalActions');
-
-    titleEl.innerText = title;
-    messageEl.innerHTML = message;
-    actionsEl.innerHTML = '';
-
-    if (type === 'success') {
-        iconContainer.className = 'mx-auto flex items-center justify-center h-14 w-14 rounded-full bg-green-100 text-green-500 mb-4';
-        icon.innerText = 'check_circle';
-    } else if (type === 'error') {
-        iconContainer.className = 'mx-auto flex items-center justify-center h-14 w-14 rounded-full bg-red-100 text-red-500 mb-4';
-        icon.innerText = 'error';
-    } else if (type === 'confirm' || type === 'warning') {
-        iconContainer.className = 'mx-auto flex items-center justify-center h-14 w-14 rounded-full bg-amber-100 text-amber-500 mb-4';
-        icon.innerText = 'warning';
-    } else {
-        iconContainer.className = 'mx-auto flex items-center justify-center h-14 w-14 rounded-full bg-blue-100 text-blue-500 mb-4';
-        icon.innerText = 'info';
-    }
-
-    if (type === 'confirm') {
-        const btnCancel = document.createElement('button');
-        btnCancel.className = 'flex-1 px-4 py-2 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-lg font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 transition-all';
-        btnCancel.innerText = 'Batal';
-        btnCancel.onclick = () => modal.classList.add('hidden');
-
-        const btnOk = document.createElement('button');
-        btnOk.className = 'flex-1 px-4 py-2 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 shadow-lg shadow-red-500/20 transition-all';
-        btnOk.innerText = 'Ya, Lanjutkan';
-        btnOk.onclick = () => {
-            modal.classList.add('hidden');
-            if (onConfirm) onConfirm();
-        };
-
-        actionsEl.appendChild(btnCancel);
-        actionsEl.appendChild(btnOk);
-    } else {
-        const btnOk = document.createElement('button');
-        btnOk.className = 'w-full px-4 py-2 bg-primary text-white rounded-lg font-semibold hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all';
-        btnOk.innerText = 'Tutup';
-        btnOk.onclick = () => modal.classList.add('hidden');
-        actionsEl.appendChild(btnOk);
-    }
-
-    modal.classList.remove('hidden');
-}
-
 // =========================================
 // LOGIC UTAMA APLIKASI
 // =========================================
@@ -162,7 +109,7 @@ function renderDeviceRow(device) {
 
         if (isNowOnline) {
             resetQrPanel();
-            showCustomModal('success', 'Terkoneksi!', `Device <b>${device.username}</b> berhasil terhubung ke WhatsApp.`);
+            showModal({ type: 'success', title: 'Terkoneksi!', message: `Device <b>${device.username}</b> berhasil terhubung ke WhatsApp.` });
         }
     });
 }
@@ -209,7 +156,7 @@ async function triggerQr(apiKey, username) {
             body: JSON.stringify({ api_key: apiKey })
         });
     } catch (error) {
-        showCustomModal('error', 'Gagal', 'Gagal menghubungi server untuk generate QR.');
+        showModal({ type: 'error', title: 'Gagal', message: 'Gagal menghubungi server untuk generate QR.' });
     }
 }
 
@@ -245,12 +192,12 @@ document.getElementById('addDeviceForm').addEventListener('submit', async (e) =>
             toggleAddModal(false);
             document.getElementById('addDeviceForm').reset();
             loadDevices();
-            showCustomModal('success', 'Device Terdaftar!', `Token Anda:<br><br><span class="font-mono bg-slate-100 dark:bg-slate-800 p-2 rounded block break-all text-primary border border-slate-200 dark:border-slate-700">${data.token || data.data.api_key}</span>`);
+            showModal({ type: 'success', title: 'Device Terdaftar!', message: `Token Anda:<br><br><span class="font-mono bg-slate-100 dark:bg-slate-800 p-2 rounded block break-all text-primary border border-slate-200 dark:border-slate-700">${data.token || data.data.api_key}</span>` });
         } else {
-            showCustomModal('error', 'Gagal Mendaftar', data.message);
+            showModal({ type: 'error', title: 'Gagal Mendaftar', message: data.message });
         }
     } catch (e) {
-        showCustomModal('error', 'Error Server', 'Terjadi kesalahan pada server saat menyimpan.');
+        showModal({ type: 'error', title: 'Error Server', message: 'Terjadi kesalahan pada server saat menyimpan.' });
     } finally {
         btn.innerText = 'Register'; btn.disabled = false;
     }
@@ -258,35 +205,45 @@ document.getElementById('addDeviceForm').addEventListener('submit', async (e) =>
 
 function copyToken(token) {
     navigator.clipboard.writeText(token).then(() => {
-        showCustomModal('success', 'Tersalin!', 'Token berhasil disalin ke clipboard.');
+        showModal({ type: 'success', title: 'Tersalin!', message: 'Token berhasil disalin ke clipboard.' });
     }).catch(err => {
-        showCustomModal('error', 'Gagal', 'Tidak dapat menyalin token.');
+        showModal({ type: 'error', title: 'Gagal', message: 'Tidak dapat menyalin token.' });
     });
 }
 
 function disconnectDevice(apiKey) {
-    showCustomModal('confirm', 'Logout Device', `Apakah Anda yakin ingin melakukan <b>Log Out</b> pada device ini?`, async () => {
-        try {
-            await fetch('/api/disconnect-device', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ api_key: apiKey }) });
-        } catch (e) {
-            showCustomModal('error', 'Gagal Logout', 'Gagal terhubung ke server.');
+    showModal({
+        type: 'confirm',
+        title: 'Logout Device',
+        message: `Apakah Anda yakin ingin melakukan <b>Log Out</b> pada device ini?`,
+        onConfirm: async () => {
+            try {
+                await fetch('/api/disconnect-device', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ api_key: apiKey }) });
+            } catch (e) {
+                showModal({ type: 'error', title: 'Gagal Logout', message: 'Gagal terhubung ke server.' });
+            }
         }
     });
 }
 
 function deleteDevice(apiKey) {
-    showCustomModal('confirm', 'Hapus Permanen', `Data device ini dan semua sesinya akan <b>dihapus secara permanen</b>. Lanjutkan?`, async () => {
-        try {
-            const res = await fetch('/api/delete-device', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ api_key: apiKey }) });
-            const data = await res.json();
-            if (data.status) {
-                showCustomModal('success', 'Terhapus', 'Device berhasil dihapus permanen.');
-                loadDevices();
-            } else {
-                showCustomModal('error', 'Gagal Menghapus', data.message);
+    showModal({
+        type: 'confirm',
+        title: 'Hapus Permanen',
+        message: `Data device ini dan semua sesinya akan <b>dihapus secara permanen</b>. Lanjutkan?`,
+        onConfirm: async () => {
+            try {
+                const res = await fetch('/api/delete-device', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ api_key: apiKey }) });
+                const data = await res.json();
+                if (data.status) {
+                    showModal({ type: 'success', title: 'Terhapus', message: 'Device berhasil dihapus permanen.' });
+                    loadDevices();
+                } else {
+                    showModal({ type: 'error', title: 'Gagal Menghapus', message: data.message });
+                }
+            } catch (e) {
+                showModal({ type: 'error', title: 'Error', message: 'Gagal menghubungi server.' });
             }
-        } catch (e) {
-            showCustomModal('error', 'Error', 'Gagal menghubungi server.');
         }
     });
 }
@@ -301,39 +258,44 @@ function renameDevice(apiKey, currentName) {
     `;
 
     // 2. Panggil custom modal lo dengan tipe 'confirm'
-    showCustomModal('confirm', 'Rename Device', `Silakan ubah nama untuk device ini: ${inputHtml}`, async () => {
+    showModal({
+        type: 'confirm',
+        title: 'Rename Device',
+        message: `Silakan ubah nama untuk device ini: ${inputHtml}`,
+        onConfirm: async () => {
 
-        // Tangkap isi ketikan user
-        const newName = document.getElementById(`renameInput-${apiKey}`).value.trim();
+            // Tangkap isi ketikan user
+            const newName = document.getElementById(`renameInput-${apiKey}`).value.trim();
 
-        // Validasi Kosong
-        if (!newName) {
-            setTimeout(() => showCustomModal('error', 'Validasi Gagal', 'Nama device tidak boleh kosong!'), 350);
-            return;
-        }
-
-        // Kalau namanya nggak diganti, nggak usah tembak API (hemat resource)
-        if (newName === currentName) return;
-
-        try {
-            // 3. Tembak API Backend
-            const res = await fetch('/api/rename-device', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ api_key: apiKey, new_name: newName })
-            });
-
-            const data = await res.json();
-
-            if (data.status) {
-                // Kasih delay dikit biar animasi modal confirm selesai nutup dulu
-                setTimeout(() => showCustomModal('success', 'Berhasil', 'Nama device berhasil diperbarui.'), 350);
-                loadDevices(); // Refresh isi tabel secara otomatis
-            } else {
-                setTimeout(() => showCustomModal('error', 'Gagal Rename', data.message), 350);
+            // Validasi Kosong
+            if (!newName) {
+                setTimeout(() => showModal({ type: 'error', title: 'Validasi Gagal', message: 'Nama device tidak boleh kosong!' }), 350);
+                return;
             }
-        } catch (e) {
-            setTimeout(() => showCustomModal('error', 'Error Server', 'Gagal menghubungi server untuk rename.'), 350);
+
+            // Kalau namanya nggak diganti, nggak usah tembak API (hemat resource)
+            if (newName === currentName) return;
+
+            try {
+                // 3. Tembak API Backend
+                const res = await fetch('/api/rename-device', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ api_key: apiKey, new_name: newName })
+                });
+
+                const data = await res.json();
+
+                if (data.status) {
+                    // Kasih delay dikit biar animasi modal confirm selesai nutup dulu
+                    setTimeout(() => showModal({ type: 'success', title: 'Berhasil', message: 'Nama device berhasil diperbarui.' }), 350);
+                    loadDevices(); // Refresh isi tabel secara otomatis
+                } else {
+                    setTimeout(() => showModal({ type: 'error', title: 'Gagal Rename', message: data.message }), 350);
+                }
+            } catch (e) {
+                setTimeout(() => showModal({ type: 'error', title: 'Error Server', message: 'Gagal menghubungi server untuk rename.' }), 350);
+            }
         }
     });
 }
