@@ -41,6 +41,7 @@ db.exec(`
     last_sent_date TEXT,
     manual_run_time TEXT,
     manual_run_status TEXT DEFAULT 'idle',
+    manual_tasks TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
@@ -61,6 +62,7 @@ const migrationColumns = [
   "ALTER TABLE automation_schedules ADD COLUMN end_date TEXT",
   "ALTER TABLE automation_schedules ADD COLUMN custom_days TEXT",
   "ALTER TABLE automation_schedules ADD COLUMN excluded_dates TEXT",
+  "ALTER TABLE automation_schedules ADD COLUMN manual_tasks TEXT",
 ];
 migrationColumns.forEach((sql) => {
   try {
