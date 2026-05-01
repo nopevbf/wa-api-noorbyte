@@ -13,7 +13,22 @@ socket.on('connect', () => console.log('✅ WebSocket Connected ke Backend'));
 // LOGIC UTAMA APLIKASI
 // =========================================
 function toggleAddModal(show) {
-    document.getElementById('addModal').classList.toggle('hidden', !show);
+    const modal = document.getElementById('addModal');
+    const content = modal.querySelector('.transform');
+    
+    if (show) {
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+            modal.classList.remove('opacity-0');
+            if(content) content.classList.remove('scale-95');
+        }, 10);
+    } else {
+        modal.classList.add('opacity-0');
+        if(content) content.classList.add('scale-95');
+        setTimeout(() => {
+            modal.classList.add('hidden');
+        }, 300);
+    }
 }
 
 async function loadDevices() {

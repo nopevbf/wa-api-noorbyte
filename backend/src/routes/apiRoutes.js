@@ -271,10 +271,16 @@ router.post("/auth/verify", (req, res) => {
 const { getScheduleLogs, clearScheduleLogs } = require("../services/automationEngine");
 
 router.post("/automation/save-settings", checkApiKey, (req, res) => {
-  const { api_key, dp_api_url, dp_email, dp_password, target_number, fetch_time, send_wa_time, frequency, is_active, start_date, end_date, custom_days, excluded_dates, manual_tasks } = req.body;
-  // Use api_key from req.user if available (from checkApiKey)
-  const effectiveApiKey = req.user?.api_key || api_key;
+  const { dp_api_url, dp_email, dp_password, target_number, fetch_time, send_wa_time, frequency, is_active, start_date, end_date, custom_days, excluded_dates, manual_tasks } = req.body;
+  // Use api_key from req.user if available (from checkApiKey), or from body if admin
+  const effectiveApiKey = req.user?.role === 'admin' ? req.body.api_key : req.user?.api_key;
   if (!effectiveApiKey) return res.status(400).json({ status: false, message: "API Key wajib diisi." });
+
+  // Input Validation: manual_tasks harus berupa array
+  if (manual_tasks !== undefined && !Array.isArray(manual_tasks)) {
+    return res.status(400).json({ status: false, message: "manual_tasks harus berupa array." });
+  }
+
   const customDaysStr = JSON.stringify(custom_days || []);
   const excludedDatesStr = JSON.stringify(excluded_dates || []);
   const manualTasksStr = JSON.stringify(manual_tasks || []);
@@ -312,8 +318,14 @@ router.post("/automation/save-settings", checkApiKey, (req, res) => {
 
 router.post("/automation/run-manual", sensitiveLimiter, checkApiKey, (req, res) => {
   const { run_time, dp_api_url, dp_email, dp_password, target_number, manual_tasks } = req.body;
-  const api_key = req.body.api_key || req.user.api_key;
+  const api_key = req.user?.role === 'admin' ? req.body.api_key : req.user?.api_key;
   if (!api_key || !run_time) return res.status(400).json({ status: false, message: "API Key dan waktu wajib diisi." });
+
+  // Input Validation: manual_tasks harus berupa array
+  if (manual_tasks !== undefined && !Array.isArray(manual_tasks)) {
+    return res.status(400).json({ status: false, message: "manual_tasks harus berupa array." });
+  }
+
   const manualTasksStr = JSON.stringify(manual_tasks || []);
   try {
     const existing = db.prepare("SELECT id FROM automation_schedules WHERE api_key = ?").get(api_key);
@@ -330,7 +342,7 @@ router.post("/automation/run-manual", sensitiveLimiter, checkApiKey, (req, res) 
 });
 
 router.post("/automation/cancel-manual", checkApiKey, (req, res) => {
-  const api_key = req.body.api_key || req.user.api_key;
+  const api_key = req.user?.role === 'admin' ? req.body.api_key : req.user?.api_key;
   if (!api_key) return res.status(400).json({ status: false, message: "API Key wajib diisi." });
   try {
     db.prepare(`UPDATE automation_schedules SET manual_run_time = NULL, manual_run_status = NULL WHERE api_key = ?`).run(api_key);
@@ -341,7 +353,7 @@ router.post("/automation/cancel-manual", checkApiKey, (req, res) => {
 });
 
 router.get("/automation/status", checkApiKey, (req, res) => {
-  const api_key = req.query.api_key || req.user.api_key;
+  const api_key = req.user?.role === 'admin' ? req.query.api_key : req.user?.api_key;
   if (!api_key) return res.status(400).json({ status: false, message: "API Key wajib diisi." });
   try {
     const schedule = db.prepare("SELECT * FROM automation_schedules WHERE api_key = ?").get(api_key);
@@ -358,7 +370,7 @@ router.get("/automation/status", checkApiKey, (req, res) => {
 
 router.post('/rename-device', sensitiveLimiter, checkApiKey, async (req, res) => {
   const { new_name } = req.body;
-  const api_key = req.body.api_key || req.user.api_key;
+  const api_key = req.user?.api_key;
   if (!api_key || !new_name) return res.status(400).json({ status: false, message: "Data tidak lengkap." });
   try {
     db.prepare("UPDATE users SET username = ? WHERE api_key = ?").run(new_name, api_key);
@@ -369,7 +381,7 @@ router.post('/rename-device', sensitiveLimiter, checkApiKey, async (req, res) =>
 });
 
 router.get("/automation/kpi", checkApiKey, (req, res) => {
-  const api_key = req.query.api_key || req.user.api_key;
+  const api_key = req.user?.role === 'admin' ? req.query.api_key : req.user?.api_key;
   if (!api_key) return res.status(400).json({ status: false, message: "API Key wajib diisi." });
   try {
     const totalResult = db.prepare("SELECT COUNT(*) as count FROM message_logs WHERE api_key = ?").get(api_key);

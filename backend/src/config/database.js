@@ -56,23 +56,26 @@ db.exec(`
 `);
 
 // Migrasi Database: Tambahkan kolom baru jika belum ada
-const migrationColumns = [
-  "ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user'",
-  "ALTER TABLE automation_schedules ADD COLUMN start_date TEXT",
-  "ALTER TABLE automation_schedules ADD COLUMN end_date TEXT",
-  "ALTER TABLE automation_schedules ADD COLUMN custom_days TEXT",
-  "ALTER TABLE automation_schedules ADD COLUMN excluded_dates TEXT",
-  "ALTER TABLE automation_schedules ADD COLUMN manual_tasks TEXT",
+const migrations = [
+  { table: 'users', column: 'role', sql: "ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user'" },
+  { table: 'automation_schedules', column: 'start_date', sql: "ALTER TABLE automation_schedules ADD COLUMN start_date TEXT" },
+  { table: 'automation_schedules', column: 'end_date', sql: "ALTER TABLE automation_schedules ADD COLUMN end_date TEXT" },
+  { table: 'automation_schedules', column: 'custom_days', sql: "ALTER TABLE automation_schedules ADD COLUMN custom_days TEXT" },
+  { table: 'automation_schedules', column: 'excluded_dates', sql: "ALTER TABLE automation_schedules ADD COLUMN excluded_dates TEXT" },
+  { table: 'automation_schedules', column: 'manual_tasks', sql: "ALTER TABLE automation_schedules ADD COLUMN manual_tasks TEXT" },
 ];
-migrationColumns.forEach((sql) => {
+
+migrations.forEach(({ table, column, sql }) => {
   try {
-    db.exec(sql);
-    const colName = sql.match(/ADD COLUMN ([a-zA-Z_][a-zA-Z0-9_]*)/)?.[1];
-    if (colName) console.log(`[DATABASE] Kolom '${colName}' berhasil ditambahkan.`);
-  } catch (error) {
-    if (!error.message.includes("duplicate column name")) {
-      console.error("[DATABASE] Gagal migrasi kolom:", error.message);
+    const tableInfo = db.prepare(`PRAGMA table_info(${table})`).all();
+    const columnExists = tableInfo.some(info => info.name === column);
+    
+    if (!columnExists) {
+      db.exec(sql);
+      console.log(`[DATABASE] Kolom '${column}' berhasil ditambahkan ke tabel '${table}'.`);
     }
+  } catch (error) {
+    console.error(`[DATABASE] Gagal memeriksa atau menambah kolom ${column}:`, error.message);
   }
 });
 
