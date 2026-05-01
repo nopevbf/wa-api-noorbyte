@@ -65,6 +65,12 @@ backend/database.db
 **/cache/
 **/cache_files/
 
+# Ignore Python bytecode files
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+
 # Ignore test files
 **/tests/
 backend/tests/

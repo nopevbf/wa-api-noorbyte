@@ -12,6 +12,8 @@ const {
 } = require('../services/scapper.js');
 const { SocksProxyAgent } = require("socks-proxy-agent");
 const crypto = require("crypto");
+const { getTargetApiKey } = require("../helpers/apiKeyHelper");
+const { validateManualTasks } = require("../helpers/validators");
 
 // Socks5 Proxy dari env — dipakai untuk semua request keluar ke DParagon (termasuk checkin handle)
 const proxyUrl = process.env.PROXY_URL || "";
@@ -272,18 +274,20 @@ const { getScheduleLogs, clearScheduleLogs } = require("../services/automationEn
 
 router.post("/automation/save-settings", checkApiKey, (req, res) => {
   const { dp_api_url, dp_email, dp_password, target_number, fetch_time, send_wa_time, frequency, is_active, start_date, end_date, custom_days, excluded_dates, manual_tasks } = req.body;
-  // Use api_key from req.user if available (from checkApiKey), or from body if admin
-  const effectiveApiKey = req.user?.role === 'admin' ? req.body.api_key : req.user?.api_key;
-  if (!effectiveApiKey) return res.status(400).json({ status: false, message: "API Key wajib diisi." });
 
-  // Input Validation: manual_tasks harus berupa array
-  if (manual_tasks !== undefined && !Array.isArray(manual_tasks)) {
-    return res.status(400).json({ status: false, message: "manual_tasks harus berupa array." });
+  // Centralized API Key resolution
+  const { apiKey: effectiveApiKey, error: keyError } = getTargetApiKey(req, 'body');
+  if (keyError) return res.status(400).json({ status: false, message: keyError });
+
+  // Zod-based validation for manual_tasks
+  const taskValidation = validateManualTasks(manual_tasks);
+  if (!taskValidation.valid) {
+    return res.status(400).json({ status: false, message: taskValidation.error });
   }
 
   const customDaysStr = JSON.stringify(custom_days || []);
   const excludedDatesStr = JSON.stringify(excluded_dates || []);
-  const manualTasksStr = JSON.stringify(manual_tasks || []);
+  const manualTasksStr = JSON.stringify(taskValidation.data);
   try {
     const existing = db.prepare("SELECT * FROM automation_schedules WHERE api_key = ?").get(effectiveApiKey);
     
@@ -318,15 +322,19 @@ router.post("/automation/save-settings", checkApiKey, (req, res) => {
 
 router.post("/automation/run-manual", sensitiveLimiter, checkApiKey, (req, res) => {
   const { run_time, dp_api_url, dp_email, dp_password, target_number, manual_tasks } = req.body;
-  const api_key = req.user?.role === 'admin' ? req.body.api_key : req.user?.api_key;
-  if (!api_key || !run_time) return res.status(400).json({ status: false, message: "API Key dan waktu wajib diisi." });
 
-  // Input Validation: manual_tasks harus berupa array
-  if (manual_tasks !== undefined && !Array.isArray(manual_tasks)) {
-    return res.status(400).json({ status: false, message: "manual_tasks harus berupa array." });
+  // Centralized API Key resolution
+  const { apiKey: api_key, error: keyError } = getTargetApiKey(req, 'body');
+  if (keyError) return res.status(400).json({ status: false, message: keyError });
+  if (!run_time) return res.status(400).json({ status: false, message: "Waktu wajib diisi." });
+
+  // Zod-based validation for manual_tasks
+  const taskValidation = validateManualTasks(manual_tasks);
+  if (!taskValidation.valid) {
+    return res.status(400).json({ status: false, message: taskValidation.error });
   }
 
-  const manualTasksStr = JSON.stringify(manual_tasks || []);
+  const manualTasksStr = JSON.stringify(taskValidation.data);
   try {
     const existing = db.prepare("SELECT id FROM automation_schedules WHERE api_key = ?").get(api_key);
     if (existing) {
@@ -342,8 +350,8 @@ router.post("/automation/run-manual", sensitiveLimiter, checkApiKey, (req, res) 
 });
 
 router.post("/automation/cancel-manual", checkApiKey, (req, res) => {
-  const api_key = req.user?.role === 'admin' ? req.body.api_key : req.user?.api_key;
-  if (!api_key) return res.status(400).json({ status: false, message: "API Key wajib diisi." });
+  const { apiKey: api_key, error: keyError } = getTargetApiKey(req, 'body');
+  if (keyError) return res.status(400).json({ status: false, message: keyError });
   try {
     db.prepare(`UPDATE automation_schedules SET manual_run_time = NULL, manual_run_status = NULL WHERE api_key = ?`).run(api_key);
     res.status(200).json({ status: true, message: "Jadwal manual berhasil dibatalkan." });
@@ -353,8 +361,8 @@ router.post("/automation/cancel-manual", checkApiKey, (req, res) => {
 });
 
 router.get("/automation/status", checkApiKey, (req, res) => {
-  const api_key = req.user?.role === 'admin' ? req.query.api_key : req.user?.api_key;
-  if (!api_key) return res.status(400).json({ status: false, message: "API Key wajib diisi." });
+  const { apiKey: api_key, error: keyError } = getTargetApiKey(req, 'query');
+  if (keyError) return res.status(400).json({ status: false, message: keyError });
   try {
     const schedule = db.prepare("SELECT * FROM automation_schedules WHERE api_key = ?").get(api_key);
     if (!schedule) return res.status(200).json({ status: true, data: null });
@@ -381,8 +389,8 @@ router.post('/rename-device', sensitiveLimiter, checkApiKey, async (req, res) =>
 });
 
 router.get("/automation/kpi", checkApiKey, (req, res) => {
-  const api_key = req.user?.role === 'admin' ? req.query.api_key : req.user?.api_key;
-  if (!api_key) return res.status(400).json({ status: false, message: "API Key wajib diisi." });
+  const { apiKey: api_key, error: keyError } = getTargetApiKey(req, 'query');
+  if (keyError) return res.status(400).json({ status: false, message: keyError });
   try {
     const totalResult = db.prepare("SELECT COUNT(*) as count FROM message_logs WHERE api_key = ?").get(api_key);
     const successResult = db.prepare("SELECT COUNT(*) as count FROM message_logs WHERE api_key = ? AND status = 'SUCCESS'").get(api_key);
