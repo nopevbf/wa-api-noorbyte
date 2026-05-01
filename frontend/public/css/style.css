@@ -78,3 +78,278 @@
     transform: translateX(100%);
   }
 }
+
+/* ==========================================
+   AIR DATEPICKER CUSTOM STYLING (MODERN WEB)
+   ========================================== */
+.air-datepicker {
+  --adp-background-color: #ffffff !important;
+  --adp-color: #334155 !important;
+  --adp-accent-color: #6366f1 !important;
+  --adp-border-color: #e2e8f0 !important;
+  --adp-border-radius: 16px !important;
+  --adp-font-family: "Plus Jakarta Sans", sans-serif !important;
+  --adp-font-size: 14px !important;
+  --adp-cell-border-radius: 10px !important;
+  --adp-transition-duration: 200ms !important;
+  
+  border: 1px solid var(--adp-border-color) !important;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+  backdrop-filter: blur(10px) !important;
+  padding: 8px !important;
+  z-index: 9999 !important;
+}
+
+/* Header customization */
+.air-datepicker-nav {
+  border-bottom: none !important;
+  padding: 10px !important;
+}
+
+.air-datepicker-nav--title,
+.air-datepicker-nav--title i {
+  font-weight: 700 !important;
+  color: #1e293b !important;
+}
+
+.air-datepicker-nav--action:hover {
+  background: #f1f5f9 !important;
+  border-radius: 50% !important;
+}
+
+/* Day names */
+.air-datepicker-body--day-name {
+  color: #94a3b8 !important;
+  font-weight: 700 !important;
+  font-size: 11px !important;
+  text-transform: uppercase !important;
+}
+
+/* Saturday & Sunday labels (Sab & Min) red */
+.air-datepicker-body--day-name[data-day="0"],
+.air-datepicker-body--day-name[data-day="6"] {
+  color: #ef4444 !important;
+}
+
+/* Cells */
+.air-datepicker-cell {
+  height: 36px !important;
+  font-weight: 500 !important;
+}
+
+/* Saturday & Sunday cells red - using only the official class */
+.air-datepicker-cell.-day-.-weekend- {
+  color: #ef4444 !important;
+}
+
+/* Reset color for selected weekend cells so they stay white */
+.air-datepicker-cell.-day-.-selected-,
+.air-datepicker-cell.-day-.-range-from-,
+.air-datepicker-cell.-day-.-range-to- {
+  color: #fff !important;
+}
+
+.air-datepicker-cell.-current- {
+  color: var(--adp-accent-color) !important;
+  font-weight: 700 !important;
+}
+
+.air-datepicker-cell.-selected-,
+.air-datepicker-cell.-selected-.-current- {
+  background: var(--adp-accent-color) !important;
+  color: #fff !important;
+}
+
+.air-datepicker-cell.-in-range- {
+  background: rgba(99, 102, 241, 0.1) !important;
+  color: #4338ca !important;
+}
+
+.air-datepicker-cell.-range-from-,
+.air-datepicker-cell.-range-to- {
+  background: var(--adp-accent-color) !important;
+  color: #fff !important;
+}
+
+/* Buttons */
+.air-datepicker-buttons {
+  border-top: 1px solid #f1f5f9 !important;
+  padding: 12px !important;
+}
+
+.air-datepicker-button {
+  border-radius: 8px !important;
+  color: var(--adp-accent-color) !important;
+  font-weight: 700 !important;
+  flex: 1 !important;
+}
+
+.air-datepicker-button:hover {
+  background: #f5f3ff !important;
+}
+
+
+/* ==========================================
+   CUSTOM SPINNER TIME PICKER (DP STYLE - POPUP)
+   ========================================== */
+.dp__time_popup {
+  position: absolute;
+  z-index: 10000;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  display: none; /* Hidden by default */
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  min-width: 160px;
+  animation: dpPopupIn 0.2s ease-out;
+}
+
+@keyframes dpPopupIn {
+  from { opacity: 0; transform: translateY(10px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.dp__time_input_inner {
+  display: flex;
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+  border-radius: 12px;
+  padding: 10px;
+  gap: 10px;
+  user-select: none;
+}
+
+.dp__time_col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+/* ==========================================
+   CUSTOM SPINNER TIME PICKER (DP STYLE - POPUP)
+   ========================================== */
+.dp__time_popup {
+  position: absolute;
+  z-index: 10000;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  display: none; /* Hidden by default */
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  min-width: 160px;
+  animation: dpPopupIn 0.2s ease-out;
+}
+
+@keyframes dpPopupIn {
+  from { opacity: 0; transform: translateY(10px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.dp__time_input_inner {
+  display: flex;
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+  border-radius: 12px;
+  padding: 10px;
+  gap: 10px;
+  user-select: none;
+}
+
+.dp__time_col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.dp__time_display {
+  width: 48px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1e293b;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  cursor: default;
+  transition: all 0.2s;
+}
+
+.dp__btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 24px;
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.2s;
+  padding: 0;
+}
+
+.dp__btn:hover {
+  color: #6366f1;
+  transform: scale(1.15);
+}
+
+.dp__btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+.dp__time_separator {
+  font-weight: 700;
+  font-size: 1.25rem;
+  color: #cbd5e1;
+  line-height: 1;
+}
+
+.dp__time_ok_btn {
+  width: 100%;
+  padding: 8px;
+  background: #6366f1;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.dp__time_ok_btn:hover {
+  background: #4f46e5;
+  box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.4);
+}
+
+/* Arrow for the popup */
+.dp__time_popup::before {
+  content: "";
+  position: absolute;
+  top: -6px;
+  left: 20px;
+  width: 12px;
+  height: 12px;
+  background: white;
+  border-left: 1px solid #e2e8f0;
+  border-top: 1px solid #e2e8f0;
+  transform: rotate(45deg);
+}
+

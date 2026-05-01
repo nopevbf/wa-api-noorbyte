@@ -160,7 +160,7 @@ async function requestWithContext(config, stepLabel) {
   }
 }
 
-async function executeStep1And2(dpApiUrl, dpEmail, dpPassword) {
+async function executeStep1And2(dpApiUrl, dpEmail, dpPassword, logger = null, manualTasks = []) {
   const baseApiUrl = normalizeDpApiUrl(dpApiUrl);
 
   const loginAttempts = [
@@ -188,6 +188,8 @@ async function executeStep1And2(dpApiUrl, dpEmail, dpPassword) {
 
   let authRes = null;
   const loginErrors = [];
+
+  if (logger) logger("STEP 1", "Mencoba login ke DParagon...", "text-blue-400");
 
   for (const attempt of loginAttempts) {
     try {
@@ -237,6 +239,9 @@ async function executeStep1And2(dpApiUrl, dpEmail, dpPassword) {
   if (!dpToken)
     throw new Error("Gagal mendapatkan access_token dari response.");
 
+  if (logger) logger("STEP 1", "Login berhasil (Token diperoleh).", "text-emerald-400");
+
+  if (logger) logger("STEP 2", "Mengambil data on-progress task...", "text-blue-400");
   const taskRes = await requestWithContext(
     {
       method: "get",
@@ -247,13 +252,19 @@ async function executeStep1And2(dpApiUrl, dpEmail, dpPassword) {
   );
 
   const payloadData = taskRes.data.payload || [];
-  if (payloadData.length === 0)
+  if (payloadData.length === 0 && manualTasks.length === 0)
     throw new Error("Data payload kosong atau tidak ditemukan.");
 
   const tasksList = payloadData.map((task) => ({
     dates: `${task.start_date || ""} - ${task.end_date || ""}`,
     task_description: task.task_description || "",
   }));
+
+  if (manualTasks.length > 0) {
+    tasksList.push(...manualTasks);
+  }
+
+  if (logger) logger("STEP 2", `Ditemukan ${tasksList.length} tasks.`, "text-emerald-400");
 
   return { dpToken, tasksList, baseApiUrl };
 }
@@ -262,7 +273,7 @@ async function executeStep1And2(dpApiUrl, dpEmail, dpPassword) {
 // STEP 3–5 — axios direct (fast path)
 // ---------------------------------------------------------------------------
 
-async function executeStep3To5(dpApiUrl, dpToken, tasksList) {
+async function executeStep3To5(dpApiUrl, dpToken, tasksList, logger = null) {
   const baseApiUrl = normalizeDpApiUrl(dpApiUrl);
 
   const now = new Date();
@@ -272,6 +283,7 @@ async function executeStep3To5(dpApiUrl, dpToken, tasksList) {
     String(now.getDate()).padStart(2, "0"),
   ].join("-");
 
+  if (logger) logger("STEP 3", "Mendaftarkan task baru untuk hari ini...", "text-blue-400");
   await requestWithContext(
     {
       method: "post",
@@ -281,7 +293,9 @@ async function executeStep3To5(dpApiUrl, dpToken, tasksList) {
     },
     "STEP 3 NEW TASK",
   );
+  if (logger) logger("STEP 3", "Task berhasil didaftarkan.", "text-emerald-400");
 
+  if (logger) logger("STEP 4", "Mengambil kode laporan harian...", "text-blue-400");
   const listRes = await requestWithContext(
     {
       method: "get",
@@ -299,7 +313,9 @@ async function executeStep3To5(dpApiUrl, dpToken, tasksList) {
   const lastKey = keys[keys.length - 1];
   const reportCode = group[lastKey]?.daily_report_code;
   if (!reportCode) throw new Error("Key daily_report_code tidak ditemukan.");
+  if (logger) logger("STEP 4", `Kode laporan: ${reportCode}`, "text-emerald-400");
 
+  if (logger) logger("STEP 5", "Menghasilkan ringkasan laporan harian...", "text-blue-400");
   const summaryRes = await requestWithContext(
     {
       method: "get",
@@ -309,12 +325,17 @@ async function executeStep3To5(dpApiUrl, dpToken, tasksList) {
     "STEP 5 SUMMARY REPORT",
   );
 
-  return extractMessage(summaryRes.data, "STEP 5");
+  const message = extractMessage(summaryRes.data, "STEP 5");
+  if (logger) logger("STEP 5", "Ringkasan laporan berhasil dihasilkan.", "text-emerald-400");
+
+  return message;
 }
 
-async function runDailyReportViaBrowser(dpApiUrl, dpEmail, dpPassword) {
+async function runDailyReportViaBrowser(dpApiUrl, dpEmail, dpPassword, logger = null, manualTasks = []) {
   const baseApiUrl = normalizeDpApiUrl(dpApiUrl);
   const managementOrigin = getManagementOriginFromApiUrl(baseApiUrl);
+
+  if (logger) logger("BROWSER", "Memulai browser fallback untuk bypass Cloudflare...", "text-amber-400");
 
   const profileSuffix = Buffer.from(baseApiUrl)
     .toString("base64url")
@@ -351,6 +372,7 @@ async function runDailyReportViaBrowser(dpApiUrl, dpEmail, dpPassword) {
       });
 
       // Warmup: buka management origin supaya CF set clearance cookie
+      if (logger) logger("BROWSER", "Melakukan warmup koneksi...", "text-slate-400");
       await page.goto(managementOrigin, {
         waitUntil: "networkidle2",
         timeout: 60000,
@@ -359,15 +381,32 @@ async function runDailyReportViaBrowser(dpApiUrl, dpEmail, dpPassword) {
       // Kalau masih challenge page, tunggu dan reload sekali
       const titleAfterWarmup = await page.title();
       if (titleAfterWarmup.toLowerCase().includes("just a moment")) {
-        console.warn("[BROWSER] CF challenge aktif, menunggu 5 detik...");
+        if (logger) logger("BROWSER", "Menunggu Cloudflare clearance...", "text-amber-400");
         await new Promise((r) => setTimeout(r, 5000));
         await page.reload({ waitUntil: "networkidle2", timeout: 60000 });
+      }
+
+      // Gunakan CDP untuk memantau logs dari browser evaluate
+      if (logger) {
+        page.on('console', msg => {
+          const text = msg.text();
+          if (text.startsWith('[LOG]')) {
+            const parts = text.replace('[LOG]', '').split('|');
+            if (parts.length === 3) {
+              logger(parts[0], parts[1], parts[2]);
+            }
+          }
+        });
       }
 
       // Jalankan semua step via fetch() di dalam konteks browser
       // (sudah punya CF clearance cookie dari warmup di atas)
       const result = await page.evaluate(
-        async ({ baseApiUrl, managementOrigin, dpEmail, dpPassword }) => {
+        async ({ baseApiUrl, managementOrigin, dpEmail, dpPassword, manualTasks }) => {
+          const log = (label, text, color) => {
+            console.log(`[LOG]${label}|${text}|${color}`);
+          };
+
           const toJsonSafe = async (res) => {
             const text = await res.text();
             try {
@@ -391,6 +430,7 @@ async function runDailyReportViaBrowser(dpApiUrl, dpEmail, dpPassword) {
             "";
 
           // --- Login ---
+          log("STEP 1", "Mencoba login via browser...", "text-blue-400");
           const loginAttempts = [
             {
               label: "login/email",
@@ -445,6 +485,7 @@ async function runDailyReportViaBrowser(dpApiUrl, dpEmail, dpPassword) {
               `[BROWSER LOGIN] Gagal token. ${loginErrors.join(" | ")}`,
             );
           }
+          log("STEP 1", "Login browser berhasil.", "text-emerald-400");
 
           // --- Fetch helper ---
           const apiFetch = async (url, options, label) => {
@@ -473,6 +514,7 @@ async function runDailyReportViaBrowser(dpApiUrl, dpEmail, dpPassword) {
           };
 
           // --- Step 2: on-progress task ---
+          log("STEP 2", "Mengambil data on-progress task...", "text-blue-400");
           const taskData = await apiFetch(
             `${baseApiUrl}/daily-reports/on-progress-task`,
             { method: "GET" },
@@ -480,16 +522,22 @@ async function runDailyReportViaBrowser(dpApiUrl, dpEmail, dpPassword) {
           );
 
           const payloadData = taskData.payload || [];
-          if (!Array.isArray(payloadData) || payloadData.length === 0) {
+          if ((!Array.isArray(payloadData) || payloadData.length === 0) && manualTasks.length === 0) {
             throw new Error("[BROWSER STEP 2] Data payload kosong.");
           }
 
-          const tasksList = payloadData.map((t) => ({
+          const tasksList = (Array.isArray(payloadData) ? payloadData : []).map((t) => ({
             dates: `${t.start_date || ""} - ${t.end_date || ""}`,
             task_description: t.task_description || "",
           }));
 
+          if (manualTasks.length > 0) {
+            tasksList.push(...manualTasks);
+          }
+          log("STEP 2", `Ditemukan ${tasksList.length} tasks.`, "text-emerald-400");
+
           // --- Step 3: post new task ---
+          log("STEP 3", "Mendaftarkan task baru...", "text-blue-400");
           const now = new Date();
           const todayDate = [
             now.getFullYear(),
@@ -505,8 +553,10 @@ async function runDailyReportViaBrowser(dpApiUrl, dpEmail, dpPassword) {
             },
             "BROWSER STEP 3",
           );
+          log("STEP 3", "Task berhasil didaftarkan.", "text-emerald-400");
 
           // --- Step 4: get report code ---
+          log("STEP 4", "Mengambil kode laporan harian...", "text-blue-400");
           const listData = await apiFetch(
             `${baseApiUrl}/daily-reports/list?dates=&employee_position_id=`,
             { method: "GET" },
@@ -523,8 +573,10 @@ async function runDailyReportViaBrowser(dpApiUrl, dpEmail, dpPassword) {
             throw new Error(
               "[BROWSER STEP 4] daily_report_code tidak ditemukan.",
             );
+          log("STEP 4", `Kode laporan: ${reportCode}`, "text-emerald-400");
 
           // --- Step 5: summary ---
+          log("STEP 5", "Menghasilkan ringkasan laporan...", "text-blue-400");
           const summaryData = await apiFetch(
             `${baseApiUrl}/daily-reports/summary-daily-report?code=${reportCode}`,
             { method: "GET" },
@@ -542,9 +594,10 @@ async function runDailyReportViaBrowser(dpApiUrl, dpEmail, dpPassword) {
           if (!msg)
             throw new Error("[BROWSER STEP 5] Message laporan tidak ditemukan.");
 
+          log("STEP 5", "Ringkasan laporan berhasil dihasilkan.", "text-emerald-400");
           return msg;
         },
-        { baseApiUrl, managementOrigin, dpEmail, dpPassword },
+        { baseApiUrl, managementOrigin, dpEmail, dpPassword, manualTasks },
       );
 
       return result;
@@ -576,7 +629,7 @@ function extractMessage(summaryData, stepLabel) {
   // Full pipeline
   // ---------------------------------------------------------------------------
 
-  async function fetchDparagonReport(dpApiUrl, dpEmail, dpPassword) {
+  async function fetchDparagonReport(dpApiUrl, dpEmail, dpPassword, logger = null, manualTasks = []) {
     const baseApiUrl = normalizeDpApiUrl(dpApiUrl);
 
     try {
@@ -584,8 +637,10 @@ function extractMessage(summaryData, stepLabel) {
         baseApiUrl,
         dpEmail,
         dpPassword,
+        logger,
+        manualTasks
       );
-      return await executeStep3To5(baseApiUrl, dpToken, tasksList);
+      return await executeStep3To5(baseApiUrl, dpToken, tasksList, logger);
     } catch (err) {
       const isCF =
         err.isCloudflareChallengeError || isCloudflareChallengeError(err);
@@ -596,7 +651,7 @@ function extractMessage(summaryData, stepLabel) {
       );
 
       try {
-        return await runDailyReportViaBrowser(baseApiUrl, dpEmail, dpPassword);
+        return await runDailyReportViaBrowser(baseApiUrl, dpEmail, dpPassword, logger, manualTasks);
       } catch (browserErr) {
         throw new Error(
           `[fetchDparagonReport] Browser fallback juga gagal.\n` +
