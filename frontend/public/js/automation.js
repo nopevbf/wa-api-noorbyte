@@ -997,26 +997,39 @@ Occupancy Rate: 0%
   let taskDatePicker;
   if (taskDateInput && typeof AirDatepicker !== 'undefined') {
     try {
-      // English locale object definition (Manual fallback to avoid 'exports is not defined' error)
-      const localeEn = {
-        days: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
-        daysShort: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
-        daysMin: ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'],
-        months: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
-        monthsShort: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-        today: 'Today',
-        clear: 'Clear',
+      // Indonesian locale object definition (Manual fallback to avoid 'exports is not defined' error)
+      const localeIndo = {
+        days: ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'],
+        daysShort: ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'],
+        daysMin: ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'],
+        months: ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'],
+        monthsShort: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'],
+        today: 'Hari Ini',
+        clear: 'Hapus',
         dateFormat: 'yyyy-MM-dd',
         timeFormat: 'hh:mm aa',
         firstDay: 0
       };
 
       taskDatePicker = new AirDatepicker(taskDateInput, {
-        locale: localeEn,
+        locale: localeIndo,
         range: true,
         multipleDatesSeparator: " - ",
         dateFormat: "yyyy-MM-dd",
         autoClose: true,
+        buttons: [
+          {
+            content: 'Hari Ini',
+            onClick: (dp) => {
+              const today = new Date();
+              dp.clear();
+              dp.selectDate([today, today]);
+              dp.setViewDate(today);
+            }
+          },
+          'clear'
+        ],
+        toggleSelected: false,
         // Positioning fix for modals
         position: 'bottom center',
       });
@@ -1029,17 +1042,17 @@ Occupancy Rate: 0%
     btnOpenTaskModal.addEventListener("click", () => {
       manualTaskModal.classList.remove("hidden");
 
-      // Default date
+      // Default date: same-day range
       const today = new Date();
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
 
       if (taskDatePicker) {
-        taskDatePicker.selectDate([today, tomorrow]);
+        taskDatePicker.clear(); // Ensure clean state
+        taskDatePicker.selectDate([today, today]);
       } else {
         // Fallback if datepicker fails
         const formatDate = (date) => date.toISOString().split('T')[0];
-        taskDateInput.value = `${formatDate(today)} - ${formatDate(tomorrow)}`;
+        const dateStr = formatDate(today);
+        taskDateInput.value = `${dateStr} - ${dateStr}`;
       }
 
       renderTasks();
