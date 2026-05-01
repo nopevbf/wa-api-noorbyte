@@ -113,6 +113,34 @@ function getTodayDateWIB() {
 }
 
 /**
+ * Filter expired manual tasks and clean up the database if necessary.
+ */
+function filterAndCleanManualTasks(scheduleId, manualTasks) {
+  if (!Array.isArray(manualTasks)) return [];
+  
+  const todayStr = getTodayDateWIB();
+  
+  const filtered = manualTasks.filter(task => {
+    const dateStr = task.date || task.dates || "";
+    const parts = dateStr.split(" - ");
+    const endDateStr = parts[parts.length - 1].trim();
+    
+    if (!endDateStr) return true; // Keep if no date
+    return endDateStr >= todayStr;
+  });
+
+  if (filtered.length !== manualTasks.length) {
+    db.prepare("UPDATE automation_schedules SET manual_tasks = ? WHERE id = ?")
+      .run(JSON.stringify(filtered), scheduleId);
+  }
+  
+  return filtered.map(t => ({
+    dates: t.date || t.dates,
+    task_description: t.description || t.task_description
+  }));
+}
+
+/**
  * Get current time in HH:MM format in Asia/Jakarta timezone
  */
 function getCurrentTimeWIB() {
@@ -139,11 +167,15 @@ async function processFetch(schedule) {
   );
 
   try {
+    const manualTasksRaw = JSON.parse(schedule.manual_tasks || "[]");
+    const activeManualTasks = filterAndCleanManualTasks(schedule.id, manualTasksRaw);
+
     const message = await fetchDparagonReport(
       schedule.dp_api_url,
       schedule.dp_email,
       schedule.dp_password,
-      (label, text, color) => addScheduleLog(schedule.id, color, label, text)
+      (label, text, color) => addScheduleLog(schedule.id, color, label, text),
+      activeManualTasks
     );
 
     const dataSizeMB = (
@@ -270,11 +302,15 @@ async function processManualRuns() {
 
       try {
         // Step 1-5: Fetch data
+        const manualTasksRaw = JSON.parse(schedule.manual_tasks || "[]");
+        const activeManualTasks = filterAndCleanManualTasks(schedule.id, manualTasksRaw);
+
         const message = await fetchDparagonReport(
           schedule.dp_api_url,
           schedule.dp_email,
           schedule.dp_password,
-          (label, text, color) => addScheduleLog(schedule.id, color, label, text)
+          (label, text, color) => addScheduleLog(schedule.id, color, label, text),
+          activeManualTasks
         );
 
         const dataSizeMB = (
