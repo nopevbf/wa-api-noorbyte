@@ -167,10 +167,10 @@ jobs:
           // --- Fallback: flash first, then pro ---
           async function runReview() {
             try {
-              return await callGeminiWithRetry("gemini-3-flash", 3);
+              return await callGeminiWithRetry("gemini-3-flash-preview", 3);
             } catch (flashErr) {
-              console.warn("gemini-3-flash gagal, nyoba gemini-1.5-pro sebagai fallback...");
-              return await callGeminiWithRetry("gemini-3-pro", 2);
+              console.warn("gemini-3-flash gagal, nyoba gemini-3-pro sebagai fallback...");
+              return await callGeminiWithRetry("gemini-3-pro-preview", 2);
             }
           }
 
