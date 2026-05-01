@@ -479,6 +479,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         document.querySelectorAll("#excludedDatesList span"),
       ).map((el) => el.textContent),
       is_active: document.getElementById("scheduleToggle")?.checked || false,
+      manual_tasks: JSON.parse(localStorage.getItem("manualTasks") || "[]"),
     };
   }
 
@@ -559,6 +560,7 @@ document.addEventListener("DOMContentLoaded", async () => {
               dp_email: formData.dp_email,
               dp_password: formData.dp_password,
               target_number: formData.target_number,
+              manual_tasks: formData.manual_tasks,
             }),
           });
 
