@@ -311,16 +311,17 @@ router.post("/automation/save-settings", checkApiKey, (req, res) => {
 });
 
 router.post("/automation/run-manual", sensitiveLimiter, checkApiKey, (req, res) => {
-  const { run_time, dp_api_url, dp_email, dp_password, target_number } = req.body;
+  const { run_time, dp_api_url, dp_email, dp_password, target_number, manual_tasks } = req.body;
   const api_key = req.body.api_key || req.user.api_key;
   if (!api_key || !run_time) return res.status(400).json({ status: false, message: "API Key dan waktu wajib diisi." });
+  const manualTasksStr = JSON.stringify(manual_tasks || []);
   try {
     const existing = db.prepare("SELECT id FROM automation_schedules WHERE api_key = ?").get(api_key);
     if (existing) {
-      db.prepare(`UPDATE automation_schedules SET dp_api_url = ?, dp_email = ?, dp_password = ?, target_number = ?, manual_run_time = ?, manual_run_status = 'waiting' WHERE api_key = ?`).run(dp_api_url, dp_email, dp_password, target_number, run_time, api_key);
+      db.prepare(`UPDATE automation_schedules SET dp_api_url = ?, dp_email = ?, dp_password = ?, target_number = ?, manual_tasks = ?, manual_run_time = ?, manual_run_status = 'waiting' WHERE api_key = ?`).run(dp_api_url, dp_email, dp_password, target_number, manualTasksStr, run_time, api_key);
       clearScheduleLogs(existing.id);
     } else {
-      db.prepare(`INSERT INTO automation_schedules (api_key, dp_api_url, dp_email, dp_password, target_number, manual_run_time, manual_run_status) VALUES (?, ?, ?, ?, ?, ?, 'waiting')`).run(api_key, dp_api_url, dp_email, dp_password, target_number, run_time);
+      db.prepare(`INSERT INTO automation_schedules (api_key, dp_api_url, dp_email, dp_password, target_number, manual_tasks, manual_run_time, manual_run_status) VALUES (?, ?, ?, ?, ?, ?, ?, 'waiting')`).run(api_key, dp_api_url, dp_email, dp_password, target_number, manualTasksStr, run_time);
     }
     res.status(200).json({ status: true, message: "Jadwal manual run terdaftar." });
   } catch (error) {
