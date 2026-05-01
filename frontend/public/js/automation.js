@@ -58,18 +58,191 @@ document.addEventListener("DOMContentLoaded", async () => {
   // ==========================================
   // 0b. INIT ADVANCED SCHEDULING UI
   // ==========================================
+  const localeIndo = {
+    days: ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'],
+    daysShort: ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'],
+    daysMin: ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'],
+    months: ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'],
+    monthsShort: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'],
+    today: 'Hari Ini',
+    clear: 'Hapus',
+    dateFormat: 'yyyy-MM-dd',
+    timeFormat: 'hh:mm aa',
+    firstDay: 0
+  };
+
+  const commonAirConfig = {
+    locale: localeIndo,
+    dateFormat: "yyyy-MM-dd",
+    autoClose: true,
+    buttons: [
+      {
+        content: 'Hari Ini',
+        onClick: (dp) => {
+          const today = new Date();
+          dp.clear();
+          dp.selectDate(today);
+          dp.setViewDate(today);
+        }
+      },
+      'clear'
+    ],
+    position: 'bottom center',
+  };
+
   const startDateInput = document.getElementById("startDate");
+  const endDateInput = document.getElementById("endDate");
+  const excludedDateInput = document.getElementById("excludedDateInput");
+
+  let startDatePicker, endDatePicker, excludedDatePicker;
+
+  try {
+    if (startDateInput && typeof AirDatepicker !== 'undefined') {
+      startDatePicker = new AirDatepicker(startDateInput, commonAirConfig);
+    }
+
+    if (endDateInput && typeof AirDatepicker !== 'undefined') {
+      endDatePicker = new AirDatepicker(endDateInput, commonAirConfig);
+    }
+
+    if (excludedDateInput && typeof AirDatepicker !== 'undefined') {
+      excludedDatePicker = new AirDatepicker(excludedDateInput, commonAirConfig);
+    }
+  } catch (e) {
+    console.warn("Gagal inisialisasi salah satu AirDatepicker:", e);
+  }
+
   if (startDateInput && !startDateInput.value) {
     const today = new Date().toISOString().split("T")[0];
-    startDateInput.value = today;
+    if (startDatePicker) startDatePicker.selectDate(new Date(today));
+    else startDateInput.value = today;
   }
 
   const freqCustom = document.getElementById("freqCustom");
   const customDaysContainer = document.getElementById("customDaysContainer");
   const freqRadios = document.querySelectorAll('input[name="frequency"]');
   const btnAddExcludedDate = document.getElementById("btnAddExcludedDate");
-  const excludedDateInput = document.getElementById("excludedDateInput");
+  // excludedDateInput and excludedDatesList are already defined above if needed, 
+  // but let's ensure they are available for the logic below.
   const excludedDatesList = document.getElementById("excludedDatesList");
+
+  // ==========================================
+  // 0c. CUSTOM TIME PICKER HELPER (DP STYLE - POPUP)
+  // ==========================================
+  const setupCustomTimePicker = (inputId) => {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+
+    // Create Popup Container
+    const popup = document.createElement("div");
+    popup.className = "dp__time_popup";
+    
+    // Wrapper for the spinners inside popup
+    const innerWrapper = document.createElement("div");
+    innerWrapper.className = "dp__time_input_inner";
+    
+    let [h, m] = (input.value || "08:00").split(":");
+    let hours = parseInt(h) || 0;
+    let mins = parseInt(m) || 0;
+
+    const updateInput = () => {
+      const hh = String(hours).padStart(2, '0');
+      const mm = String(mins).padStart(2, '0');
+      input.value = `${hh}:${mm}`;
+      input.dispatchEvent(new Event("change"));
+    };
+
+    const createCol = (getVal, onInc, onDec) => {
+      const col = document.createElement("div");
+      col.className = "dp__time_col";
+      
+      const btnInc = document.createElement("button");
+      btnInc.type = "button";
+      btnInc.className = "dp__btn dp__inc_dec_button";
+      btnInc.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="currentColor" class="dp__icon"><path d="M24.943 19.057l-8-8c-0.521-0.521-1.365-0.521-1.885 0l-8 8c-0.52 0.52-0.52 1.365 0 1.885s1.365 0.52 1.885 0l7.057-7.057c0 0 7.057 7.057 7.057 7.057 0.52 0.52 1.365 0.52 1.885 0s0.52-1.365 0-1.885z"></path></svg>`;
+      
+      const display = document.createElement("button");
+      display.type = "button";
+      display.className = "dp__time_display dp__time_display_block";
+      display.textContent = String(getVal()).padStart(2, '0');
+      
+      const btnDec = document.createElement("button");
+      btnDec.type = "button";
+      btnDec.className = "dp__btn dp__inc_dec_button";
+      btnDec.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="currentColor" class="dp__icon"><path d="M7.057 12.943l8 8c0.521 0.521 1.365 0.521 1.885 0l8-8c0.52-0.52 0.52-1.365 0-1.885s-1.365-0.52-1.885 0l-7.057 7.057c0 0-7.057-7.057-7.057-7.057-0.52-0.52-1.365-0.52-1.885 0s-0.52 1.365 0 1.885z"></path></svg>`;
+
+      btnInc.onclick = (e) => { e.stopPropagation(); onInc(); display.textContent = String(getVal()).padStart(2, '0'); updateInput(); };
+      btnDec.onclick = (e) => { e.stopPropagation(); onDec(); display.textContent = String(getVal()).padStart(2, '0'); updateInput(); };
+
+      col.appendChild(btnInc);
+      col.appendChild(display);
+      col.appendChild(btnDec);
+      return { col, display };
+    };
+
+    const hCol = createCol(() => hours, () => { hours = (hours + 1) % 24; }, () => { hours = (hours - 1 + 24) % 24; });
+    const separator = document.createElement("div");
+    separator.className = "dp__time_separator";
+    separator.textContent = ":";
+    const mCol = createCol(() => mins, () => { mins = (mins + 1) % 60; }, () => { mins = (mins - 1 + 60) % 60; });
+
+    innerWrapper.appendChild(hCol.col);
+    innerWrapper.appendChild(separator);
+    innerWrapper.appendChild(mCol.col);
+    popup.appendChild(innerWrapper);
+
+    // OK Button
+    const okBtn = document.createElement("button");
+    okBtn.type = "button";
+    okBtn.className = "dp__time_ok_btn";
+    okBtn.textContent = "OK";
+    okBtn.onclick = (e) => {
+      e.stopPropagation();
+      popup.style.display = "none";
+    };
+    popup.appendChild(okBtn);
+
+    // Sync from input if changed externally
+    input.addEventListener("sync", () => {
+      let [nh, nm] = (input.value || "08:00").split(":");
+      hours = parseInt(nh) || 0;
+      mins = parseInt(nm) || 0;
+      hCol.display.textContent = String(hours).padStart(2, '0');
+      mCol.display.textContent = String(mins).padStart(2, '0');
+    });
+
+    // Style the input to look clickable
+    input.style.cursor = "pointer";
+    input.readOnly = true;
+
+    // Show/Hide Logic
+    input.addEventListener("click", (e) => {
+      e.stopPropagation();
+      // Close all other popups first
+      document.querySelectorAll(".dp__time_popup").forEach(p => p.style.display = "none");
+      
+      const rect = input.getBoundingClientRect();
+      popup.style.display = "flex";
+      popup.style.top = `${rect.height + 8}px`;
+      popup.style.left = "0px";
+    });
+
+    // Close when clicking outside
+    document.addEventListener("click", (e) => {
+      if (!popup.contains(e.target) && e.target !== input) {
+        popup.style.display = "none";
+      }
+    });
+
+    // Ensure parent has relative position
+    if (window.getComputedStyle(input.parentNode).position === "static") {
+      input.parentNode.style.position = "relative";
+    }
+    input.parentNode.appendChild(popup);
+  };
+
+  setupCustomTimePicker("executionTime");
+  setupCustomTimePicker("runAutomationTime");
 
   const toggleCustomDays = () => {
     if (freqCustom && freqCustom.checked) {
@@ -116,7 +289,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         return;
       }
       addExcludedDateBadge(dateStr);
-      excludedDateInput.value = ""; // Reset input
+      
+      if (excludedDatePicker) {
+        excludedDatePicker.clear();
+      } else {
+        excludedDateInput.value = ""; // Reset input fallback
+      }
     });
   }
 
@@ -309,6 +487,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const hh = String(now.getHours()).padStart(2, '0');
         const mm = String(now.getMinutes()).padStart(2, '0');
         runTimeInput.value = `${hh}:${mm}`;
+        runTimeInput.dispatchEvent(new Event("sync"));
       }
       runModal.classList.remove("hidden");
     });
@@ -538,15 +717,19 @@ document.addEventListener("DOMContentLoaded", async () => {
 
           // Restore execution time
           if (data.fetch_time && document.getElementById("executionTime")) {
-            document.getElementById("executionTime").value = data.fetch_time;
+            const exInput = document.getElementById("executionTime");
+            exInput.value = data.fetch_time;
+            exInput.dispatchEvent(new Event("sync"));
           }
 
           // Restore Advanced Scheduling from backend
           if (data.start_date && document.getElementById("startDate")) {
-            document.getElementById("startDate").value = data.start_date;
+            if (startDatePicker) startDatePicker.selectDate(new Date(data.start_date));
+            else document.getElementById("startDate").value = data.start_date;
           }
           if (data.end_date && document.getElementById("endDate")) {
-            document.getElementById("endDate").value = data.end_date;
+            if (endDatePicker) endDatePicker.selectDate(new Date(data.end_date));
+            else document.getElementById("endDate").value = data.end_date;
           }
           if (data.frequency) {
             if (data.frequency === "weekdays")
@@ -779,9 +962,11 @@ Occupancy Rate: 0%
       if (document.getElementById("scheduleToggle"))
         document.getElementById("scheduleToggle").checked =
           savedSettings.scheduleEnabled || false;
-      if (document.getElementById("executionTime"))
-        document.getElementById("executionTime").value =
-          savedSettings.fetchTime || "08:00";
+      if (document.getElementById("executionTime")) {
+        const exInput = document.getElementById("executionTime");
+        exInput.value = savedSettings.fetchTime || "08:00";
+        exInput.dispatchEvent(new Event("sync"));
+      }
 
       if (savedSettings.frequency === "weekdays")
         document.getElementById("freqWeekdays").checked = true;
@@ -790,10 +975,14 @@ Occupancy Rate: 0%
       else document.getElementById("freqDaily").checked = true;
 
       // Restore Advanced Scheduling
-      if (document.getElementById("startDate") && savedSettings.startDate)
-        document.getElementById("startDate").value = savedSettings.startDate;
-      if (document.getElementById("endDate"))
-        document.getElementById("endDate").value = savedSettings.endDate || "";
+      if (document.getElementById("startDate") && savedSettings.startDate) {
+        if (startDatePicker) startDatePicker.selectDate(new Date(savedSettings.startDate));
+        else document.getElementById("startDate").value = savedSettings.startDate;
+      }
+      if (document.getElementById("endDate")) {
+        if (endDatePicker) endDatePicker.selectDate(new Date(savedSettings.endDate));
+        else document.getElementById("endDate").value = savedSettings.endDate || "";
+      }
 
       if (savedSettings.customDays) {
         document.querySelectorAll('input[name="customDay"]').forEach((el) => {
@@ -997,26 +1186,11 @@ Occupancy Rate: 0%
   let taskDatePicker;
   if (taskDateInput && typeof AirDatepicker !== 'undefined') {
     try {
-      // Indonesian locale object definition (Manual fallback to avoid 'exports is not defined' error)
-      const localeIndo = {
-        days: ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'],
-        daysShort: ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'],
-        daysMin: ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'],
-        months: ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'],
-        monthsShort: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'],
-        today: 'Hari Ini',
-        clear: 'Hapus',
-        dateFormat: 'yyyy-MM-dd',
-        timeFormat: 'hh:mm aa',
-        firstDay: 0
-      };
-
       taskDatePicker = new AirDatepicker(taskDateInput, {
-        locale: localeIndo,
+        ...commonAirConfig,
         range: true,
         multipleDatesSeparator: " - ",
-        dateFormat: "yyyy-MM-dd",
-        autoClose: true,
+        toggleSelected: false,
         buttons: [
           {
             content: 'Hari Ini',
@@ -1029,9 +1203,6 @@ Occupancy Rate: 0%
           },
           'clear'
         ],
-        toggleSelected: false,
-        // Positioning fix for modals
-        position: 'bottom center',
       });
     } catch (e) {
       console.warn("Gagal inisialisasi AirDatepicker:", e);

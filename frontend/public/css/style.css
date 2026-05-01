@@ -187,3 +187,169 @@
 .air-datepicker-button:hover {
   background: #f5f3ff !important;
 }
+
+
+/* ==========================================
+   CUSTOM SPINNER TIME PICKER (DP STYLE - POPUP)
+   ========================================== */
+.dp__time_popup {
+  position: absolute;
+  z-index: 10000;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  display: none; /* Hidden by default */
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  min-width: 160px;
+  animation: dpPopupIn 0.2s ease-out;
+}
+
+@keyframes dpPopupIn {
+  from { opacity: 0; transform: translateY(10px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.dp__time_input_inner {
+  display: flex;
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+  border-radius: 12px;
+  padding: 10px;
+  gap: 10px;
+  user-select: none;
+}
+
+.dp__time_col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+/* ==========================================
+   CUSTOM SPINNER TIME PICKER (DP STYLE - POPUP)
+   ========================================== */
+.dp__time_popup {
+  position: absolute;
+  z-index: 10000;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  display: none; /* Hidden by default */
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  min-width: 160px;
+  animation: dpPopupIn 0.2s ease-out;
+}
+
+@keyframes dpPopupIn {
+  from { opacity: 0; transform: translateY(10px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.dp__time_input_inner {
+  display: flex;
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+  border-radius: 12px;
+  padding: 10px;
+  gap: 10px;
+  user-select: none;
+}
+
+.dp__time_col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.dp__time_display {
+  width: 48px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1e293b;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  cursor: default;
+  transition: all 0.2s;
+}
+
+.dp__btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 24px;
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.2s;
+  padding: 0;
+}
+
+.dp__btn:hover {
+  color: #6366f1;
+  transform: scale(1.15);
+}
+
+.dp__btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+.dp__time_separator {
+  font-weight: 700;
+  font-size: 1.25rem;
+  color: #cbd5e1;
+  line-height: 1;
+}
+
+.dp__time_ok_btn {
+  width: 100%;
+  padding: 8px;
+  background: #6366f1;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.dp__time_ok_btn:hover {
+  background: #4f46e5;
+  box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.4);
+}
+
+/* Arrow for the popup */
+.dp__time_popup::before {
+  content: "";
+  position: absolute;
+  top: -6px;
+  left: 20px;
+  width: 12px;
+  height: 12px;
+  background: white;
+  border-left: 1px solid #e2e8f0;
+  border-top: 1px solid #e2e8f0;
+  transform: rotate(45deg);
+}
+
