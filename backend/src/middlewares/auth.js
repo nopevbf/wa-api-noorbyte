@@ -9,9 +9,10 @@ const checkApiKey = (req, res, next) => {
         // Potong tulisan 'Bearer ' dan ambil token-nya aja
         apiKey = authHeader.split(' ')[1]; 
     } 
-    // 2. Fallback (Cadangan): Cek dari header x-api-key atau body (biar API lama nggak error)
+    // 2. Fallback (Cadangan): Cek dari header x-api-key saja
+    // SECURITY: body/query fallback dihapus — jangan biarkan client inject api_key via body/query
     else {
-        apiKey = req.headers['x-api-key'] || req.body.api_key || req.query.api_key;
+        apiKey = req.headers['x-api-key'];
     }
 
     // [FIX] Bila tidak ada device sama sekali, izinkan bypass API Key untuk pendaftaran pertama

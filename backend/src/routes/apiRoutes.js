@@ -13,7 +13,7 @@ const {
 const { SocksProxyAgent } = require("socks-proxy-agent");
 const crypto = require("crypto");
 const { getTargetApiKey } = require("../helpers/apiKeyHelper");
-const { validateManualTasks } = require("../helpers/validators");
+const { validateManualTasks, validateSaveSettings } = require("../helpers/validators");
 
 // Socks5 Proxy dari env — dipakai untuk semua request keluar ke DParagon (termasuk checkin handle)
 const proxyUrl = process.env.PROXY_URL || "";
@@ -279,6 +279,12 @@ router.post("/automation/save-settings", checkApiKey, (req, res) => {
   const { apiKey: effectiveApiKey, error: keyError } = getTargetApiKey(req, 'body');
   if (keyError) return res.status(400).json({ status: false, message: keyError });
 
+  // Mass assignment: validate is_active and frequency
+  const settingsValidation = validateSaveSettings(req.body);
+  if (!settingsValidation.valid) {
+    return res.status(400).json({ status: false, message: settingsValidation.error });
+  }
+
   // Zod-based validation for manual_tasks
   const taskValidation = validateManualTasks(manual_tasks);
   if (!taskValidation.valid) {
@@ -367,9 +373,16 @@ router.get("/automation/status", checkApiKey, (req, res) => {
     const schedule = db.prepare("SELECT * FROM automation_schedules WHERE api_key = ?").get(api_key);
     if (!schedule) return res.status(200).json({ status: true, data: null });
     const logs = getScheduleLogs(schedule.id);
+
+    // Safe JSON.parse — app must not crash on corrupt DB data
+    let custom_days = [];
+    let excluded_dates = [];
+    try { custom_days = JSON.parse(schedule.custom_days || '[]'); } catch (_) { custom_days = []; }
+    try { excluded_dates = JSON.parse(schedule.excluded_dates || '[]'); } catch (_) { excluded_dates = []; }
+
     res.status(200).json({
       status: true,
-      data: { ...schedule, logs, custom_days: JSON.parse(schedule.custom_days || '[]'), excluded_dates: JSON.parse(schedule.excluded_dates || '[]') }
+      data: { ...schedule, logs, custom_days, excluded_dates }
     });
   } catch (error) {
     res.status(500).json({ status: false, message: "Gagal mengambil status." });

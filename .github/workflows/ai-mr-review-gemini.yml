@@ -165,11 +165,11 @@ jobs:
           async function runReview() {
             let review;
             try {
-              review = await callGeminiWithRetry("gemini-1.5-flash", 3);
+              review = await callGeminiWithRetry("gemini-3-flash-preview", 3);
             } catch (flashErr) {
-              console.warn("⚠️ gemini-1.5-flash failed, trying gemini-1.5-pro as fallback...");
+              console.warn("⚠️ gemini-3-flash-preview failed, trying gemini-3-pro-preview as fallback...");
               try {
-                review = await callGeminiWithRetry("gemini-1.5-pro", 2);
+                review = await callGeminiWithRetry("gemini-3-pro-preview", 2);
               } catch (proErr) {
                 throw proErr;
               }
