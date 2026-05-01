@@ -1079,11 +1079,6 @@ Occupancy Rate: 0%
       localStorage.setItem("manualTasks", JSON.stringify(manualTasks));
 
       taskDescInput.value = "";
-      if (taskDatePicker) {
-        taskDatePicker.clear();
-      } else {
-        taskDateInput.value = "";
-      }
       renderTasks();
 
       if (typeof showToast === 'function') showToast("Task berhasil ditambahkan", "success");
