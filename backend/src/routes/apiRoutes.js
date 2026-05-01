@@ -14,6 +14,7 @@ const { SocksProxyAgent } = require("socks-proxy-agent");
 const crypto = require("crypto");
 const { getTargetApiKey } = require("../helpers/apiKeyHelper");
 const { validateManualTasks, validateSaveSettings } = require("../helpers/validators");
+const { buildMagicLinkMessage } = require("../helpers/messageTemplates");
 
 // Socks5 Proxy dari env — dipakai untuk semua request keluar ke DParagon (termasuk checkin handle)
 const proxyUrl = process.env.PROXY_URL || "";
@@ -242,7 +243,7 @@ router.post("/auth/magic-link", async (req, res) => {
     db.prepare("INSERT INTO magic_links (phone, token, expires_at) VALUES (?, ?, ?)").run(phone, token, expiresAt);
     const frontendUrl = req.headers.origin || (req.headers.referer ? req.headers.referer.split('/login')[0] : 'http://localhost:4000');
     const magicLink = `${frontendUrl}/verify?token=${token}`;
-    const messageText = `👋 *NoorByteAPI Login*\n\nKlik link di bawah untuk masuk:\n🔗 ${magicLink}`;
+    const messageText = buildMagicLinkMessage(magicLink);
     await sendMessageViaWa(senderDevice.api_key, phone, messageText, "text");
     res.status(200).json({ status: true, message: "Magic link terkirim." });
   } catch (error) {
