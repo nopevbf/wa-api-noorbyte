@@ -78,3 +78,112 @@
     transform: translateX(100%);
   }
 }
+
+/* ==========================================
+   AIR DATEPICKER CUSTOM STYLING (MODERN WEB)
+   ========================================== */
+.air-datepicker {
+  --adp-background-color: #ffffff !important;
+  --adp-color: #334155 !important;
+  --adp-accent-color: #6366f1 !important;
+  --adp-border-color: #e2e8f0 !important;
+  --adp-border-radius: 16px !important;
+  --adp-font-family: "Plus Jakarta Sans", sans-serif !important;
+  --adp-font-size: 14px !important;
+  --adp-cell-border-radius: 10px !important;
+  --adp-transition-duration: 200ms !important;
+  
+  border: 1px solid var(--adp-border-color) !important;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+  backdrop-filter: blur(10px) !important;
+  padding: 8px !important;
+  z-index: 9999 !important;
+}
+
+/* Header customization */
+.air-datepicker-nav {
+  border-bottom: none !important;
+  padding: 10px !important;
+}
+
+.air-datepicker-nav--title,
+.air-datepicker-nav--title i {
+  font-weight: 700 !important;
+  color: #1e293b !important;
+}
+
+.air-datepicker-nav--action:hover {
+  background: #f1f5f9 !important;
+  border-radius: 50% !important;
+}
+
+/* Day names */
+.air-datepicker-body--day-name {
+  color: #94a3b8 !important;
+  font-weight: 700 !important;
+  font-size: 11px !important;
+  text-transform: uppercase !important;
+}
+
+/* Saturday & Sunday labels (Sab & Min) red */
+.air-datepicker-body--day-name[data-day="0"],
+.air-datepicker-body--day-name[data-day="6"] {
+  color: #ef4444 !important;
+}
+
+/* Cells */
+.air-datepicker-cell {
+  height: 36px !important;
+  font-weight: 500 !important;
+}
+
+/* Saturday & Sunday cells red - using only the official class */
+.air-datepicker-cell.-day-.-weekend- {
+  color: #ef4444 !important;
+}
+
+/* Reset color for selected weekend cells so they stay white */
+.air-datepicker-cell.-day-.-selected-,
+.air-datepicker-cell.-day-.-range-from-,
+.air-datepicker-cell.-day-.-range-to- {
+  color: #fff !important;
+}
+
+.air-datepicker-cell.-current- {
+  color: var(--adp-accent-color) !important;
+  font-weight: 700 !important;
+}
+
+.air-datepicker-cell.-selected-,
+.air-datepicker-cell.-selected-.-current- {
+  background: var(--adp-accent-color) !important;
+  color: #fff !important;
+}
+
+.air-datepicker-cell.-in-range- {
+  background: rgba(99, 102, 241, 0.1) !important;
+  color: #4338ca !important;
+}
+
+.air-datepicker-cell.-range-from-,
+.air-datepicker-cell.-range-to- {
+  background: var(--adp-accent-color) !important;
+  color: #fff !important;
+}
+
+/* Buttons */
+.air-datepicker-buttons {
+  border-top: 1px solid #f1f5f9 !important;
+  padding: 12px !important;
+}
+
+.air-datepicker-button {
+  border-radius: 8px !important;
+  color: var(--adp-accent-color) !important;
+  font-weight: 700 !important;
+  flex: 1 !important;
+}
+
+.air-datepicker-button:hover {
+  background: #f5f3ff !important;
+}
