@@ -29,7 +29,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Install dependencies
         run: npm install @google/generative-ai
@@ -62,59 +62,65 @@ jobs:
           const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
           const diff = fs.readFileSync("/tmp/pr_diff.txt", "utf8");
 
-          const prompt = `You are a Senior QA Engineer and Code Reviewer with deep expertise in ISTQB standards, STLC methodology, and Node.js / TypeScript best practices.
-
-          ## PR Context
-          - **Title:** ${process.env.PR_TITLE}
-          - **Author:** ${process.env.PR_AUTHOR}
-          - **Branch:** \`${process.env.HEAD_BRANCH}\` → \`${process.env.BASE_BRANCH}\`
-          - **Changed Files:** ${process.env.CHANGED_FILES || "N/A"}
-          - **Description:** ${process.env.PR_BODY || "_(no description provided)_"}
-
-          ## Code Diff
-          \`\`\`diff
-          ${diff || "_(no diff available)_"}
-          \`\`\`
-
-          ---
-
-          Review this PR across the following dimensions. Format your response in clean Markdown suitable for a GitHub PR comment.
-
-          ### 1. 🎯 Change Summary
-          Briefly summarize what this PR changes and what modules/components are affected.
-
-          ### 2. 🧪 Test Coverage Assessment (ISTQB)
-          - Are unit tests added/updated for changed logic?
-          - Are happy path, negative, boundary value (BVA), and edge cases covered?
-          - Are assertions specific or too loose?
-          - List any **missing test scenarios**.
-
-          ### 3. 🔍 Code Quality
-          - Logic correctness and error handling
-          - Null/undefined safety
-          - DRY and SOLID compliance
-          - Readability and naming clarity
-          - Performance concerns
-
-          ### 4. 🔐 Security Checklist (OWASP-Aware)
-          Flag any: input validation gaps, hardcoded secrets, auth/authz issues, injection vectors, XSS risks.
-
-          ### 5. 🚦 Review Verdict
-
-          **Overall Risk:** [Low / Medium / High / Critical]
-
-          **Status:** [✅ Approved | ⚠️ Approved with Comments | ❌ Changes Requested]
-
-          **🚫 Blocking Issues (must fix before merge):**
-          - (list or "None")
-
-          **💡 Suggestions (non-blocking):**
-          - (list or "None")
-
-          **👍 What's done well:**
-          - (list positives)
-
-          Keep the tone constructive and professional. Be concise but specific.`;
+          const prompt = [
+            "Lo adalah Senior QA Engineer dan Code Reviewer yang literally expert banget di ISTQB standards, STLC methodology, sama Node.js / TypeScript best practices.",
+            "",
+            "Gaya bahasa lo: Indonesia campur dikit English, casual tapi tetep professional — ala anak Jaksel yang works in tech.",
+            "Pakai kata kayak 'which is', 'literally', 'actually', 'kind of', 'basically', 'so', 'anyway', 'honestly', 'lowkey'.",
+            "Vibes-nya santai tapi insightful. Jangan lebay, jangan kaku.",
+            "",
+            "## Konteks PR",
+            "- **Judul:** " + (process.env.PR_TITLE || "N/A"),
+            "- **Author:** " + (process.env.PR_AUTHOR || "N/A"),
+            "- **Branch:** `" + (process.env.HEAD_BRANCH || "?") + "` ke `" + (process.env.BASE_BRANCH || "main") + "`",
+            "- **File yang berubah:** " + (process.env.CHANGED_FILES || "N/A"),
+            "- **Deskripsi:** " + (process.env.PR_BODY || "_(ga ada deskripsi, which is agak susah di-review tbh)_"),
+            "",
+            "## Code Diff",
+            "```diff",
+            (diff || "_(diff kosong, mungkin binary files atau ga ada perubahan JS/TS)_"),
+            "```",
+            "",
+            "---",
+            "",
+            "Review PR ini dengan format Markdown yang clean buat GitHub PR comment. Spesifik ya, sebut nama file dan konteks baris kalau bisa.",
+            "",
+            "### 1. Rangkuman Perubahan",
+            "Jelasin secara singkat ini PR ngubah apa dan ngaruh ke modul atau komponen mana aja. Basically kasih gambaran besarnya dulu.",
+            "",
+            "### 2. Test Coverage (ISTQB)",
+            "- Unit test udah di-update buat logic yang berubah?",
+            "- Happy path, negative case, boundary value (BVA), sama edge case udah ke-cover?",
+            "- Assertion-nya spesifik atau masih terlalu loose?",
+            "- List skenario yang belum di-test — honestly ini bagian paling penting.",
+            "",
+            "### 3. Code Quality",
+            "- Logic-nya bener ga? Error handling-nya gimana?",
+            "- Null/undefined safety — ada yang bisa meledak ga?",
+            "- DRY dan SOLID — ada yang violasi?",
+            "- Readability — nama variabel/fungsi-nya makes sense?",
+            "- Performance — ada N+1, blocking call, atau loop yang ga perlu?",
+            "",
+            "### 4. Security (OWASP-Aware)",
+            "Flag kalau ada: input validation yang kurang, hardcoded secret, celah auth/authz, injection vector, atau XSS risk.",
+            "",
+            "### 5. Verdict",
+            "",
+            "**Overall Risk:** [Low / Medium / High / Critical]",
+            "",
+            "**Status:** [Approved / Approved with Comments / Changes Requested]",
+            "",
+            "**Blocking Issues (wajib fix sebelum merge):**",
+            "- (list atau tulis 'Ga ada, which is bagus!')",
+            "",
+            "**Saran non-blocking tapi worth it:**",
+            "- (list atau tulis 'Ga ada saran tambahan')",
+            "",
+            "**Yang udah bagus:**",
+            "- (list hal positif — jangan lupa appreciate yang udah bener)",
+            "",
+            "Intinya: jujur, konstruktif, dan to the point. Jangan terlalu panjang tapi jangan sampai ada yang kelewat."
+          ].join("\n");
 
           // --- Error classification ---
           function classifyError(err) {
@@ -132,38 +138,34 @@ jobs:
           }
 
           // --- Retry with exponential backoff ---
-          async function callGeminiWithRetry(modelName, maxRetries = 3) {
-            let lastErr;
-            for (let attempt = 1; attempt <= maxRetries; attempt++) {
+          async function callGeminiWithRetry(modelName, maxRetries) {
+            maxRetries = maxRetries || 3;
+            var lastErr;
+            for (var attempt = 1; attempt <= maxRetries; attempt++) {
               try {
-                console.log(`⏳ Attempt ${attempt}/${maxRetries} using model: ${modelName}`);
-                const model = genAI.getGenerativeModel({ model: modelName });
-                const result = await model.generateContent(prompt);
+                console.log("Attempt " + attempt + "/" + maxRetries + " — model: " + modelName);
+                var model = genAI.getGenerativeModel({ model: modelName });
+                var result = await model.generateContent(prompt);
                 return result.response.text();
               } catch (err) {
                 lastErr = err;
-                const type = classifyError(err);
-                console.error(`❌ Attempt ${attempt} failed [${type}]: ${err.message}`);
+                var type = classifyError(err);
+                console.error("Attempt " + attempt + " gagal [" + type + "]: " + err.message);
 
-                if (type === "auth") {
-                  // No point retrying auth errors
-                  throw err;
-                }
+                if (type === "auth") throw err;
 
                 if (attempt < maxRetries) {
-                  // Exponential backoff: 10s, 30s, 60s
-                  const waitMs = [10000, 30000, 60000][attempt - 1] || 60000;
-                  console.log(`⏱️ Waiting ${waitMs / 1000}s before retry...`);
-                  await new Promise(r => setTimeout(r, waitMs));
+                  var waitMs = [10000, 30000, 60000][attempt - 1] || 60000;
+                  console.log("Nunggu " + (waitMs / 1000) + "s sebelum retry...");
+                  await new Promise(function(r) { setTimeout(r, waitMs); });
                 }
               }
             }
             throw lastErr;
           }
 
-          // --- Fallback: try flash first, then pro if flash fails ---
+          // --- Fallback: flash first, then pro ---
           async function runReview() {
-            let review;
             try {
               review = await callGeminiWithRetry("gemini-3-flash-preview", 3);
             } catch (flashErr) {
@@ -174,32 +176,30 @@ jobs:
                 throw proErr;
               }
             }
-            return review;
           }
 
-          // --- Build error comment based on error type ---
+          // --- Error comment builder ---
           function buildErrorComment(err) {
-            const type = classifyError(err);
-            const messages = {
-              rate_limit: `> ⚠️ **Rate limit reached** — Gemini free tier quota exceeded (15 req/min or 1500 req/day).\n> Workflow retried 3× with exponential backoff but still failed.\n> The review will run automatically on the next push to this PR.\n\n**Tip:** If this happens often, consider upgrading to a paid Gemini API plan.`,
-              auth:       `> ❌ **Authentication error** — \`GEMINI_API_KEY\` is missing or invalid.\n> Please check: **Repo → Settings → Secrets → GEMINI_API_KEY**`,
-              server:     `> 🔴 **Gemini API is temporarily unavailable** (5xx error).\n> This is Google's side — the review will run automatically on the next push.`,
-              unknown:    `> ⚠️ **Unexpected error** — please check the [workflow logs](${{ github.server_url }}/${{ github.repository }}/actions) for details.\n\n\`\`\`\n${err.message}\n\`\`\``
+            var type = classifyError(err);
+            var messages = {
+              rate_limit: "> ⚠️ **Rate limit kena nih** — kuota Gemini free tier habis (15 req/menit atau 1500 req/hari).\n> Udah di-retry 3x tapi tetep gagal, which is unfortunate.\n> Review akan jalan otomatis di push berikutnya.\n\n**Tip:** Kalau ini sering kejadian, consider upgrade ke paid plan.",
+              auth:       "> ❌ **Auth error** — GEMINI_API_KEY-nya ga valid atau belum di-set.\n> Cek di: **Repo Settings → Secrets → GEMINI_API_KEY**",
+              server:     "> 🔴 **Gemini API lagi down** (error 5xx) — ini dari sisi Google-nya.\n> Review akan jalan otomatis di push berikutnya.",
+              unknown:    "> ⚠️ **Ada error ga terduga** — cek workflow logs buat detail-nya.\n\n```\n" + err.message + "\n```"
             };
-            return `## 🤖 AI Code Review — ISTQB-Based (Gemini)\n\n${messages[type] || messages.unknown}\n\n---\n<sub>Failed on commit \`${{ github.sha }}\` · Workflow: \`ai-mr-review-gemini\`</sub>`;
+            return "## 🤖 AI Code Review — ISTQB-Based (Gemini)\n\n" + (messages[type] || messages.unknown) + "\n\n---\n<sub>Workflow: ai-mr-review-gemini</sub>";
           }
 
           // --- Main ---
-          (async () => {
+          (async function() {
             try {
-              const review = await runReview();
-              const comment = `## 🤖 AI Code Review — ISTQB-Based (Gemini)\n\n> _Automated review powered by Google Gemini. This is a quality gate, not a replacement for human review._\n\n---\n\n${review}\n\n---\n<sub>Generated on commit \`${{ github.sha }}\` · Workflow: \`ai-mr-review-gemini\`</sub>`;
+              var review = await runReview();
+              var comment = "## 🤖 AI Code Review — ISTQB-Based (Gemini)\n\n> _Auto-review by Google Gemini. Ini quality gate ya, bukan pengganti human review._\n\n---\n\n" + review + "\n\n---\n<sub>Workflow: ai-mr-review-gemini</sub>";
               fs.writeFileSync("/tmp/review_comment.txt", comment);
-              console.log("✅ Review generated successfully.");
+              console.log("Review berhasil digenerate!");
             } catch (err) {
-              console.error("❌ All attempts failed:", err.message);
+              console.error("Semua attempt gagal:", err.message);
               fs.writeFileSync("/tmp/review_comment.txt", buildErrorComment(err));
-              // Exit 0 so the workflow posts the error comment instead of silently failing
               process.exit(0);
             }
           })();
