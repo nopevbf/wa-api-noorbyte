@@ -67,7 +67,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     today: 'Hari Ini',
     clear: 'Hapus',
     dateFormat: 'yyyy-MM-dd',
-    timeFormat: 'hh:mm aa',
+    timeFormat: 'HH:mm',
     firstDay: 0
   };
 
@@ -132,6 +132,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   const setupCustomTimePicker = (inputId) => {
     const input = document.getElementById(inputId);
     if (!input) return;
+
+    // Set initial current time if empty
+    if (!input.value) {
+      const now = new Date();
+      const hh = String(now.getHours()).padStart(2, '0');
+      const mm = String(now.getMinutes()).padStart(2, '0');
+      input.value = `${hh}:${mm}`;
+    }
 
     // Create Popup Container
     const popup = document.createElement("div");
@@ -445,6 +453,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   // 3. HELPER: Kumpulkan semua form data
   // ==========================================
   function getFormData() {
+    const now = new Date();
+    const currentT = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    
     return {
       api_key: selector ? selector.value : "",
       dp_api_url: (document.getElementById("dpApiUrl")?.value || "").replace(
@@ -454,8 +465,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       dp_email: document.getElementById("dpEmail")?.value || "",
       dp_password: document.getElementById("accountPassword")?.value || "",
       target_number: document.getElementById("targetNumber")?.value || "",
-      fetch_time: document.getElementById("executionTime")?.value || "08:00",
-      send_wa_time: document.getElementById("executionTime")?.value || "08:00",
+      fetch_time: document.getElementById("executionTime")?.value || currentT,
+      send_wa_time: document.getElementById("executionTime")?.value || currentT,
       frequency:
         document.querySelector('input[name="frequency"]:checked')?.value ||
         "daily",
