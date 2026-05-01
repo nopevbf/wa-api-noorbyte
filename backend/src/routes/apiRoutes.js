@@ -271,12 +271,13 @@ router.post("/auth/verify", (req, res) => {
 const { getScheduleLogs, clearScheduleLogs } = require("../services/automationEngine");
 
 router.post("/automation/save-settings", checkApiKey, (req, res) => {
-  const { api_key, dp_api_url, dp_email, dp_password, target_number, fetch_time, send_wa_time, frequency, is_active, start_date, end_date, custom_days, excluded_dates } = req.body;
+  const { api_key, dp_api_url, dp_email, dp_password, target_number, fetch_time, send_wa_time, frequency, is_active, start_date, end_date, custom_days, excluded_dates, manual_tasks } = req.body;
   // Use api_key from req.user if available (from checkApiKey)
   const effectiveApiKey = req.user?.api_key || api_key;
   if (!effectiveApiKey) return res.status(400).json({ status: false, message: "API Key wajib diisi." });
   const customDaysStr = JSON.stringify(custom_days || []);
   const excludedDatesStr = JSON.stringify(excluded_dates || []);
+  const manualTasksStr = JSON.stringify(manual_tasks || []);
   try {
     const existing = db.prepare("SELECT * FROM automation_schedules WHERE api_key = ?").get(effectiveApiKey);
     
@@ -290,18 +291,18 @@ router.post("/automation/save-settings", checkApiKey, (req, res) => {
       db.prepare(`
         UPDATE automation_schedules 
         SET dp_api_url = ?, dp_email = ?, dp_password = ?, target_number = ?, fetch_time = ?, send_wa_time = ?, 
-            frequency = ?, is_active = ?, start_date = ?, end_date = ?, custom_days = ?, excluded_dates = ?,
+            frequency = ?, is_active = ?, start_date = ?, end_date = ?, custom_days = ?, excluded_dates = ?, manual_tasks = ?,
             last_fetched_date = ?, last_sent_date = ?
         WHERE api_key = ?
       `).run(
         dp_api_url, dp_email, dp_password, target_number, fetch_time, send_wa_time, 
-        frequency || "daily", is_active ? 1 : 0, start_date, end_date, customDaysStr, excludedDatesStr,
+        frequency || "daily", is_active ? 1 : 0, start_date, end_date, customDaysStr, excludedDatesStr, manualTasksStr,
         resetFlags ? null : existing.last_fetched_date,
         resetFlags ? null : existing.last_sent_date,
         effectiveApiKey
       );
     } else {
-      db.prepare(`INSERT INTO automation_schedules (api_key, dp_api_url, dp_email, dp_password, target_number, fetch_time, send_wa_time, frequency, is_active, start_date, end_date, custom_days, excluded_dates) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(effectiveApiKey, dp_api_url, dp_email, dp_password, target_number, fetch_time, send_wa_time, frequency || "daily", is_active ? 1 : 0, start_date, end_date, customDaysStr, excludedDatesStr);
+      db.prepare(`INSERT INTO automation_schedules (api_key, dp_api_url, dp_email, dp_password, target_number, fetch_time, send_wa_time, frequency, is_active, start_date, end_date, custom_days, excluded_dates, manual_tasks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(effectiveApiKey, dp_api_url, dp_email, dp_password, target_number, fetch_time, send_wa_time, frequency || "daily", is_active ? 1 : 0, start_date, end_date, customDaysStr, excludedDatesStr, manualTasksStr);
     }
     res.status(200).json({ status: true, message: "Pengaturan berhasil disimpan." });
   } catch (error) {
