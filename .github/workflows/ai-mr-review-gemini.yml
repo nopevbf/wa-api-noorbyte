@@ -119,7 +119,18 @@ jobs:
             "**Yang udah bagus:**",
             "- (list hal positif — jangan lupa appreciate yang udah bener)",
             "",
-            "Intinya: jujur, konstruktif, dan to the point. Jangan terlalu panjang tapi jangan sampai ada yang kelewat."
+            "Intinya: jujur, konstruktif, dan to the point. Jangan terlalu panjang tapi jangan sampai ada yang kelewat.",
+            "",
+            "PENTING: Gunakan emoji dan icon yang relevan di tiap section biar enak dibaca. Contoh penggunaan:",
+            "- Section header pakai: 🎯 🧪 🔍 🔐 🚦",
+            "- Hal positif/oke pakai: ✅ 👍 🙌 💚",
+            "- Perlu perhatian/warning pakai: ⚠️ 🟡 👀",
+            "- Blocking issue/berbahaya pakai: ❌ 🚫 🔴 💥",
+            "- Saran/ide improvement pakai: 💡 🛠️ 📝 🔧",
+            "- Security-related pakai: 🔒 🛡️",
+            "- Performance issue pakai: ⚡ 🐢",
+            "- Testing pakai: 🧬 🎯",
+            "Tapi jangan lebay, pake yang makes sense aja dan natural."
           ].join("\n");
 
           // --- Error classification ---
