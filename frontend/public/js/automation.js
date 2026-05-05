@@ -1167,7 +1167,15 @@ Occupancy Rate: 0%
   const taskDateInput = document.getElementById("taskDateInput");
   const taskDescInput = document.getElementById("taskDescInput");
 
-  let manualTasks = JSON.parse(localStorage.getItem("manualTasks") || "[]");
+  // Migrate legacy format { date, description } → { task_name, task_time } (backend Zod contract)
+  let manualTasks = JSON.parse(localStorage.getItem("manualTasks") || "[]").map(task => {
+    if (task.date !== undefined || task.description !== undefined) {
+      return { task_name: task.description || task.task_name || '', task_time: task.date || task.task_time || '' };
+    }
+    return task;
+  });
+  // Persist migrated data immediately
+  localStorage.setItem("manualTasks", JSON.stringify(manualTasks));
 
   function renderTasks() {
     if (!taskListContainer) return;
@@ -1179,8 +1187,8 @@ Occupancy Rate: 0%
     taskListContainer.innerHTML = manualTasks.map((task, index) => `
       <div class="p-3 bg-slate-50 border border-outline rounded-lg flex justify-between items-start gap-3 group">
         <div class="flex-1">
-          <p class="text-[10px] font-bold text-primary uppercase mb-0.5">${task.date}</p>
-          <p class="text-xs text-slate-600 leading-relaxed font-medium">${task.description}</p>
+          <p class="text-[10px] font-bold text-primary uppercase mb-0.5">${task.task_time}</p>
+          <p class="text-xs text-slate-600 leading-relaxed font-medium">${task.task_name}</p>
         </div>
         <button onclick="removeManualTask(${index})" class="text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100">
           <span class="material-symbols-outlined text-lg">delete</span>
@@ -1251,15 +1259,16 @@ Occupancy Rate: 0%
 
   if (btnSubmitTask) {
     btnSubmitTask.addEventListener("click", () => {
-      const date = taskDateInput.value.trim();
-      const description = taskDescInput.value.trim();
+      const task_time = taskDateInput.value.trim();
+      const task_name = taskDescInput.value.trim();
 
-      if (!date || !description) {
+      if (!task_time || !task_name) {
         if (typeof showToast === 'function') showToast("Mohon isi semua field", "warning");
         return;
       }
 
-      manualTasks.push({ date, description });
+      // Field names MUST match backend Zod schema: { task_name, task_time }
+      manualTasks.push({ task_name, task_time });
       localStorage.setItem("manualTasks", JSON.stringify(manualTasks));
 
       taskDescInput.value = "";
