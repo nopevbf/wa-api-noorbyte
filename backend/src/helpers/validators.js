@@ -2,11 +2,12 @@ const { z } = require('zod');
 
 /**
  * Schema for a single manual task item.
+ * Fields: { date: string, description: string }
  * Uses .strip() so unknown fields are silently dropped (prevents mass injection).
  */
 const manualTaskSchema = z.object({
-  task_name: z.string().min(1, 'task_name wajib diisi'),
-  task_time: z.string().min(1, 'task_time wajib diisi'),
+  date: z.string().min(1, 'date wajib diisi'),
+  description: z.string().min(1, 'description wajib diisi'),
 }).strip();
 
 /**
