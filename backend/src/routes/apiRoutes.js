@@ -7,9 +7,12 @@ const rateLimit = require("express-rate-limit");
 const { 
   scrapeDparagonAttendance, 
   parseDparagonTime, 
-  getCachedData, 
-  setCachedData 
-} = require('../services/scapper.js');
+  getCachedData,
+  setCachedData,
+  isCacheExpired,
+  formatAttendanceData
+} = require('../services/scraper.js');
+
 const { SocksProxyAgent } = require("socks-proxy-agent");
 const crypto = require("crypto");
 const { getTargetApiKey } = require("../helpers/apiKeyHelper");
@@ -423,26 +426,23 @@ router.get("/attendance/history", async (req, res) => {
     const targetPage = parseInt(req.query.page) || 1;
     const fullName = req.query.name || "";
     if (!fullName || fullName === "UNKNOWN USER") return res.json({ status: true, data: [], current_page: targetPage });
-    const { cachedHistoryData, lastScrapeTime } = getCachedData();
-    const isCacheExpired = !lastScrapeTime || new Date() - lastScrapeTime > 5 * 60 * 1000;
-    let resultData = [];
-    if (targetPage === 1 && cachedHistoryData.length > 0 && !isCacheExpired) {
-      resultData = cachedHistoryData;
-    } else {
-      const env = process.env.NODE_ENV || "development";
-      const email = env === "production" ? process.env.DPARAGON_EMAIL : process.env.DPARAGON_EMAIL_DEV;
-      const password = env === "production" ? process.env.DPARAGON_PASSWORD : process.env.DPARAGON_PASSWORD_DEV;
-      const rawData = await scrapeDparagonAttendance(env, email, password, fullName, targetPage);
-      let formattedData = [];
-      rawData.forEach(item => {
-        if (item.waktu_masuk && item.waktu_masuk !== "-") formattedData.push({ status: "checkin", raw_time: item.waktu_masuk, image_url: item.foto_masuk, shift_info: item.shift_info });
-        if (item.waktu_keluar && item.waktu_keluar !== "-") formattedData.push({ status: "checkout", raw_time: item.waktu_keluar, image_url: item.foto_keluar, shift_info: item.shift_info });
-      });
-      formattedData.sort((a, b) => parseDparagonTime(b.raw_time) - parseDparagonTime(a.raw_time));
-      resultData = formattedData;
-      if (targetPage === 1) setCachedData(formattedData, new Date());
+
+    const { cachedHistoryData } = getCachedData(fullName);
+    
+    if (targetPage === 1 && cachedHistoryData.length > 0 && !isCacheExpired(fullName)) {
+      return res.json({ status: true, data: cachedHistoryData, current_page: targetPage });
     }
-    res.json({ status: true, data: resultData, current_page: targetPage });
+
+    const env = process.env.NODE_ENV || "development";
+    const email = env === "production" ? process.env.DPARAGON_EMAIL : process.env.DPARAGON_EMAIL_DEV;
+    const password = env === "production" ? process.env.DPARAGON_PASSWORD : process.env.DPARAGON_PASSWORD_DEV;
+
+    const rawData = await scrapeDparagonAttendance(env, email, password, fullName, targetPage);
+    const formattedData = formatAttendanceData(rawData);
+
+    if (targetPage === 1) setCachedData(fullName, formattedData);
+    
+    res.json({ status: true, data: formattedData, current_page: targetPage });
   } catch (error) {
     res.status(500).json({ status: false, message: "Gagal ambil history." });
   }
@@ -452,9 +452,27 @@ router.get("/attendance/recent", async (req, res) => {
   try {
     const fullName = req.query.name || "";
     if (!fullName || fullName === "UNKNOWN USER") return res.json({ status: true, data: [] });
-    const { cachedHistoryData } = getCachedData();
-    res.json({ status: true, data: cachedHistoryData.slice(0, 2) });
+    
+    const { cachedHistoryData } = getCachedData(fullName);
+    const force = req.query.force === "true";
+
+    if (cachedHistoryData.length > 0 && !isCacheExpired(fullName) && !force) {
+      return res.json({ status: true, data: cachedHistoryData.slice(0, 2) });
+    }
+
+    // Jika cache kosong/expired atau dipaksa sync, lakukan scrape
+    const env = process.env.NODE_ENV || "development";
+    const email = env === "production" ? process.env.DPARAGON_EMAIL : process.env.DPARAGON_EMAIL_DEV;
+    const password = env === "production" ? process.env.DPARAGON_PASSWORD : process.env.DPARAGON_PASSWORD_DEV;
+
+    const rawData = await scrapeDparagonAttendance(env, email, password, fullName, 1);
+    const formattedData = formatAttendanceData(rawData);
+
+    setCachedData(fullName, formattedData);
+
+    res.json({ status: true, data: formattedData.slice(0, 2) });
   } catch (error) {
+    console.error("Recent Error:", error);
     res.status(500).json({ status: false, message: "Error." });
   }
 });
