@@ -7,9 +7,13 @@
 const NODE_ENV = process.env.NODE_ENV || "development";
 const isProd = NODE_ENV === "production";
 
+const packageJson = require("../../package.json");
+
 const config = {
   env: NODE_ENV,
   isProd,
+  version: packageJson.version || "1.0.0",
+  description: packageJson.description || "",
 
   // DParagon API URL — otomatis pilih berdasarkan NODE_ENV
   dparagonApiUrl: isProd

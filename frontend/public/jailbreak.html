@@ -29,6 +29,7 @@
         },
       };
     </script>
+    <link rel="stylesheet" href="/css/style.css">
     <style>
       .material-symbols-outlined {
         font-variation-settings:
@@ -152,7 +153,7 @@
                 </p>
                 <div class="mt-auto">
                   <button
-                    onclick="window.location.href = '/jailbreak/checkin'"
+                    id="btnBypassAbsen"
                     class="w-full bg-error text-white font-bold py-3 md:py-3.5 rounded-lg hover:bg-red-500 transition-colors shadow-[0_0_15px_rgba(239,68,68,0.2)] text-xs md:text-sm tracking-wide"
                   >
                     BYPASS ABSEN
@@ -234,6 +235,91 @@
         </div>
       </main>
     </div>
+
+    <!-- D'PARAGON AUTH MODAL -->
+    <div id="dparagonAuthModal"
+        class="fixed inset-0 z-[100] hidden flex items-center justify-center bg-slate-950/90 backdrop-blur-md transition-all duration-500 p-4">
+
+        <div id="dparagonAuthContent"
+            class="bg-slate-900 border border-error/50 rounded-2xl w-full max-w-md max-h-[95vh] overflow-y-auto p-6 md:p-8 shadow-[0_0_50px_rgba(239,68,68,0.15)] relative transform scale-95 opacity-0 transition-all duration-500">
+            <div class="absolute inset-0 z-0 pointer-events-none opacity-10">
+                <div class="h-1 bg-error w-full animate-scan"></div>
+            </div>
+
+            <span id="envBadge"
+                class="hidden absolute top-4 md:top-6 right-4 md:right-6 px-2 py-1 text-[8px] md:text-[9px] font-bold rounded uppercase tracking-widest z-20"></span>
+
+            <div class="relative z-10">
+                <div class="flex flex-col items-center mb-6 md:mb-8 shrink-0">
+                    <div
+                        class="w-12 h-12 md:w-16 md:h-16 bg-error/10 border border-error/30 rounded-full flex items-center justify-center mb-3 shadow-[0_0_15px_rgba(239,68,68,0.3)]">
+                        <span class="material-symbols-outlined text-error text-2xl md:text-3xl">vpn_key</span>
+                    </div>
+                    <h2 class="text-xl md:text-2xl font-black text-white tracking-widest uppercase text-center">
+                        D'Paragon Auth</h2>
+                    <p
+                        class="text-error text-[9px] md:text-xs font-mono mt-1 tracking-widest animate-pulse text-center">
+                        SECURE BYPASS REQUIRED</p>
+                </div>
+
+                <form id="dparagonForm" class="space-y-4 md:space-y-5">
+                    <div>
+                        <label
+                            class="text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Target
+                            Node URL</label>
+                        <div class="relative">
+                            <span
+                                class="material-symbols-outlined absolute left-3 top-3 text-slate-500 text-sm md:text-base">dns</span>
+                            <input type="url" id="dpApiUrl" required readonly
+                                class="w-full bg-slate-950/50 border border-slate-800 rounded-lg py-2.5 md:py-3 pl-9 md:pl-10 pr-4 text-slate-400 font-mono text-base md:text-xs focus:outline-none cursor-not-allowed">
+                        </div>
+                    </div>
+                    <div>
+                        <label
+                            class="text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Target
+                            Email / Username</label>
+                        <div class="relative">
+                            <span
+                                class="material-symbols-outlined absolute left-3 top-3 text-slate-500 text-sm md:text-base">mail</span>
+                            <input type="email" id="dpEmail" required
+                                class="w-full bg-slate-950 border border-slate-800 rounded-lg py-2.5 md:py-3 pl-9 md:pl-10 pr-4 text-slate-200 font-mono text-base md:text-sm focus:ring-1 focus:ring-error focus:outline-none"
+                                placeholder="agen@dparagon.com">
+                        </div>
+                    </div>
+                    <div>
+                        <label
+                            class="text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Encryption
+                            Key</label>
+                        <div class="relative">
+                            <span
+                                class="material-symbols-outlined absolute left-3 top-3 text-slate-500 text-sm md:text-base">password</span>
+                            <input type="password" id="dpPassword" required
+                                class="w-full bg-slate-950 border border-slate-800 rounded-lg py-2.5 md:py-3 pl-9 md:pl-10 pr-4 text-slate-200 font-mono text-base md:text-sm focus:ring-1 focus:ring-error focus:outline-none"
+                                placeholder="••••••••••••">
+                        </div>
+                    </div>
+
+                    <div class="pt-4 mt-4 border-t border-slate-800/80">
+                        <button type="submit" id="btnDpSubmit"
+                            class="w-full bg-error hover:bg-red-700 text-white py-3 md:py-3.5 rounded-lg font-black text-xs md:text-sm uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-95 shadow-[0_0_15px_rgba(239,68,68,0.2)]">
+                            <span class="material-symbols-outlined text-base md:text-lg">terminal</span>
+                            Initiate Bypass
+                        </button>
+
+                        <div id="dpLoadingText" class="hidden flex-col items-center justify-center mt-4">
+                            <p class="text-[9px] md:text-[10px] font-mono text-error animate-pulse text-center"
+                                id="dpProcessLog">[WAIT] ESTABLISHING CONNECTION...</p>
+                            <div class="w-full bg-slate-800 h-1 mt-2 rounded overflow-hidden">
+                                <div class="bg-error h-full w-0 transition-all duration-[2000ms] ease-out"
+                                    id="dpProgressBar"></div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <script src="/socket.io/socket.io.js"></script>
     <script src="/js/jailbreak.js"></script>
     <script src="/js/sidebar.js"></script>

@@ -8,50 +8,32 @@ let NEXT_ACTION = "MASUK"; // <-- Tambahin baris ini buat nyimpen status!
 // FUNGSI GLOBAL SYSTEM ALERT (PENGGANTI ALERT BROWSER)
 // ==========================================
 function showSystemAlert(title, message, type = 'error', callback = null) {
-    const modal = document.getElementById('systemAlertModal');
-    const box = document.getElementById('systemAlertBox');
-    const icon = document.getElementById('systemAlertIcon');
-    const iconContainer = document.getElementById('systemAlertIconContainer');
-    const topBar = document.getElementById('systemAlertTopBar');
-    const titleEl = document.getElementById('systemAlertTitle');
-    const msgEl = document.getElementById('systemAlertMessage');
-    const btn = document.getElementById('btnAcknowledgeAlert');
-
-    titleEl.innerText = title;
-    msgEl.innerText = message;
-
-    // Styling Berdasarkan Tipe (Success / Error)
-    if (type === 'success') {
-        icon.innerText = 'check_circle';
-        iconContainer.className = 'w-16 h-16 rounded-full flex items-center justify-center mb-4 bg-green-500/10 border border-green-500/30 text-green-500 shadow-[0_0_15px_rgba(34,197,94,0.3)]';
-        topBar.className = 'absolute top-0 left-0 w-full h-1 bg-green-500 shadow-[0_0_10px_rgba(34,197,94,1)]';
-        btn.className = 'w-full bg-green-600/20 hover:bg-green-600/30 text-green-500 border border-green-500/50 py-3 rounded-lg text-xs font-bold uppercase tracking-widest transition-all active:scale-95';
+    if (typeof showToast === 'function') {
+        showToast(message, type);
     } else {
-        icon.innerText = 'warning';
-        iconContainer.className = 'w-16 h-16 rounded-full flex items-center justify-center mb-4 bg-error/10 border border-error/30 text-error shadow-[0_0_15px_rgba(239,68,68,0.3)]';
-        topBar.className = 'absolute top-0 left-0 w-full h-1 bg-error shadow-[0_0_10px_rgba(239,68,68,1)]';
-        btn.className = 'w-full bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 py-3 rounded-lg text-xs font-bold uppercase tracking-widest transition-all active:scale-95';
+        alert(`${title}: ${message}`);
     }
-
-    // Tampilkan Modal dengan Animasi
-    modal.classList.remove('hidden');
-    modal.classList.add('flex');
-    setTimeout(() => {
-        modal.classList.remove('opacity-0');
-        box.classList.remove('scale-95');
-    }, 10);
-
-    // Logic Tombol Tutup
-    btn.onclick = () => {
-        modal.classList.add('opacity-0');
-        box.classList.add('scale-95');
-        setTimeout(() => {
-            modal.classList.remove('flex');
-            modal.classList.add('hidden');
-            if (callback) callback(); // Eksekusi aksi lanjutan (misal pindah halaman)
-        }, 300);
-    };
+    
+    if (typeof callback === 'function') {
+        callback();
+    }
 }
+
+/**
+ * Helper to show Jailbreak Login Modal
+ */
+function showJailbreakLoginModal() {
+    const authModal = document.getElementById('dparagonAuthModal');
+    const authContent = document.getElementById('dparagonAuthContent');
+    if (authModal) {
+        authModal.classList.remove('hidden');
+        if (authContent) {
+            authContent.classList.remove('scale-95', 'opacity-0');
+            authContent.classList.add('scale-100', 'opacity-100');
+        }
+    }
+}
+window.showJailbreakLoginModal = showJailbreakLoginModal;
 
 // ==========================================
 // LOGIC ANIMASI WAKTU REALTIME
@@ -76,6 +58,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     const progressBar = document.getElementById('dpProgressBar');
 
     let defaultDparagonApiUrl = "";
+
+    // ===================================
+    // 0. CEK SESSION (STRICT GUARD)
+    // ===================================
+    if (typeof isJailbreakSessionValid === 'function' && isJailbreakSessionValid()) {
+        console.log("[SYSTEM] Valid Jailbreak session detected.");
+        if (authModal) authModal.classList.add('hidden');
+        loadRecentAttendanceWidget();
+        // Start camera slightly delayed to ensure DOM is ready
+        setTimeout(() => {
+            if (typeof startCamera === 'function') startCamera();
+        }, 500);
+    } else {
+        console.warn("[SYSTEM] Invalid/Expired Jailbreak session. Redirecting to Jailbreak Terminal.");
+        window.location.replace("/jailbreak");
+        return;
+    }
 
     // ==========================================
     // LOGIC KAMERA & CAPTURE (PREVIEW MODE)
@@ -130,6 +129,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ==========================================
     if (btnCapture) {
         btnCapture.addEventListener('click', () => {
+            // ===================================
+            // 0. VALIDASI SESSION (REAL-TIME)
+            // ===================================
+            if (typeof isJailbreakSessionValid === 'function' && !isJailbreakSessionValid()) {
+                showSystemAlert('SESSION EXPIRED', 'Sesi D\'Paragon Anda telah berakhir. Anda akan diarahkan kembali ke Terminal.', 'error', () => {
+                    window.location.replace("/jailbreak");
+                });
+                return;
+            }
+            if (typeof updateJailbreakActivity === 'function') updateJailbreakActivity();
 
             // ===================================
             // VALIDASI: CEK LOKASI SUDAH DI-LOCK?
@@ -556,10 +565,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (dpApiUrlInput) dpApiUrlInput.value = "Offline Mode / Error";
     }
 
-    setTimeout(() => {
-        authContent.classList.remove('scale-95', 'opacity-0');
-        authContent.classList.add('scale-100', 'opacity-100');
-    }, 300);
+    // Modal showing is now handled lazily by user actions (like btnCapture)
+    // or manually triggered when needed, rather than automatically on page load.
 
     // ==========================================
     // 2. Handle Submit Form (DIRECT TO ENV TARGET NODE)
@@ -610,6 +617,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // Pengecekan sukses lebih fleksibel (pakai response.ok)
             if (response.ok && result.message === "Login success") {
+                if (typeof updateJailbreakActivity === 'function') updateJailbreakActivity(true);
 
                 progressBar.style.width = '100%';
                 processLog.innerText = `[SUCCESS] ACCESS GRANTED.`;
@@ -684,10 +692,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                     setTimeout(() => {
                         authModal.classList.add('hidden');
-                        startCamera();
+                        if (typeof updateJailbreakActivity === 'function') updateJailbreakActivity();
+                        if (typeof startCamera === 'function') startCamera();
+                        if (typeof loadRecentAttendanceWidget === 'function') loadRecentAttendanceWidget(true);
                     }, 500);
                 }, 1500);
-                loadRecentAttendanceWidget(true);
 
             } else {
                 throw new Error(result.message || "Invalid Credentials");
@@ -1108,7 +1117,5 @@ async function loadRecentAttendanceWidget(forceSync = false) {
     }
 }
 
-// // Langsung panggil fungsinya pas halaman dashboard beres dimuat
-// document.addEventListener('DOMContentLoaded', () => {
-//     loadRecentAttendanceWidget();
-// });
+// End of File
+

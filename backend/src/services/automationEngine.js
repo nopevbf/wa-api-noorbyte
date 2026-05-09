@@ -17,6 +17,8 @@ db.exec(`
 
 // In-memory log cache per schedule
 const scheduleLogs = {};
+// In-memory lock to prevent concurrent processing of the same schedule
+const processingSchedules = new Set();
 
 function addScheduleLog(scheduleId, colorClass, label, text) {
   if (!scheduleLogs[scheduleId]) scheduleLogs[scheduleId] = [];
@@ -111,6 +113,34 @@ function getTodayDateWIB() {
 }
 
 /**
+ * Filter expired manual tasks and clean up the database if necessary.
+ */
+function filterAndCleanManualTasks(scheduleId, manualTasks) {
+  if (!Array.isArray(manualTasks)) return [];
+  
+  const todayStr = getTodayDateWIB();
+  
+  const filtered = manualTasks.filter(task => {
+    const dateStr = task.date || task.dates || "";
+    const parts = dateStr.split(" - ");
+    const endDateStr = parts[parts.length - 1].trim();
+    
+    if (!endDateStr) return true; // Keep if no date
+    return endDateStr >= todayStr;
+  });
+
+  if (filtered.length !== manualTasks.length) {
+    db.prepare("UPDATE automation_schedules SET manual_tasks = ? WHERE id = ?")
+      .run(JSON.stringify(filtered), scheduleId);
+  }
+  
+  return filtered.map(t => ({
+    dates: t.date || t.dates,
+    task_description: t.description || t.task_description
+  }));
+}
+
+/**
  * Get current time in HH:MM format in Asia/Jakarta timezone
  */
 function getCurrentTimeWIB() {
@@ -137,10 +167,15 @@ async function processFetch(schedule) {
   );
 
   try {
+    const manualTasksRaw = JSON.parse(schedule.manual_tasks || "[]");
+    const activeManualTasks = filterAndCleanManualTasks(schedule.id, manualTasksRaw);
+
     const message = await fetchDparagonReport(
       schedule.dp_api_url,
       schedule.dp_email,
       schedule.dp_password,
+      (label, text, color) => addScheduleLog(schedule.id, color, label, text),
+      activeManualTasks
     );
 
     const dataSizeMB = (
@@ -219,6 +254,11 @@ async function processSend(schedule) {
       "SUCCESS",
       `Pesan WhatsApp berhasil terkirim! (Latency: ${latencySec}s)`,
     );
+
+    const summary = `[DAILY REPORT] Laporan berhasil terkirim ke ${schedule.target_number}`;
+    db.prepare(
+      "INSERT INTO message_logs (api_key, target_number, message, status) VALUES (?, ?, ?, ?)",
+    ).run(schedule.api_key, schedule.target_number, summary, "SUCCESS");
   } catch (err) {
     addScheduleLog(
       schedule.id,
@@ -226,6 +266,11 @@ async function processSend(schedule) {
       "ERROR",
       `Gagal kirim WA: ${err.message}`,
     );
+
+    const summary = `[DAILY REPORT] Gagal mengirim laporan ke ${schedule.target_number}`;
+    db.prepare(
+      "INSERT INTO message_logs (api_key, target_number, message, status) VALUES (?, ?, ?, ?)",
+    ).run(schedule.api_key, schedule.target_number, summary, "FAILED");
   }
 }
 
@@ -257,16 +302,15 @@ async function processManualRuns() {
 
       try {
         // Step 1-5: Fetch data
-        addScheduleLog(
-          schedule.id,
-          "text-blue-400",
-          "STEP 1-5",
-          "Menjalankan fetch data DParagon...",
-        );
+        const manualTasksRaw = JSON.parse(schedule.manual_tasks || "[]");
+        const activeManualTasks = filterAndCleanManualTasks(schedule.id, manualTasksRaw);
+
         const message = await fetchDparagonReport(
           schedule.dp_api_url,
           schedule.dp_email,
           schedule.dp_password,
+          (label, text, color) => addScheduleLog(schedule.id, color, label, text),
+          activeManualTasks
         );
 
         const dataSizeMB = (
@@ -308,6 +352,12 @@ async function processManualRuns() {
           "SUCCESS",
           `Otomatis run selesai! Pesan terkirim. (Latency: ${latencySec}s)`,
         );
+
+        const summary = `[DAILY REPORT] Laporan berhasil terkirim ke ${schedule.target_number}`;
+        db.prepare(
+          "INSERT INTO message_logs (api_key, target_number, message, status) VALUES (?, ?, ?, ?)",
+        ).run(schedule.api_key, schedule.target_number, summary, "SUCCESS");
+
         db.prepare(
           "UPDATE automation_schedules SET manual_run_status = 'done', last_sent_date = ? WHERE id = ?",
         ).run(today, schedule.id);
@@ -324,6 +374,12 @@ async function processManualRuns() {
           "ERROR",
           `Otomatis run gagal: ${err.message}`,
         );
+
+        const summary = `[DAILY REPORT] Gagal mengirim laporan ke ${schedule.target_number}`;
+        db.prepare(
+          "INSERT INTO message_logs (api_key, target_number, message, status) VALUES (?, ?, ?, ?)",
+        ).run(schedule.api_key, schedule.target_number, summary, "FAILED");
+
         db.prepare(
           "UPDATE automation_schedules SET manual_run_status = 'error' WHERE id = ?",
         ).run(schedule.id);
@@ -333,48 +389,95 @@ async function processManualRuns() {
 }
 
 /**
- * Main engine tick — called every 30 seconds
+ * Main engine tick — called recursively with setTimeout
  */
 async function engineTick() {
-  const currentTime = getCurrentTimeWIB();
-  const today = getTodayDateWIB();
-  const dayOfWeek = new Date(
-    new Date().toLocaleString("en-US", { timeZone: "Asia/Jakarta" }),
-  ).getDay();
+  try {
+    const currentTime = getCurrentTimeWIB();
+    const today = getTodayDateWIB();
+    const dayOfWeek = new Date(
+      new Date().toLocaleString("en-US", { timeZone: "Asia/Jakarta" }),
+    ).getDay();
 
-  // 1. Process SCHEDULED automations
-  const activeSchedules = db
-    .prepare("SELECT * FROM automation_schedules WHERE is_active = 1")
-    .all();
+    // 1. Process SCHEDULED automations
+    const activeSchedules = db
+      .prepare("SELECT * FROM automation_schedules WHERE is_active = 1")
+      .all();
 
-  for (const schedule of activeSchedules) {
-    // Skip weekends if frequency = weekdays
-    if (
-      schedule.frequency === "weekdays" &&
-      (dayOfWeek === 0 || dayOfWeek === 6)
-    ) {
-      continue;
+    for (const schedule of activeSchedules) {
+      // Prevent concurrent processing of the same schedule
+      if (processingSchedules.has(schedule.id)) continue;
+
+      // Unified Validation Logic
+      let shouldRunToday = true;
+
+      // 1. Date Range: today >= start_date and today <= end_date
+      if (schedule.start_date && today < schedule.start_date) shouldRunToday = false;
+      if (schedule.end_date && today > schedule.end_date) shouldRunToday = false;
+
+      // 2. Excluded Dates: today not in excluded_dates
+      if (schedule.excluded_dates) {
+        try {
+          const excluded = JSON.parse(schedule.excluded_dates);
+          if (Array.isArray(excluded) && excluded.includes(today)) {
+            shouldRunToday = false;
+          }
+        } catch (e) {}
+      }
+
+      // 3. Frequency & Custom Days
+      if (schedule.frequency === "weekdays") {
+        if (dayOfWeek === 0 || dayOfWeek === 6) shouldRunToday = false;
+      } else if (schedule.frequency === "custom") {
+        if (schedule.custom_days) {
+          try {
+            const customDays = JSON.parse(schedule.custom_days);
+            if (Array.isArray(customDays) && !customDays.includes(dayOfWeek)) {
+              shouldRunToday = false;
+            }
+          } catch (e) {}
+        }
+      }
+
+      if (!shouldRunToday) continue;
+
+      // Check if it's time to fetch OR send
+      const needsFetch = currentTime === schedule.fetch_time && schedule.last_fetched_date !== today;
+      const needsSend = currentTime === schedule.send_wa_time && schedule.last_sent_date !== today;
+
+      if (needsFetch || needsSend) {
+        processingSchedules.add(schedule.id);
+        
+        try {
+          if (needsFetch) {
+            await processFetch(freshSchedule(schedule.id) || schedule);
+          }
+          if (needsSend) {
+            await processSend(freshSchedule(schedule.id) || schedule);
+          }
+        } catch (err) {
+          console.error(`[ENGINE] Error processing schedule #${schedule.id}:`, err.message);
+        } finally {
+          processingSchedules.delete(schedule.id);
+        }
+      }
     }
 
-    // Check fetch time
-    if (
-      currentTime === schedule.fetch_time &&
-      schedule.last_fetched_date !== today
-    ) {
-      await processFetch(schedule);
-    }
-
-    // Check send time
-    if (
-      currentTime === schedule.send_wa_time &&
-      schedule.last_sent_date !== today
-    ) {
-      await processSend(schedule);
+    // 2. Process Otomatis runs
+    await processManualRuns();
+  } catch (err) {
+    console.error("[AUTOMATION ENGINE] Tick error:", err.message);
+  } finally {
+    // Schedule next tick after 5 seconds, ensuring no overlapping ticks
+    if (engineInterval) {
+      engineInterval = setTimeout(engineTick, 5000);
     }
   }
+}
 
-  // 2. Process Otomatis runs
-  await processManualRuns();
+// Helper to get fresh schedule data from DB
+function freshSchedule(id) {
+  return db.prepare("SELECT * FROM automation_schedules WHERE id = ?").get(id);
 }
 
 let engineInterval = null;
@@ -385,11 +488,8 @@ let engineInterval = null;
 function startAutomationEngine() {
   if (engineInterval) return;
   console.log("🤖 [AUTOMATION ENGINE] Started — checking every 5 seconds.");
-  engineInterval = setInterval(engineTick, 5000);
-  // Run immediately once
-  engineTick().catch((err) =>
-    console.error("[AUTOMATION ENGINE] Tick error:", err.message),
-  );
+  engineInterval = true; // Use as a flag to indicate it should keep running
+  engineTick();
 }
 
 /**
@@ -397,7 +497,9 @@ function startAutomationEngine() {
  */
 function stopAutomationEngine() {
   if (engineInterval) {
-    clearInterval(engineInterval);
+    if (typeof engineInterval === 'number') {
+      clearTimeout(engineInterval);
+    }
     engineInterval = null;
     console.log("🤖 [AUTOMATION ENGINE] Stopped.");
   }

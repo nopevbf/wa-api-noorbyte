@@ -12,7 +12,8 @@ db.exec(`
     phone TEXT,
     api_key TEXT UNIQUE,
     webhook_url TEXT,
-    status TEXT DEFAULT 'Disconnected'
+    status TEXT DEFAULT 'Disconnected',
+    role TEXT DEFAULT 'user'
   );
 
   CREATE TABLE IF NOT EXISTS message_logs (
@@ -40,8 +41,42 @@ db.exec(`
     last_sent_date TEXT,
     manual_run_time TEXT,
     manual_run_status TEXT DEFAULT 'idle',
+    manual_tasks TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS magic_links (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    phone TEXT,
+    token TEXT UNIQUE,
+    expires_at INTEGER,
+    used INTEGER DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 `);
+
+// Migrasi Database: Tambahkan kolom baru jika belum ada
+const migrations = [
+  { table: 'users', column: 'role', sql: "ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user'" },
+  { table: 'automation_schedules', column: 'start_date', sql: "ALTER TABLE automation_schedules ADD COLUMN start_date TEXT" },
+  { table: 'automation_schedules', column: 'end_date', sql: "ALTER TABLE automation_schedules ADD COLUMN end_date TEXT" },
+  { table: 'automation_schedules', column: 'custom_days', sql: "ALTER TABLE automation_schedules ADD COLUMN custom_days TEXT" },
+  { table: 'automation_schedules', column: 'excluded_dates', sql: "ALTER TABLE automation_schedules ADD COLUMN excluded_dates TEXT" },
+  { table: 'automation_schedules', column: 'manual_tasks', sql: "ALTER TABLE automation_schedules ADD COLUMN manual_tasks TEXT" },
+];
+
+migrations.forEach(({ table, column, sql }) => {
+  try {
+    const tableInfo = db.prepare(`PRAGMA table_info(${table})`).all();
+    const columnExists = tableInfo.some(info => info.name === column);
+    
+    if (!columnExists) {
+      db.exec(sql);
+      console.log(`[DATABASE] Kolom '${column}' berhasil ditambahkan ke tabel '${table}'.`);
+    }
+  } catch (error) {
+    console.error(`[DATABASE] Gagal memeriksa atau menambah kolom ${column}:`, error.message);
+  }
+});
 
 module.exports = db;

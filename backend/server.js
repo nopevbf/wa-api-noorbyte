@@ -3,15 +3,16 @@ const express = require("express");
 const cors = require("cors");
 const http = require("http");
 const { Server } = require("socket.io");
+const path = require("path");
 
 const apiRoutes = require("./src/routes/apiRoutes");
 const { initAllSessions } = require("./src/services/waEngine");
-const path = require("path");
+const appConfig = require("./src/config/appConfig");
 
 const app = express();
 const server = http.createServer(app);
 
-// 1. Atur CORS agar menerima dari manapun selama kita pakai proxy/cloudflared
+// 1. Middleware & CORS
 const corsOptions = {
   origin: "*",
   methods: ["GET", "POST", "DELETE", "PUT"],
@@ -20,62 +21,37 @@ app.use(cors(corsOptions));
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ limit: "10mb", extended: true }));
 
-// 2. Setup Socket.io dengan CORS yang sama
+// 2. Setup Socket.io
 global.io = new Server(server, {
   cors: corsOptions,
 });
 
-// 3. Daftarkan API Routes dengan prefix '/api' biar rapi
+// 3. API Routes
 app.use("/api", apiRoutes);
 
-// --- TAMBAHAN: Sajikan Frontend UI di Port yang Sama ---
+// 4. Static Frontend Assets
 const frontendPath = path.join(__dirname, "../frontend/public");
 app.use(express.static(frontendPath));
 
 // ROUTE UNTUK HALAMAN UI
-app.get("/login", (req, res) =>
-  res.sendFile(path.join(frontendPath, "login.html")),
-);
-app.get("/dashboard", (req, res) =>
-  res.sendFile(path.join(frontendPath, "dashboard.html")),
-);
-app.get("/devices", (req, res) =>
-  res.sendFile(path.join(frontendPath, "devices.html")),
-);
-app.get("/groups", (req, res) =>
-  res.sendFile(path.join(frontendPath, "groups.html")),
-);
-app.get("/tester", (req, res) =>
-  res.sendFile(path.join(frontendPath, "tester.html")),
-);
-app.get("/automation", (req, res) =>
-  res.sendFile(path.join(frontendPath, "automation.html")),
-);
-app.get("/verify", (req, res) =>
-  res.sendFile(path.join(frontendPath, "verify.html")),
-);
-app.get("/jailbreak", (req, res) =>
-  res.sendFile(path.join(frontendPath, "jailbreak.html")),
-);
-app.get("/jailbreak/checkin", (req, res) =>
-  res.sendFile(path.join(frontendPath, "checkin.html")),
-);
-app.get("/pulse", (req, res) => res.sendFile(path.join(frontendPath, "pulse.html")));
+const uiPages = ["login", "dashboard", "devices", "groups", "tester", "automation", "verify", "jailbreak", "pulse"];
+uiPages.forEach(page => {
+    app.get(`/${page}`, (req, res) => res.sendFile(path.join(frontendPath, `${page}.html`)));
+});
+app.get("/jailbreak/checkin", (req, res) => res.sendFile(path.join(frontendPath, "checkin.html")));
 
+// Extension Download Route
 const { downloadExtensionZip } = require('./src/services/extensionService');
 app.get('/api/extension/download', downloadExtensionZip);
 
-// Redirect sisanya ke login jika bukan request ke API
+// Default redirect & 404 handler
 app.get("*", (req, res, next) => {
-  if (req.path.startsWith("/api") || req.path.startsWith("/socket.io"))
-    return next();
+  if (req.path.startsWith("/api") || req.path.startsWith("/socket.io")) return next();
   res.redirect("/login");
 });
-// ---------------------------------------------------------
 
-// 4. Nyalakan Backend Service (Port dari ENV, fallback ke 4000)
+// 5. Start Server
 const PORT = process.env.PORT || 4000;
-const appConfig = require("./src/config/appConfig");
 
 function startServer(port) {
   server.listen(port, () => {
@@ -149,7 +125,7 @@ startServer(PORT);
 
 const {
   scrapeDparagonAttendance,
-} = require("../frontend/public/js/scapper.js");
+} = require("./src/services/scraper"); // Updated path from scapper.js to scraper.js
 
 // Variabel global buat nyimpen hasil scrape sementara (HANYA UNTUK PAGE 1)
 let cachedHistoryData = [];

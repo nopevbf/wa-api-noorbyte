@@ -3,9 +3,11 @@ node_modules/
 **/node_modules/**
 */node_modules/**
 .env
-.env.local
+.env.*
+!.env.example
 
 # Ignore session data files (keep the folder structure)
+sessions/
 backend/sessions/**
 !backend/sessions/.gitkeep
 
@@ -17,6 +19,8 @@ backend/sessions/**
 backend/database.db
 **/database.sqlite
 **/db/*
+*.db
+*.sqlite
 
 # Ignore Puppeteer LCR sessions
 **/lcr_session_*/
@@ -28,15 +32,20 @@ backend/public/lcr_screenshots/
 # Ignore API keys and tokens
 **/api_keys.json
 **/api_tokens.json
+**/credentials.json
+**/creds.json
 
 # Ignore log files
 **/logs/*.log
+*.log
 
 # Ignore temporary files
 **/temp/*.tmp
+*.tmp
 
 # Ignore backup files
 **/backup/*.bak
+*.bak
 
 # Ignore compiled files
 **/dist/
@@ -45,6 +54,11 @@ backend/public/lcr_screenshots/
 # Ignore IDE files
 **/.idea/
 **/.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 
 # Ignore deployment files
 **/deploy/
@@ -57,4 +71,16 @@ backend/public/lcr_screenshots/
 # Ignore cache files
 **/cache/
 **/cache_files/
+
 .blackboxcli/
+
+# Ignore Python bytecode files
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+
+# Ignore test files
+**/tests/
+backend/tests/
+**/test/

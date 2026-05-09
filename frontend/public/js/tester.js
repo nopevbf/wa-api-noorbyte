@@ -9,7 +9,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     try {
         const isAdmin = localStorage.getItem('connectApi_loggedIn') === 'true';
         const guestApiKey = localStorage.getItem('noorbyte_session');
-        const query = isAdmin ? '?role=admin' : (guestApiKey ? `?api_key=${guestApiKey}` : '');
+        // [MOD] Ensure api_key is passed even for admin role
+        const query = isAdmin 
+            ? `?role=admin&api_key=${guestApiKey || ''}` 
+            : (guestApiKey ? `?api_key=${guestApiKey}` : '');
         const response = await fetch(`${API_URL}/get-devices${query}`);
         const result = await response.json();
 
@@ -17,10 +20,13 @@ document.addEventListener("DOMContentLoaded", async () => {
             selector.innerHTML = '<option value="">-- Pilih Device Pengirim --</option>';
             result.data.forEach(device => {
                 const isOnline = device.status === 'Connected';
+                const statusIcon = isOnline ? '🟢' : '🔴';
+                const statusText = isOnline ? 'Online' : 'Offline';
+
                 const option = document.createElement('option');
                 // Value-nya kita isi API Key untuk otorisasi pengiriman
                 option.value = device.api_key;
-                option.textContent = `${device.username} (${device.phone}) - ${isOnline ? '🟢 Online' : '🔴 Offline'}`;
+                option.textContent = `${device.username} (${device.phone}) - ${statusIcon} ${statusText}`;
 
                 if (!isOnline) option.disabled = true; // Cuma bisa milih device yg connect
                 selector.appendChild(option);
@@ -150,11 +156,11 @@ document.getElementById('testMessageForm').addEventListener('submit', async (e) 
     const jsonBox = document.getElementById('responseJson');
     const httpStatus = document.getElementById('httpStatus');
 
-    if (!apiKey) return showModal('Peringatan', 'Pilih device pengirim terlebih dahulu!');
+    if (!apiKey) return showModal({ title: 'Peringatan', message: 'Pilih device pengirim terlebih dahulu.', type: 'warning' });
 
     // Validasi kalau pilih Image/Document tapi gak ada file
     if ((msgType === 'image' || msgType === 'document') && fileInput.files.length === 0) {
-        return showModal('Peringatan', `Anda memilih tipe ${msgType}, silakan upload file attachment-nya.`);
+        return showModal({ title: 'Peringatan', message: `Anda memilih tipe ${msgType}, silakan upload file attachment-nya.`, type: 'warning' });
     }
 
     btnText.innerText = 'Sending...';
@@ -199,7 +205,7 @@ document.getElementById('testMessageForm').addEventListener('submit', async (e) 
             httpStatus.innerText = 'HTTP 200 OK';
             httpStatus.className = 'text-[10px] font-mono text-emerald-500 uppercase tracking-widest';
             jsonBox.className = 'whitespace-pre-wrap word-break text-emerald-400';
-            showModal('Terkirim!', 'Pesan berhasil diteruskan ke mesin WhatsApp.');
+            showModal({ title: 'Terkirim!', message: 'Pesan berhasil diteruskan ke mesin WhatsApp.', type: 'success' });
         } else {
             httpStatus.innerText = `HTTP ${response.status} ERROR`;
             httpStatus.className = 'text-[10px] font-mono text-red-500 uppercase tracking-widest';
@@ -222,12 +228,9 @@ document.getElementById('testMessageForm').addEventListener('submit', async (e) 
 function copyJson() {
     const jsonText = document.getElementById('responseJson').innerText;
     navigator.clipboard.writeText(jsonText).then(() => {
-        alert('Response JSON disalin ke clipboard!');
+        showToast('JSON disalin! ✅', 'success');
     });
 }
 
-function showModal(title, message) {
-    document.getElementById('modalTitle').innerText = title;
-    document.getElementById('modalMessage').innerHTML = message;
-    document.getElementById('globalModal').classList.remove('hidden');
-}
+
+// showModal is now provided globally by sidebar.js

@@ -1,4 +1,4 @@
-// ==========================================
+﻿// ==========================================
 // AUTH GUARD: Cek session sebelum memuat halaman
 // ==========================================
 const isAdmin = localStorage.getItem("connectApi_loggedIn") === "true";
@@ -205,7 +205,11 @@ async function loadSidebar() {
         btnRevokeRequest.addEventListener("click", () => {
           localStorage.removeItem("jailbreak_pending");
           localStorage.removeItem("jailbreak_timestamp");
-          alert("Pengajuan akses dibatalkan.");
+          if (typeof showToast === "function") {
+             showToast("Pengajuan akses dibatalkan", "info");
+          } else {
+             showToast("Akses dibatalkan", "info");
+          }
           closeJailbreakModal();
         });
       }
@@ -232,6 +236,22 @@ async function loadSidebar() {
     if (toggleBtn) toggleBtn.addEventListener("click", openSidebar);
     if (closeBtn) closeBtn.addEventListener("click", closeSidebar);
     if (backdrop) backdrop.addEventListener("click", closeSidebar);
+
+    // ==========================================
+    // 3.5. FETCH SYSTEM VERSION
+    // ==========================================
+    try {
+      const configRes = await fetch("/api/app-config");
+      const configData = await configRes.json();
+      if (configData.status && configData.data && configData.data.version) {
+        const versionEl = document.getElementById("system-version");
+        if (versionEl) {
+          versionEl.innerHTML = `v${configData.data.version}`;
+        }
+      }
+    } catch (e) {
+      console.warn("Gagal memuat versi sistem:", e.message);
+    }
 
     // ==========================================
     // 4. LOGIC LOGOUT (Berlaku di Semua Halaman)
@@ -265,28 +285,347 @@ async function loadSidebar() {
         btnCancelLogout.disabled = true;
 
         setTimeout(() => {
+          // Sapu bersih session jailbreak
+          if (typeof clearJailbreakSession === "function") {
+            clearJailbreakSession();
+          }
+
           // --- SAPU BERSIH SESSION SISTEM UTAMA ---
           localStorage.removeItem("noorbyte_session");
           localStorage.removeItem("noorbyte_username");
           localStorage.removeItem("noorbyte_phone");
           localStorage.removeItem("connectApi_loggedIn");
-
-          // ==========================================
-          // SQA INJECTION: SAPU BERSIH KREDENSIAL TARGET
-          // ==========================================
-          localStorage.removeItem("full_name");
-          localStorage.removeItem("active_env");
-          localStorage.removeItem("dparagon_token");
-          localStorage.removeItem("access_token");
+          localStorage.removeItem("automationSelectedDevice");
 
           // TENDANG KE HALAMAN LOGIN
           window.location.href = "/login";
         }, 800);
       });
     }
+
+    // ==========================================
+    // 5. INITIALIZE JAILBREAK SESSION MONITOR
+    // ==========================================
+    startJailbreakSessionWatcher();
+    initJailbreakActivityTracking();
+
   } catch (error) {
     console.error("Error load sidebar:", error);
   }
 }
 
-document.addEventListener("DOMContentLoaded", loadSidebar);
+async function loadNavbar() {
+  const currentPath = window.location.pathname;
+  if (currentPath.startsWith("/jailbreak")) return;
+
+  const headerTag = document.querySelector("main header");
+  if (!headerTag) return;
+
+  try {
+    const response = await fetch("/components/navbar.html");
+    if (!response.ok) throw new Error("Gagal memuat navbar");
+    const html = await response.text();
+    headerTag.outerHTML = html;
+
+    // Tunggu sebentar agar DOM terupdate
+    setTimeout(() => {
+      const navbarPageName = document.getElementById("navbar-page-name");
+      const navbarUserName = document.getElementById("navbar-user-name");
+      const navbarUserRole = document.getElementById("navbar-user-role");
+      const navbarUserAvatar = document.getElementById("navbar-user-avatar");
+
+      const isAdmin = localStorage.getItem("connectApi_loggedIn") === "true";
+      const guestUsername = localStorage.getItem("noorbyte_username");
+
+      let displayUsername = "Guest";
+      let displayRole = "Guest Access";
+      if (isAdmin) {
+        displayUsername = "Admin";
+        displayRole = "Master Access";
+      } else if (guestUsername) {
+        displayUsername = guestUsername;
+        displayRole = "Device Owner";
+      }
+
+      if (navbarUserName) navbarUserName.innerText = displayUsername;
+      if (navbarUserRole) navbarUserRole.innerText = displayRole;
+      if (navbarUserAvatar) {
+        navbarUserAvatar.innerText = displayUsername.substring(0, 2).toUpperCase();
+      }
+
+      const pageNames = {
+        "/dashboard": "Dashboard",
+        "/devices": "Devices",
+        "/automation": "Automation",
+        "/checkin": "Check-in",
+        "/groups": "Groups",
+        "/tester": "API Tester",
+        "/verify": "Verification"
+      };
+
+      const cleanPath = currentPath.replace(".html", "").split("?")[0];
+      const pageName = pageNames[cleanPath] || document.title.split(" - ")[0].split(" | ")[0] || "System";
+      if (navbarPageName) navbarPageName.innerText = pageName;
+
+      // Re-bind toggle sidebar button
+      const toggleBtn = document.getElementById("toggleSidebarBtn");
+      if (toggleBtn) {
+        toggleBtn.addEventListener("click", () => {
+          const sidebar = document.getElementById("app-sidebar");
+          const backdrop = document.getElementById("sidebar-backdrop");
+          if (sidebar) sidebar.classList.remove("-translate-x-full");
+          if (backdrop) backdrop.classList.remove("hidden");
+        });
+      }
+    }, 0);
+
+  } catch (error) {
+    console.error("Error load navbar:", error);
+  }
+}
+
+/**
+ * ==========================================
+ * CORE SESSION MANAGEMENT & ACTIVITY WATCHER
+ * ==========================================
+ */
+
+function clearJailbreakSession() {
+  console.log("[SESSION] Clearing Jailbreak credentials...");
+  localStorage.removeItem("full_name");
+  localStorage.removeItem("active_env");
+  localStorage.removeItem("dparagon_token");
+  localStorage.removeItem("access_token");
+  localStorage.removeItem("jailbreak_last_activity");
+  localStorage.removeItem("active_timebomb_key");
+}
+
+let lastJailbreakActivityUpdate = 0;
+function updateJailbreakActivity(force = false) {
+  const now = Date.now();
+  // Throttle updates to at most once every 10 seconds, unless forced
+  if (!force && now - lastJailbreakActivityUpdate < 10000) return;
+
+  const mainSession = localStorage.getItem("noorbyte_session");
+  if (!mainSession) return;
+
+  // Only update if session is currently valid or we are forcing it (after login)
+  if (force || isJailbreakSessionValid()) {
+    localStorage.setItem("jailbreak_last_activity", now.toString());
+    lastJailbreakActivityUpdate = now;
+  }
+}
+
+function isJailbreakSessionValid() {
+  const mainSession = localStorage.getItem("noorbyte_session");
+  const jailbreakToken = localStorage.getItem("dparagon_token");
+  const lastActivity = localStorage.getItem("jailbreak_last_activity");
+
+  if (!mainSession || !jailbreakToken || !lastActivity) return false;
+
+  const inactiveThreshold = 30 * 60 * 1000; // 30 minutes
+  const now = Date.now();
+  if (now - parseInt(lastActivity, 10) > inactiveThreshold) {
+    return false;
+  }
+
+  return true;
+}
+
+function startJailbreakSessionWatcher() {
+  if (window.jailbreakWatcherInterval) {
+    clearInterval(window.jailbreakWatcherInterval);
+  }
+
+  window.jailbreakWatcherInterval = setInterval(() => {
+    const currentPath = window.location.pathname;
+    const isJailbreakPage = currentPath.startsWith("/jailbreak") || currentPath.includes("checkin.html");
+    
+    // Check if we even have a jailbreak token before watching
+    const hasJailbreakToken = localStorage.getItem("dparagon_token");
+    
+    if (isJailbreakPage && hasJailbreakToken) {
+      if (!isJailbreakSessionValid()) {
+        console.warn("Jailbreak session expired or main session lost. Cleaning up...");
+        clearJailbreakSession();
+        
+        const mainSession = localStorage.getItem("noorbyte_session");
+        if (!mainSession) {
+          window.location.replace("/login");
+        } else if (currentPath.startsWith("/jailbreak")) {
+          // Redirect to login only if on a strictly jailbreak terminal page
+          window.location.replace("/login");
+        } else {
+          // If on check-in, just toast and modal will be handled by page logic
+          if (typeof showToast === "function") showToast("Jailbreak session expired.", "warning");
+        }
+      }
+    }
+  }, 10000); // Check every 10 seconds
+}
+
+function initJailbreakActivityTracking() {
+  const events = ["mousedown", "mousemove", "keydown", "scroll", "touchstart"];
+  events.forEach((event) => {
+    document.addEventListener(event, updateJailbreakActivity);
+  });
+  // Initial activity update
+  updateJailbreakActivity();
+}
+
+// Export to window
+window.clearJailbreakSession = clearJailbreakSession;
+window.updateJailbreakActivity = updateJailbreakActivity;
+window.isJailbreakSessionValid = isJailbreakSessionValid;
+window.startJailbreakSessionWatcher = startJailbreakSessionWatcher;
+window.initJailbreakActivityTracking = initJailbreakActivityTracking;
+
+document.addEventListener("DOMContentLoaded", () => {
+  loadSidebar();
+  loadNavbar();
+});
+
+function showToast(message, type = "info", duration = 3000) {
+  const container = getToastContainer();
+  const toast = createToastElement(message, type);
+  
+  container.appendChild(toast);
+
+  setTimeout(() => {
+    toast.classList.add("toast-out");
+    setTimeout(() => toast.remove(), 400);
+  }, duration);
+}
+
+function getToastContainer() {
+  let container = document.getElementById("toastContainer");
+  const baseClasses = "fixed top-6 right-6 z-[999999] flex flex-col gap-3 pointer-events-none";
+
+  if (!container || container.parentElement !== document.body) {
+    if (!container) {
+      container = document.createElement("div");
+      container.id = "toastContainer";
+    }
+    document.body.appendChild(container);
+  }
+  
+  container.className = baseClasses;
+  return container;
+}
+
+function createToastElement(message, type) {
+  const toast = document.createElement("div");
+  // .toast-pill is defined in style.css. We add dark mode and interaction classes here.
+  toast.className = `toast-pill ${type} dark:bg-slate-900 dark:border-slate-800 dark:text-white pointer-events-auto transition-all duration-300`;
+
+  const config = {
+    success: { icon: 'check_circle', color: 'text-emerald-500', bg: 'bg-emerald-50' },
+    error: { icon: 'error', color: 'text-red-500', bg: 'bg-red-50' },
+    warning: { icon: 'warning', color: 'text-amber-500', bg: 'bg-amber-50' },
+    info: { icon: 'info', color: 'text-blue-500', bg: 'bg-blue-50' }
+  }[type] || { icon: 'info', color: 'text-blue-500', bg: 'bg-blue-50' };
+
+  toast.innerHTML = `
+    <div class="flex items-center gap-4">
+      <div class="flex-shrink-0 size-10 rounded-2xl flex items-center justify-center ${config.bg} ${config.color} dark:bg-opacity-10 shadow-sm">
+        <span class="material-symbols-outlined !text-[22px] font-bold">${config.icon}</span>
+      </div>
+      <div class="flex-1 pr-2">
+        <p class="text-[13px] font-extrabold tracking-tight leading-tight">${message}</p>
+      </div>
+    </div>
+  `;
+
+  return toast;
+}
+
+/**
+ * GLOBAL MODAL SYSTEM
+ * @param {Object} options - { title, message, type, onConfirm, onClose, confirmText, cancelText }
+ */
+function showModal(options = {}) {
+  const {
+    title = "Pemberitahuan",
+    message = "",
+    type = "info", // info, success, error, confirm, warning
+    onConfirm = null,
+    onClose = null,
+    confirmText = "Ya, Lanjutkan",
+    cancelText = "Tutup"
+  } = options;
+
+  const modal = document.getElementById('globalModal');
+  const modalContent = document.getElementById('globalModalContent');
+  const iconContainer = document.getElementById('modalIconContainer');
+  const icon = document.getElementById('modalIcon');
+  const titleEl = document.getElementById('modalTitle');
+  const messageEl = document.getElementById('modalMessage');
+  const actionsEl = document.getElementById('modalActions');
+
+  if (!modal || !modalContent) return;
+
+  // 1. Reset & Setup Content
+  titleEl.innerText = title;
+  messageEl.innerHTML = message;
+  actionsEl.innerHTML = '';
+
+  // 2. Setup Icon & Color based on type
+  iconContainer.className = 'mx-auto flex items-center justify-center h-20 w-20 rounded-2xl mb-6 shadow-inner transition-all duration-300';
+  
+  if (type === 'success') {
+    iconContainer.classList.add('bg-emerald-50', 'dark:bg-emerald-900/20', 'text-emerald-500');
+    icon.innerText = 'check_circle';
+  } else if (type === 'error') {
+    iconContainer.classList.add('bg-red-50', 'dark:bg-red-900/20', 'text-red-500');
+    icon.innerText = 'error';
+  } else if (type === 'warning' || type === 'confirm') {
+    iconContainer.classList.add('bg-amber-50', 'dark:bg-amber-900/20', 'text-amber-500');
+    icon.innerText = 'warning';
+  } else {
+    iconContainer.classList.add('bg-indigo-50', 'dark:bg-indigo-900/20', 'text-primary');
+    icon.innerText = 'info';
+  }
+
+  // 3. Setup Actions
+  const closeModal = () => {
+    modal.classList.add('opacity-0');
+    modalContent.classList.add('scale-95');
+    setTimeout(() => {
+      modal.classList.add('hidden');
+      if (onClose) onClose();
+    }, 300);
+  };
+
+  if (type === 'confirm') {
+    const btnCancel = document.createElement('button');
+    btnCancel.className = 'flex-1 px-4 py-3 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 rounded-xl font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-all';
+    btnCancel.innerText = cancelText;
+    btnCancel.onclick = closeModal;
+
+    const btnOk = document.createElement('button');
+    btnOk.className = 'flex-[1.5] px-4 py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all active:scale-[0.98]';
+    btnOk.innerText = confirmText;
+    btnOk.onclick = () => {
+      closeModal();
+      if (onConfirm) onConfirm();
+    };
+
+    actionsEl.appendChild(btnCancel);
+    actionsEl.appendChild(btnOk);
+  } else {
+    const btnOk = document.createElement('button');
+    btnOk.className = 'w-full px-4 py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all active:scale-[0.98]';
+    btnOk.innerText = cancelText;
+    btnOk.onclick = closeModal;
+    actionsEl.appendChild(btnOk);
+  }
+
+  // 4. Show Modal with Animation
+  modal.classList.remove('hidden');
+  setTimeout(() => {
+    modal.classList.remove('opacity-0');
+    modal.classList.add('flex');
+    modalContent.classList.remove('scale-95');
+  }, 10);
+}
+
