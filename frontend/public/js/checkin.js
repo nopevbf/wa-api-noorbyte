@@ -43,6 +43,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     let defaultDparagonApiUrl = "";
 
+    // ===================================
+    // 0. CEK SESSION (AUTO-BYPASS MODAL)
+    // ===================================
+    const savedToken = localStorage.getItem('access_token') || localStorage.getItem('dparagon_token');
+    if (savedToken) {
+        console.log("[SYSTEM] Session detected. Bypassing auth modal...");
+        if (authModal) authModal.classList.add('hidden');
+        loadRecentAttendanceWidget();
+        // Start camera slightly delayed to ensure DOM is ready
+        setTimeout(() => {
+            if (typeof startCamera === 'function') startCamera();
+        }, 500);
+    }
+
     // ==========================================
     // LOGIC KAMERA & CAPTURE (PREVIEW MODE)
     // ==========================================
@@ -1074,7 +1088,5 @@ async function loadRecentAttendanceWidget(forceSync = false) {
     }
 }
 
-// // Langsung panggil fungsinya pas halaman dashboard beres dimuat
-// document.addEventListener('DOMContentLoaded', () => {
-//     loadRecentAttendanceWidget();
-// });
+// End of File
+

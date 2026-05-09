@@ -347,4 +347,24 @@ async function internalScrapeDparagonAttendance(env, email, password, fullName, 
     }
 }
 
-module.exports = { scrapeDparagonAttendance };
+/**
+ * Helper: Ambil data cache
+ */
+function getCachedData() {
+    return { cachedHistoryData, lastScrapeTime };
+}
+
+/**
+ * Helper: Simpan data cache
+ */
+function setCachedData(data, time) {
+    cachedHistoryData = data;
+    lastScrapeTime = time;
+}
+
+module.exports = { 
+    scrapeDparagonAttendance,
+    parseDparagonTime,
+    getCachedData,
+    setCachedData
+};
