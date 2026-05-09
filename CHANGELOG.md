@@ -32,7 +32,7 @@ Format versioning mengikuti [Semantic Versioning](https://semver.org/).
 - Penggabungan server backend dan frontend ke dalam satu proses Node.js.
 
 ### 🔧 Perubahan
-- Pemindahan logika *scraping* (`scapper.js`) ke backend services untuk konsistensi.
+- Pemindahan logika *scraping* (`scraper.js`) ke backend services untuk konsistensi.
 - Pembersihan dead code, file sementara, dan script server UI legacy.
 - Perbaikan penanganan token Bearer dan auto-retry pada Cloudflare Challenge.
 

@@ -33,9 +33,9 @@ console.log("[DEBUG ENV] NODE_ENV saat ini:", process.env.NODE_ENV || "TIDAK DIT
 console.log("[DEBUG ENV] URL PROD:", process.env.DPARAGON_URL || "TIDAK DITEMUKAN");
 console.log("==========================================");
 
-// Variabel global buat nyimpen hasil scrape sementara (HANYA UNTUK PAGE 1)
-let cachedHistoryData = [];
-let lastScrapeTime = null;
+// Registry untuk menyimpan hasil scrape per user (unifikasi cache)
+// key: fullName (string) -> value: { data: Array, timestamp: number }
+const userCacheRegistry = new Map();
 
 /**
  * Helper: TRANSLATOR WAKTU INDO -> TIMESTAMP (FIXED SQA APPROVED)
@@ -107,6 +107,43 @@ function parseDparagonTime(rawTime) {
 
     // Kembalikan Timestamp (Angka milidetik), kalau masih gagal kembalikan 0
     return isNaN(parsedDate) ? 0 : parsedDate;
+}
+
+/**
+ * Helper: Cek apakah cache expired (5 menit)
+ */
+function isCacheExpired(fullName) {
+    const cache = userCacheRegistry.get(fullName.toUpperCase());
+    if (!cache) return true;
+    return Date.now() - cache.timestamp > 5 * 60 * 1000;
+}
+
+/**
+ * Helper: Formatting raw data dari Puppeteer
+ */
+function formatAttendanceData(rawData) {
+    let formattedData = [];
+    rawData.forEach(item => {
+        if (item.waktu_masuk && item.waktu_masuk !== "-") {
+            formattedData.push({
+                status: "checkin",
+                raw_time: item.waktu_masuk,
+                image_url: item.foto_masuk,
+                shift_info: item.shift_info
+            });
+        }
+        if (item.waktu_keluar && item.waktu_keluar !== "-") {
+            formattedData.push({
+                status: "checkout",
+                raw_time: item.waktu_keluar,
+                image_url: item.foto_keluar,
+                shift_info: item.shift_info
+            });
+        }
+    });
+
+    // Sort descending berdasarkan waktu (terbaru di atas)
+    return formattedData.sort((a, b) => parseDparagonTime(b.raw_time) - parseDparagonTime(a.raw_time));
 }
 
 // ==========================================
@@ -348,23 +385,33 @@ async function internalScrapeDparagonAttendance(env, email, password, fullName, 
 }
 
 /**
- * Helper: Ambil data cache
+ * Helper: Ambil data cache (user-specific)
  */
-function getCachedData() {
-    return { cachedHistoryData, lastScrapeTime };
+function getCachedData(fullName) {
+    if (!fullName) return { cachedHistoryData: [], lastScrapeTime: null };
+    const cache = userCacheRegistry.get(fullName.toUpperCase());
+    return {
+        cachedHistoryData: cache ? cache.data : [],
+        lastScrapeTime: cache ? cache.timestamp : null
+    };
 }
 
 /**
- * Helper: Simpan data cache
+ * Helper: Simpan data cache (user-specific)
  */
-function setCachedData(data, time) {
-    cachedHistoryData = data;
-    lastScrapeTime = time;
+function setCachedData(fullName, data, time = Date.now()) {
+    if (!fullName) return;
+    userCacheRegistry.set(fullName.toUpperCase(), {
+        data: data,
+        timestamp: time
+    });
 }
 
 module.exports = { 
     scrapeDparagonAttendance,
     parseDparagonTime,
+    isCacheExpired,
+    formatAttendanceData,
     getCachedData,
     setCachedData
 };
