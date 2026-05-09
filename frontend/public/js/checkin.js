@@ -19,6 +19,22 @@ function showSystemAlert(title, message, type = 'error', callback = null) {
     }
 }
 
+/**
+ * Helper to show Jailbreak Login Modal
+ */
+function showJailbreakLoginModal() {
+    const authModal = document.getElementById('dparagonAuthModal');
+    const authContent = document.getElementById('dparagonAuthContent');
+    if (authModal) {
+        authModal.classList.remove('hidden');
+        if (authContent) {
+            authContent.classList.remove('scale-95', 'opacity-0');
+            authContent.classList.add('scale-100', 'opacity-100');
+        }
+    }
+}
+window.showJailbreakLoginModal = showJailbreakLoginModal;
+
 // ==========================================
 // LOGIC ANIMASI WAKTU REALTIME
 // ==========================================
@@ -44,17 +60,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     let defaultDparagonApiUrl = "";
 
     // ===================================
-    // 0. CEK SESSION (AUTO-BYPASS MODAL)
+    // 0. CEK SESSION (STRICT GUARD)
     // ===================================
-    const savedToken = localStorage.getItem('access_token') || localStorage.getItem('dparagon_token');
-    if (savedToken) {
-        console.log("[SYSTEM] Session detected. Bypassing auth modal...");
+    if (typeof isJailbreakSessionValid === 'function' && isJailbreakSessionValid()) {
+        console.log("[SYSTEM] Valid Jailbreak session detected.");
         if (authModal) authModal.classList.add('hidden');
         loadRecentAttendanceWidget();
         // Start camera slightly delayed to ensure DOM is ready
         setTimeout(() => {
             if (typeof startCamera === 'function') startCamera();
         }, 500);
+    } else {
+        console.warn("[SYSTEM] Invalid/Expired Jailbreak session. Redirecting to Jailbreak Terminal.");
+        window.location.replace("/jailbreak");
+        return;
     }
 
     // ==========================================
@@ -110,6 +129,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ==========================================
     if (btnCapture) {
         btnCapture.addEventListener('click', () => {
+            // ===================================
+            // 0. VALIDASI SESSION (REAL-TIME)
+            // ===================================
+            if (typeof isJailbreakSessionValid === 'function' && !isJailbreakSessionValid()) {
+                showSystemAlert('SESSION EXPIRED', 'Sesi D\'Paragon Anda telah berakhir. Anda akan diarahkan kembali ke Terminal.', 'error', () => {
+                    window.location.replace("/jailbreak");
+                });
+                return;
+            }
+            if (typeof updateJailbreakActivity === 'function') updateJailbreakActivity();
 
             // ===================================
             // VALIDASI: CEK LOKASI SUDAH DI-LOCK?
@@ -536,10 +565,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (dpApiUrlInput) dpApiUrlInput.value = "Offline Mode / Error";
     }
 
-    setTimeout(() => {
-        authContent.classList.remove('scale-95', 'opacity-0');
-        authContent.classList.add('scale-100', 'opacity-100');
-    }, 300);
+    // Modal showing is now handled lazily by user actions (like btnCapture)
+    // or manually triggered when needed, rather than automatically on page load.
 
     // ==========================================
     // 2. Handle Submit Form (DIRECT TO ENV TARGET NODE)
@@ -590,6 +617,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // Pengecekan sukses lebih fleksibel (pakai response.ok)
             if (response.ok && result.message === "Login success") {
+                if (typeof updateJailbreakActivity === 'function') updateJailbreakActivity(true);
 
                 progressBar.style.width = '100%';
                 processLog.innerText = `[SUCCESS] ACCESS GRANTED.`;
@@ -664,10 +692,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                     setTimeout(() => {
                         authModal.classList.add('hidden');
-                        startCamera();
+                        if (typeof updateJailbreakActivity === 'function') updateJailbreakActivity();
+                        if (typeof startCamera === 'function') startCamera();
+                        if (typeof loadRecentAttendanceWidget === 'function') loadRecentAttendanceWidget(true);
                     }, 500);
                 }, 1500);
-                loadRecentAttendanceWidget(true);
 
             } else {
                 throw new Error(result.message || "Invalid Credentials");

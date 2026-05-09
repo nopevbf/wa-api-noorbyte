@@ -285,6 +285,11 @@ async function loadSidebar() {
         btnCancelLogout.disabled = true;
 
         setTimeout(() => {
+          // Sapu bersih session jailbreak
+          if (typeof clearJailbreakSession === "function") {
+            clearJailbreakSession();
+          }
+
           // --- SAPU BERSIH SESSION SISTEM UTAMA ---
           localStorage.removeItem("noorbyte_session");
           localStorage.removeItem("noorbyte_username");
@@ -292,19 +297,18 @@ async function loadSidebar() {
           localStorage.removeItem("connectApi_loggedIn");
           localStorage.removeItem("automationSelectedDevice");
 
-          // ==========================================
-          // SQA INJECTION: SAPU BERSIH KREDENSIAL TARGET
-          // ==========================================
-          localStorage.removeItem("full_name");
-          localStorage.removeItem("active_env");
-          localStorage.removeItem("dparagon_token");
-          localStorage.removeItem("access_token");
-
           // TENDANG KE HALAMAN LOGIN
           window.location.href = "/login";
         }, 800);
       });
     }
+
+    // ==========================================
+    // 5. INITIALIZE JAILBREAK SESSION MONITOR
+    // ==========================================
+    startJailbreakSessionWatcher();
+    initJailbreakActivityTracking();
+
   } catch (error) {
     console.error("Error load sidebar:", error);
   }
@@ -379,6 +383,102 @@ async function loadNavbar() {
     console.error("Error load navbar:", error);
   }
 }
+
+/**
+ * ==========================================
+ * CORE SESSION MANAGEMENT & ACTIVITY WATCHER
+ * ==========================================
+ */
+
+function clearJailbreakSession() {
+  console.log("[SESSION] Clearing Jailbreak credentials...");
+  localStorage.removeItem("full_name");
+  localStorage.removeItem("active_env");
+  localStorage.removeItem("dparagon_token");
+  localStorage.removeItem("access_token");
+  localStorage.removeItem("jailbreak_last_activity");
+  localStorage.removeItem("active_timebomb_key");
+}
+
+let lastJailbreakActivityUpdate = 0;
+function updateJailbreakActivity(force = false) {
+  const now = Date.now();
+  // Throttle updates to at most once every 10 seconds, unless forced
+  if (!force && now - lastJailbreakActivityUpdate < 10000) return;
+
+  const mainSession = localStorage.getItem("noorbyte_session");
+  if (!mainSession) return;
+
+  // Only update if session is currently valid or we are forcing it (after login)
+  if (force || isJailbreakSessionValid()) {
+    localStorage.setItem("jailbreak_last_activity", now.toString());
+    lastJailbreakActivityUpdate = now;
+  }
+}
+
+function isJailbreakSessionValid() {
+  const mainSession = localStorage.getItem("noorbyte_session");
+  const jailbreakToken = localStorage.getItem("dparagon_token");
+  const lastActivity = localStorage.getItem("jailbreak_last_activity");
+
+  if (!mainSession || !jailbreakToken || !lastActivity) return false;
+
+  const inactiveThreshold = 30 * 60 * 1000; // 30 minutes
+  const now = Date.now();
+  if (now - parseInt(lastActivity, 10) > inactiveThreshold) {
+    return false;
+  }
+
+  return true;
+}
+
+function startJailbreakSessionWatcher() {
+  if (window.jailbreakWatcherInterval) {
+    clearInterval(window.jailbreakWatcherInterval);
+  }
+
+  window.jailbreakWatcherInterval = setInterval(() => {
+    const currentPath = window.location.pathname;
+    const isJailbreakPage = currentPath.startsWith("/jailbreak") || currentPath.includes("checkin.html");
+    
+    // Check if we even have a jailbreak token before watching
+    const hasJailbreakToken = localStorage.getItem("dparagon_token");
+    
+    if (isJailbreakPage && hasJailbreakToken) {
+      if (!isJailbreakSessionValid()) {
+        console.warn("Jailbreak session expired or main session lost. Cleaning up...");
+        clearJailbreakSession();
+        
+        const mainSession = localStorage.getItem("noorbyte_session");
+        if (!mainSession) {
+          window.location.replace("/login");
+        } else if (currentPath.startsWith("/jailbreak")) {
+          // Redirect to login only if on a strictly jailbreak terminal page
+          window.location.replace("/login");
+        } else {
+          // If on check-in, just toast and modal will be handled by page logic
+          if (typeof showToast === "function") showToast("Jailbreak session expired.", "warning");
+        }
+      }
+    }
+  }, 10000); // Check every 10 seconds
+}
+
+function initJailbreakActivityTracking() {
+  const events = ["mousedown", "mousemove", "keydown", "scroll", "touchstart"];
+  events.forEach((event) => {
+    document.addEventListener(event, updateJailbreakActivity);
+  });
+  // Initial activity update
+  updateJailbreakActivity();
+}
+
+// Export to window
+window.clearJailbreakSession = clearJailbreakSession;
+window.updateJailbreakActivity = updateJailbreakActivity;
+window.isJailbreakSessionValid = isJailbreakSessionValid;
+window.startJailbreakSessionWatcher = startJailbreakSessionWatcher;
+window.initJailbreakActivityTracking = initJailbreakActivityTracking;
 
 document.addEventListener("DOMContentLoaded", () => {
   loadSidebar();
