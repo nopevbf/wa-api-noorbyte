@@ -7,7 +7,7 @@
     
     <link rel="stylesheet" href="/css/style.css">
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
     
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
@@ -18,19 +18,22 @@
             theme: { 
                 extend: { 
                     colors: { 
-                        "primary": "#136dec", 
-                        "background-light": "#f6f7f8", 
-                        "background-dark": "#101822" 
+                        "primary": "#6366f1", 
+                        "background-light": "#f5f3ff", 
+                        "background-dark": "#0f172a",
+                        "surface": "#ffffff",
+                        "outline": "#e2e8f0"
                     }, 
                     fontFamily: { 
-                        "display": ["Inter"] 
+                        "display": ["Plus Jakarta Sans", "Inter", "sans-serif"],
+                        "body": ["Plus Jakarta Sans", "Inter", "sans-serif"]
                     } 
                 } 
             } 
         }
     </script>
     <style> 
-        body { font-family: 'Inter', sans-serif; } 
+        body { font-family: 'Plus Jakarta Sans', 'Inter', sans-serif; } 
         .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; } 
         /* Pulse Terminal Scrollbar */
         .terminal-scroll::-webkit-scrollbar { width: 4px; }
@@ -40,38 +43,34 @@
     </style>
 </head>
 <body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 font-display" x-data="pulseController()">
-<div class="flex min-h-screen">
+<div class="flex h-screen overflow-hidden">
     
-    <div id="sidebar-container"></div>
+    <div id="sidebar-container" class="z-50 shrink-0"></div>
     
-    <main class="flex-1 flex flex-col min-w-0">
+    <main class="flex-1 overflow-y-auto custom-scrollbar relative">
         
-        <header class="h-16 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 sm:px-8 sticky top-0 z-10">
+        <header class="h-16 shrink-0 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm flex items-center justify-between px-4 sm:px-8 sticky top-0 z-10">
             <div class="flex items-center gap-4">
-                <button id="toggleSidebarBtn" class="lg:hidden p-2 -ml-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">
+                <button id="toggleSidebarBtn" class="lg:hidden p-2 -ml-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-colors">
                     <span class="material-symbols-outlined">menu</span>
                 </button>
-                <div class="flex items-center gap-2">
-                    <span class="text-slate-400 hidden sm:inline">Pages</span> 
-                    <span class="text-slate-400 hidden sm:inline">/</span> 
-                    <span class="text-slate-900 dark:text-slate-100 font-medium">Pulse Automation</span>
-                </div>
+                <h2 id="navbar-page-name" class="text-lg font-bold tracking-tight hidden sm:block">Pulse Automation</h2>
             </div>
         </header>
 
-        <div class="p-4 sm:p-8 space-y-8 max-w-[1400px] mx-auto w-full">
+        <div class="p-4 sm:p-8 space-y-8 max-w-7xl mx-auto w-full">
             
             <header class="flex flex-col md:flex-row md:items-end justify-between gap-6">
-                <div>
-                    <h2 class="text-3xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">Pulse Center</h2>
-                    <p class="text-slate-500 text-lg mt-1">Orchestrate your automated LCR monitoring workflows.</p>
+                <div class="flex flex-col gap-1">
+                    <h3 class="text-2xl font-extrabold tracking-tight">Pulse Center</h3>
+                    <p class="text-slate-500 text-sm font-medium">Orchestrate your automated LCR monitoring workflows.</p>
                 </div>
 
-                <div class="inline-flex p-1 bg-slate-200 dark:bg-slate-800 rounded-xl">
-              <button :class="mode === 'manual' ? 'bg-white dark:bg-slate-900 shadow-sm text-primary' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'" @click="mode = 'manual'" class="px-6 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2">
+                <div class="inline-flex p-1 bg-slate-200/50 dark:bg-slate-800/50 rounded-2xl backdrop-blur-sm border border-slate-200 dark:border-slate-800">
+              <button :class="mode === 'manual' ? 'bg-white dark:bg-slate-900 shadow-sm text-primary' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'" @click="mode = 'manual'" class="px-6 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2">
                 <span class="material-symbols-outlined text-lg">touch_app</span> Manual
               </button>
-              <button :class="mode === 'automatic' ? 'bg-white dark:bg-slate-900 shadow-sm text-primary' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'" @click="mode = 'automatic'" class="px-6 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2">
+              <button :class="mode === 'automatic' ? 'bg-white dark:bg-slate-900 shadow-sm text-primary' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'" @click="mode = 'automatic'" class="px-6 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2">
                 <span class="material-symbols-outlined text-lg">autorenew</span> Auto-Parse
               </button>
             </div>
@@ -80,39 +79,39 @@
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 
                 <div class="lg:col-span-4 space-y-6">
-                    <section class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-sm">
+                    <section class="bg-surface dark:bg-slate-900/60 border border-outline dark:border-slate-800 rounded-2xl p-6 shadow-sm backdrop-blur-sm transition-all hover:shadow-md hover:border-primary/20">
                         <div class="flex items-center gap-2 mb-6">
                             <span class="material-symbols-outlined text-primary">fingerprint</span>
-                            <h3 class="text-sm font-bold uppercase tracking-wider text-slate-500">Identity Config</h3>
+                            <h3 class="text-[11px] font-bold uppercase tracking-widest text-slate-500">Identity Config</h3>
                         </div>
                         <div class="space-y-4">
                             <div>
-                                <label class="block text-[11px] font-bold text-slate-400 uppercase mb-1.5 ml-1">Full Name</label>
-                                <input x-model="config.name" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg px-4 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none" placeholder="e.g. Firman Aji Prasetyo" type="text"/>
+                                <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1.5 ml-1">Full Name</label>
+                                <input x-model="config.name" class="w-full bg-slate-50/50 dark:bg-slate-950/50 border border-outline dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all" placeholder="e.g. Firman Aji Prasetyo" type="text"/>
                             </div>
                             <div>
-                                <label class="block text-[11px] font-bold text-slate-400 uppercase mb-1.5 ml-1">Instagram (@)</label>
-                                <input x-model="config.ig" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg px-4 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none" placeholder="@username" type="text"/>
+                                <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1.5 ml-1">Instagram (@)</label>
+                                <input x-model="config.ig" class="w-full bg-slate-50/50 dark:bg-slate-950/50 border border-outline dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all" placeholder="@username" type="text"/>
                             </div>
 
                             <div>
-                                <label class="block text-[11px] font-bold text-slate-400 uppercase mb-1.5 ml-1">TikTok (@)</label>
-                                <input x-model="config.tt" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg px-4 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none" placeholder="@username" type="text"/>
+                                <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1.5 ml-1">TikTok (@)</label>
+                                <input x-model="config.tt" class="w-full bg-slate-50/50 dark:bg-slate-950/50 border border-outline dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all" placeholder="@username" type="text"/>
                             </div>
 
                         </div>
                     </section>
 
-                    <section class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-sm">
+                    <section class="bg-surface dark:bg-slate-900/60 border border-outline dark:border-slate-800 rounded-2xl p-6 shadow-sm backdrop-blur-sm transition-all hover:shadow-md hover:border-primary/20">
                         <div class="flex items-center gap-2 mb-6">
                             <span class="material-symbols-outlined text-rose-500">devices</span>
-                            <h3 class="text-sm font-bold uppercase tracking-wider text-slate-500">TikTok Local Mode</h3>
+                            <h3 class="text-[11px] font-bold uppercase tracking-widest text-slate-500">TikTok Local Mode</h3>
                         </div>
                         <div class="space-y-4">
-                            <div class="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-950 rounded-lg border border-slate-100 dark:border-slate-800">
+                            <div class="flex items-center justify-between p-3.5 bg-slate-50/50 dark:bg-slate-950/50 rounded-xl border border-outline dark:border-slate-800">
                                 <div>
-                                    <h4 class="text-[11px] font-bold uppercase text-slate-500">Local Browser</h4>
-                                    <p class="text-[9px] text-slate-400">Gunakan browser Anda sendiri.</p>
+                                    <h4 class="text-[10px] font-bold uppercase text-slate-500 tracking-wider">Local Browser</h4>
+                                    <p class="text-[9px] text-slate-400 font-medium">Gunakan browser Anda sendiri.</p>
                                 </div>
                                 <label class="relative inline-flex items-center cursor-pointer">
                                     <input type="checkbox" x-model="tiktokLocal.enabled" class="sr-only peer">
@@ -121,44 +120,44 @@
                             </div>
 
                             <div x-show="tiktokLocal.enabled" x-transition class="space-y-3 pt-2">
-                                <label class="block text-[11px] font-bold text-slate-400 uppercase mb-1 ml-1">Buka di:</label>
+                                <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Buka di:</label>
                                 <div class="grid grid-cols-2 gap-2">
-                                    <button @click="tiktokLocal.mode = 'tab'" :class="tiktokLocal.mode === 'tab' ? 'bg-rose-50 border-rose-200 text-rose-600' : 'bg-slate-50 border-slate-100 text-slate-500'" class="flex items-center justify-center gap-2 py-2 rounded-lg border text-[10px] font-bold transition-all">
+                                    <button @click="tiktokLocal.mode = 'tab'" :class="tiktokLocal.mode === 'tab' ? 'bg-rose-50 border-rose-200 text-rose-600' : 'bg-slate-50/50 border-outline text-slate-500'" class="flex items-center justify-center gap-2 py-2.5 rounded-xl border text-[10px] font-bold transition-all">
                                         <span class="material-symbols-outlined text-sm">tab</span> New Tab
                                     </button>
-                                    <button @click="tiktokLocal.mode = 'window'" :class="tiktokLocal.mode === 'window' ? 'bg-rose-50 border-rose-200 text-rose-600' : 'bg-slate-50 border-slate-100 text-slate-500'" class="flex items-center justify-center gap-2 py-2 rounded-lg border text-[10px] font-bold transition-all">
+                                    <button @click="tiktokLocal.mode = 'window'" :class="tiktokLocal.mode === 'window' ? 'bg-rose-50 border-rose-200 text-rose-600' : 'bg-slate-50/50 border-outline text-slate-500'" class="flex items-center justify-center gap-2 py-2.5 rounded-xl border text-[10px] font-bold transition-all">
                                         <span class="material-symbols-outlined text-sm">open_in_new</span> New Window
                                     </button>
                                 </div>
-                                <p class="text-[9px] text-slate-400 italic bg-amber-50 dark:bg-amber-900/20 p-2 rounded border border-amber-100 dark:border-amber-800/30">
-                                    <span class="font-bold text-amber-600 mr-1">Note:</span> Pastikan Anda sudah login ke TikTok di browser Chrome ini untuk hasil maksimal.
+                                <p class="text-[9px] text-slate-400 font-medium italic bg-amber-50/50 dark:bg-amber-900/10 p-2.5 rounded-lg border border-amber-100 dark:border-amber-800/30">
+                                    <span class="font-bold text-amber-600 mr-1 uppercase text-[8px] tracking-widest">Note:</span> Pastikan Anda sudah login ke TikTok di browser Chrome ini untuk hasil maksimal.
                                 </p>
                             </div>
                         </div>
                     </section>
 
                     <template x-if="mode === 'manual'">
-                        <section class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-sm">
+                        <section class="bg-surface dark:bg-slate-900/60 border border-outline dark:border-slate-800 rounded-2xl p-6 shadow-sm backdrop-blur-sm transition-all hover:shadow-md hover:border-primary/20">
                             <div class="flex items-center gap-2 mb-6">
                                 <span class="material-symbols-outlined text-purple-500">database</span>
-                                <h3 class="text-sm font-bold uppercase tracking-wider text-slate-500">Resource Pool</h3>
+                                <h3 class="text-[11px] font-bold uppercase tracking-widest text-slate-500">Resource Pool</h3>
                             </div>
                             <div class="space-y-4">
                                 <div>
-                                    <label class="block text-[11px] font-bold text-slate-400 uppercase mb-1.5 ml-1">Pool Tanggal (One per line)</label>
-                                    <textarea x-model="manual.dates" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg px-4 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none font-mono min-h-[80px] text-slate-900 dark:text-white" placeholder="2 April 2026"></textarea>
+                                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1.5 ml-1">Pool Tanggal (One per line)</label>
+                                    <textarea x-model="manual.dates" class="w-full bg-slate-50/50 dark:bg-slate-950/50 border border-outline dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none font-mono min-h-[80px] text-slate-900 dark:text-white transition-all" placeholder="2 April 2026"></textarea>
                                 </div>
                                 <div>
-                                    <label class="block text-[11px] font-bold text-slate-400 uppercase mb-1.5 ml-1">Pool Link (One per line)</label>
-                                    <textarea x-model="manual.links" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg px-4 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none font-mono min-h-[100px] text-slate-900 dark:text-white" placeholder="https://instagram.com/p/..."></textarea>
+                                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1.5 ml-1">Pool Link (One per line)</label>
+                                    <textarea x-model="manual.links" class="w-full bg-slate-50/50 dark:bg-slate-950/50 border border-outline dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none font-mono min-h-[100px] text-slate-900 dark:text-white transition-all" placeholder="https://instagram.com/p/..."></textarea>
                                 </div>
                                 <div>
-                                    <label class="block text-[11px] font-bold text-slate-400 uppercase mb-1.5 ml-1">Pool Komen (One per line)</label>
-                                    <textarea x-model="manual.comments" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg px-4 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none font-mono min-h-[100px] text-slate-900 dark:text-white" placeholder="Awesome post! 🔥"></textarea>
+                                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1.5 ml-1">Pool Komen (One per line)</label>
+                                    <textarea x-model="manual.comments" class="w-full bg-slate-50/50 dark:bg-slate-950/50 border border-outline dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none font-mono min-h-[100px] text-slate-900 dark:text-white transition-all" placeholder="Awesome post! 🔥"></textarea>
                                 </div>
-                                <div class="pt-3 border-t border-slate-100 dark:border-slate-800 mt-2">
-                                    <p class="text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed italic">
-                                        <span class="font-bold text-primary not-italic uppercase mr-1">Pro Tip:</span>
+                                <div class="pt-4 border-t border-outline dark:border-slate-800 mt-2">
+                                    <p class="text-[9px] text-slate-500 dark:text-slate-400 leading-relaxed italic font-medium">
+                                        <span class="font-extrabold text-primary not-italic uppercase mr-1 tracking-widest">Pro Tip:</span>
                                         Gunakan koma (,) untuk memisahkan antar periode tanggal, link, atau komen. Setiap koma menandakan transisi ke periode data berikutnya.
                                     </p>
                                 </div>
@@ -167,35 +166,35 @@
                     </template>
 
                     <template x-if="mode === 'automatic'">
-                        <section class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-sm">
+                        <section class="bg-surface dark:bg-slate-900/60 border border-outline dark:border-slate-800 rounded-2xl p-6 shadow-sm backdrop-blur-sm transition-all hover:shadow-md hover:border-primary/20">
                             <div class="flex items-center gap-2 mb-6">
                                 <span class="material-symbols-outlined text-emerald-500">forum</span>
-                                <h3 class="text-sm font-bold uppercase tracking-wider text-slate-500">WA Automation</h3>
+                                <h3 class="text-[11px] font-bold uppercase tracking-widest text-slate-500">WA Automation</h3>
                             </div>
                             <div class="space-y-4">
                                 <div>
-                                    <label class="block text-[11px] font-bold text-slate-400 uppercase mb-1.5 ml-1">Monitor Group ID</label>
-                                    <input x-model="auto.monitorId" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg px-4 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none font-mono text-slate-900 dark:text-white" placeholder="12036302839485726@g.us" type="text"/>
+                                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1.5 ml-1">Monitor Group ID</label>
+                                    <input x-model="auto.monitorId" class="w-full bg-slate-50/50 dark:bg-slate-950/50 border border-outline dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none font-mono text-slate-900 dark:text-white transition-all" placeholder="12036302839485726@g.us" type="text"/>
                                 </div>
                                 <div>
-                                    <label class="block text-[11px] font-bold text-slate-400 uppercase mb-1.5 ml-1">Target Destination ID</label>
-                                    <input x-model="auto.targetId" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg px-4 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none font-mono text-slate-900 dark:text-white" placeholder="628123456789@c.us" type="text"/>
+                                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1.5 ml-1">Target Destination ID</label>
+                                    <input x-model="auto.targetId" class="w-full bg-slate-50/50 dark:bg-slate-950/50 border border-outline dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none font-mono text-slate-900 dark:text-white transition-all" placeholder="628123456789@c.us" type="text"/>
                                 </div>
                             </div>
                         </section>
                     </template>
 
-                    <div class="flex items-center justify-between p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm mb-6 transition-all" :class="stealthMode ? 'ring-1 ring-purple-500/50' : ''">
+                    <div class="flex items-center justify-between p-5 bg-surface dark:bg-slate-900/60 border border-outline dark:border-slate-800 rounded-2xl shadow-sm mb-6 transition-all backdrop-blur-sm" :class="stealthMode ? 'ring-2 ring-primary/20 border-primary/30' : ''">
                         <div>
                             <div class="flex items-center gap-1.5 mb-1">
-                                <span class="material-symbols-outlined text-sm" :class="stealthMode ? 'text-purple-500' : 'text-slate-400'" style="font-variation-settings: 'FILL' 1;">visibility_off</span>
-                                <h4 class="text-[11px] font-bold uppercase tracking-wider" :class="stealthMode ? 'text-purple-500' : 'text-slate-500'">Phantom Mode</h4>
+                                <span class="material-symbols-outlined text-sm" :class="stealthMode ? 'text-primary' : 'text-slate-400'" style="font-variation-settings: 'FILL' 1;">visibility_off</span>
+                                <h4 class="text-[10px] font-bold uppercase tracking-widest" :class="stealthMode ? 'text-primary' : 'text-slate-500'">Phantom Mode</h4>
                             </div>
-                            <p class="text-[10px] text-slate-500 dark:text-slate-400">Jalankan browser di latar belakang (Headless).</p>
+                            <p class="text-[9px] text-slate-500 dark:text-slate-400 font-medium">Jalankan browser di latar belakang (Headless).</p>
                         </div>
                         <label class="relative inline-flex items-center cursor-pointer">
                             <input type="checkbox" x-model="stealthMode" class="sr-only peer">
-                            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-800 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-600 peer-checked:bg-purple-600"></div>
+                            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-800 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-600 peer-checked:bg-primary"></div>
                         </label>
                     </div>
                     
@@ -264,24 +263,24 @@
                 </div>
 
                 <div class="lg:col-span-5 space-y-6">
-                    <section class="bg-[#0f172a] border border-slate-800 rounded-xl overflow-hidden shadow-xl flex flex-col h-[380px]">
-                        <div class="bg-[#0b1120] px-4 py-3 border-b border-slate-800 flex justify-between items-center">
+                    <section class="bg-slate-950 border border-slate-800 rounded-2xl overflow-hidden shadow-xl flex flex-col h-[380px] transition-all hover:border-primary/30">
+                        <div class="bg-slate-900/50 px-4 py-3 border-b border-slate-800 flex justify-between items-center backdrop-blur-md">
                             <div class="flex items-center gap-2">
                                 <span class="material-symbols-outlined text-emerald-500 text-sm">terminal</span>
                                 <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Real-time Activity Log</span>
                             </div>
                             <div class="flex gap-1.5">
-                                <div class="w-2.5 h-2.5 rounded-full bg-slate-700"></div>
-                                <div class="w-2.5 h-2.5 rounded-full bg-slate-700"></div>
-                                <div class="w-2.5 h-2.5 rounded-full bg-slate-700"></div>
+                                <div class="w-2.5 h-2.5 rounded-full bg-slate-800"></div>
+                                <div class="w-2.5 h-2.5 rounded-full bg-slate-800"></div>
+                                <div class="w-2.5 h-2.5 rounded-full bg-slate-800"></div>
                             </div>
                         </div>
-                        <div id="terminal-scroll" class="p-4 font-mono text-xs leading-relaxed terminal-scroll overflow-y-auto flex-1 space-y-1.5">
+                        <div id="terminal-scroll" class="p-5 font-mono text-xs leading-relaxed terminal-scroll overflow-y-auto flex-1 space-y-2 custom-scrollbar">
                             <template x-for="(log, index) in logs" :key="index">
-                                <div class="flex gap-2">
-                                    <span class="text-slate-600" x-text="`[${log.time}]`"></span>
-                                    <span :class="log.color" x-text="`${log.type}:`" class="font-bold"></span>
-                                    <span class="text-slate-300" x-text="log.message"></span>
+                                <div class="flex gap-3">
+                                    <span class="text-slate-600 shrink-0" x-text="`[${log.time}]`"></span>
+                                    <span :class="log.color" x-text="`${log.type}:`" class="font-bold shrink-0"></span>
+                                    <span class="text-slate-300 break-words" x-text="log.message"></span>
                                 </div>
                             </template>
                             <div class="flex gap-2 animate-pulse mt-2" x-show="isWaiting">
@@ -291,51 +290,52 @@
                         </div>
                     </section>
 
-                    <section class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm">
+                    <section class="bg-surface dark:bg-slate-900/60 border border-outline dark:border-slate-800 rounded-2xl p-5 shadow-sm backdrop-blur-sm transition-all hover:shadow-md hover:border-primary/20">
                         <div class="flex items-center gap-2 mb-4">
                             <span class="material-symbols-outlined text-primary text-sm">description</span>
-                            <h3 class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Caption Preview</h3>
+                            <h3 class="text-[10px] font-bold uppercase tracking-widest text-slate-500">Caption Preview</h3>
                         </div>
-                        <div class="bg-slate-50 dark:bg-slate-950 rounded-lg p-5 font-mono text-slate-700 dark:text-blue-100 border border-slate-200 dark:border-slate-800 leading-relaxed">
-                            <p class="text-sm">Firman Aji Prasetyo / 5 / 2 April 2026</p>
-                            <p class="text-[10px] mt-4 text-slate-500 italic">// Dynamic parser output</p>
+                        <div class="bg-slate-50/50 dark:bg-slate-950/50 rounded-xl p-5 font-mono text-slate-700 dark:text-indigo-200 border border-outline dark:border-slate-800 leading-relaxed text-sm">
+                            <p class="font-bold" x-text="config.name + ' / ' + (manual.dates.split('\n')[0] || '...')"></p>
+                            <p class="text-[10px] mt-4 text-slate-500 dark:text-slate-400 italic font-medium">// Dynamic parser output preview</p>
                         </div>
                     </section>
                 </div>
 
                 <div class="lg:col-span-3">
-                    <section class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm flex flex-col h-full min-h-[400px]">
-                        <div class="px-4 py-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50 rounded-t-xl">
-                            <h3 class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Execution Results</h3>
-                            <span class="text-[9px] font-bold px-2 py-0.5 rounded-full" :class="lcrStatus === 'running' ? 'bg-amber-100 text-amber-600 animate-pulse' : lcrStatus === 'done' ? 'bg-green-100 text-green-600' : 'bg-slate-100 text-slate-500'" x-text="lcrStatus === 'running' ? 'RUNNING' : lcrStatus === 'done' ? 'DONE' : 'IDLE'"></span>
+                    <section class="bg-surface dark:bg-slate-900/60 border border-outline dark:border-slate-800 rounded-2xl shadow-sm backdrop-blur-sm flex flex-col h-full min-h-[400px] transition-all hover:shadow-md hover:border-primary/20 overflow-hidden">
+                        <div class="px-5 py-4 border-b border-outline dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50 backdrop-blur-md">
+                            <h3 class="text-[10px] font-bold uppercase tracking-widest text-slate-500">Execution Results</h3>
+                            <span class="text-[9px] font-extrabold px-2.5 py-1 rounded-lg tracking-wider" :class="lcrStatus === 'running' ? 'bg-amber-100 text-amber-600 animate-pulse' : lcrStatus === 'done' ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-500'" x-text="lcrStatus === 'running' ? 'RUNNING' : lcrStatus === 'done' ? 'DONE' : 'IDLE'"></span>
                         </div>
-                        <div class="flex-1 overflow-y-auto">
-                            <template x-if="lcrResults.length === 0">
-                                <div class="flex flex-col items-center justify-center h-full text-slate-400 px-4 py-8">
-                                    <span class="material-symbols-outlined text-3xl mb-2">hourglass_empty</span>
-                                    <p class="text-xs text-center">Belum ada hasil. Jalankan Manual Execution untuk memulai.</p>
+                        <div class="flex-1 overflow-y-auto custom-scrollbar">
+                            <template x-if="allResults.length === 0">
+                                <div class="flex flex-col items-center justify-center h-full text-slate-400 px-6 py-10 opacity-60">
+                                    <span class="material-symbols-outlined text-4xl mb-3">hourglass_empty</span>
+                                    <p class="text-[10px] font-bold uppercase tracking-widest text-center">No Data Available</p>
+                                    <p class="text-[10px] mt-1 text-center font-medium">Run execution to start.</p>
                                 </div>
                             </template>
                             <table class="w-full text-left border-collapse" x-show="allResults.length > 0">
                                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                                     <template x-for="(res, idx) in allResults" :key="idx">
-                                        <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                                            <td class="px-4 py-3">
-                                                <div class="text-[10px] font-bold text-slate-900 dark:text-white truncate max-w-[120px]" x-text="(res.platform || '').toUpperCase() + ' #' + (idx+1)"></div>
-                                                <div class="flex gap-1.5 mt-1">
-                                                    <span class="text-[9px] px-1.5 py-0.5 rounded-full font-bold" :class="res.like && !res.like.skipped ? 'bg-red-50 text-red-500' : 'bg-slate-100 text-slate-400'" x-text="res.like && !res.like.skipped ? '❤️' : '♡'"></span>
-                                                    <span class="text-[9px] px-1.5 py-0.5 rounded-full font-bold" :class="res.comment && !res.comment.skipped ? 'bg-blue-50 text-blue-500' : 'bg-slate-100 text-slate-400'" x-text="res.comment && !res.comment.skipped ? '💬' : '○'"></span>
-                                                    <span class="text-[9px] px-1.5 py-0.5 rounded-full font-bold" :class="res.repost && !res.repost.skipped ? 'bg-green-50 text-green-500' : 'bg-slate-100 text-slate-400'" x-text="res.repost && !res.repost.skipped ? '🔁' : '○'"></span>
+                                        <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors group">
+                                            <td class="px-5 py-4">
+                                                <div class="text-[10px] font-extrabold text-slate-900 dark:text-white truncate max-w-[120px] uppercase tracking-wider" x-text="(res.platform || 'TASK') + ' #' + (idx+1)"></div>
+                                                <div class="flex gap-2 mt-2">
+                                                    <span class="text-[10px] size-6 flex items-center justify-center rounded-lg font-bold transition-all" :class="res.like && !res.like.skipped ? 'bg-rose-50 text-rose-500 dark:bg-rose-500/10' : 'bg-slate-100 text-slate-400 dark:bg-slate-800/50'" x-text="res.like && !res.like.skipped ? '❤️' : '♡'"></span>
+                                                    <span class="text-[10px] size-6 flex items-center justify-center rounded-lg font-bold transition-all" :class="res.comment && !res.comment.skipped ? 'bg-indigo-50 text-indigo-500 dark:bg-indigo-500/10' : 'bg-slate-100 text-slate-400 dark:bg-slate-800/50'" x-text="res.comment && !res.comment.skipped ? '💬' : '○'"></span>
+                                                    <span class="text-[10px] size-6 flex items-center justify-center rounded-lg font-bold transition-all" :class="res.repost && !res.repost.skipped ? 'bg-emerald-50 text-emerald-500 dark:bg-emerald-500/10' : 'bg-slate-100 text-slate-400 dark:bg-slate-800/50'" x-text="res.repost && !res.repost.skipped ? '🔁' : '○'"></span>
                                                 </div>
                                             </td>
-                                            <td class="px-4 py-3 text-right">
-                                                <div class="flex items-center justify-end gap-2">
+                                            <td class="px-5 py-4 text-right">
+                                                <div class="flex items-center justify-end gap-3">
                                                     <template x-if="res.screenshot">
-                                                        <button @click="activeScreenshot = res.screenshot; showScreenshot = true;" class="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition-colors text-slate-400 hover:text-primary">
-                                                            <span class="material-symbols-outlined text-sm">image</span>
+                                                        <button @click="activeScreenshot = res.screenshot; showScreenshot = true;" class="size-8 flex items-center justify-center hover:bg-primary/10 rounded-xl transition-all text-slate-400 hover:text-primary group-hover:scale-110 active:scale-90">
+                                                            <span class="material-symbols-outlined text-sm font-bold">image</span>
                                                         </button>
                                                     </template>
-                                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold" :class="res.error ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'" x-text="res.error ? 'ERR' : 'OK'"></span>
+                                                    <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-[9px] font-extrabold tracking-widest uppercase" :class="res.error ? 'bg-rose-50 text-rose-600 dark:bg-rose-500/10' : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10'" x-text="res.error ? 'ERR' : 'OK'"></span>
                                                 </div>
                                             </td>
                                         </tr>
@@ -351,40 +351,42 @@
     </main>
 
     <!-- MODAL PREVIEW SCREENSHOT -->
-    <div x-show="showScreenshot" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-10 bg-slate-900/80 backdrop-blur-sm">
-        <div @click.away="showScreenshot = false" class="bg-white dark:bg-slate-900 w-full max-w-5xl rounded-2xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800 flex flex-col max-h-full">
-            <div class="p-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50">
-                <div class="flex items-center gap-2">
-                    <span class="material-symbols-outlined text-primary">visibility</span>
-                    <h3 class="text-sm font-bold uppercase tracking-wider">Screenshot Proof</h3>
+    <div x-show="showScreenshot" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-10 bg-slate-900/60 backdrop-blur-md">
+        <div @click.away="showScreenshot = false" class="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl w-full max-w-5xl rounded-3xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800 flex flex-col max-h-full transform scale-100 transition-all duration-300">
+            <div class="p-5 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50 backdrop-blur-md">
+                <div class="flex items-center gap-3">
+                    <div class="size-10 bg-primary/10 text-primary rounded-xl flex items-center justify-center">
+                        <span class="material-symbols-outlined font-bold">visibility</span>
+                    </div>
+                    <h3 class="text-sm font-extrabold uppercase tracking-widest">Screenshot Proof</h3>
                 </div>
-                <button @click="showScreenshot = false" class="p-2 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full transition-all">
-                    <span class="material-symbols-outlined">close</span>
+                <button @click="showScreenshot = false" class="size-10 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-800 rounded-xl transition-all text-slate-400 hover:text-slate-600">
+                    <span class="material-symbols-outlined font-bold">close</span>
                 </button>
             </div>
-            <div class="flex-1 overflow-auto p-2 bg-slate-100 dark:bg-slate-950">
-                <img :src="activeScreenshot" class="w-full rounded-lg shadow-lg">
+            <div class="flex-1 overflow-auto p-4 bg-slate-100/50 dark:bg-slate-950/50 custom-scrollbar">
+                <img :src="activeScreenshot" class="w-full rounded-2xl shadow-2xl border border-white/20">
             </div>
-            <div class="p-4 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 flex justify-end">
-                <button @click="showScreenshot = false" class="px-6 py-2 bg-slate-900 dark:bg-white dark:text-slate-900 text-white rounded-xl font-bold text-xs">Tutup</button>
+            <div class="p-5 bg-white/50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-800 flex justify-end backdrop-blur-md">
+                <button @click="showScreenshot = false" class="px-8 py-3 bg-slate-900 dark:bg-white dark:text-slate-900 text-white rounded-2xl font-bold text-xs uppercase tracking-widest hover:opacity-90 transition-all active:scale-95 shadow-lg">Tutup</button>
             </div>
         </div>
     </div>
 
     <!-- MODAL SESSION COMPLETE (DOWNLOAD ZIP) -->
-    <div x-show="showCompleteModal" x-cloak class="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/90 backdrop-blur-md">
-        <div class="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800 p-8 text-center">
-            <div class="w-20 h-20 bg-green-100 dark:bg-green-900/30 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
-                <span class="material-symbols-outlined text-4xl" style="font-variation-settings: 'FILL' 1;">task_alt</span>
+    <div x-show="showCompleteModal" x-cloak class="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xl">
+        <div class="bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl w-full max-w-md rounded-[32px] shadow-2xl overflow-hidden border border-slate-200/60 dark:border-slate-800/60 p-10 text-center transform scale-100 transition-all duration-300">
+            <div class="w-24 h-24 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-500 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-inner">
+                <span class="material-symbols-outlined text-5xl" style="font-variation-settings: 'FILL' 1;">task_alt</span>
             </div>
-            <h3 class="text-2xl font-black text-slate-900 dark:text-white mb-2">Misi Selesai!</h3>
-            <p class="text-slate-500 dark:text-slate-400 text-sm mb-8 leading-relaxed">Semua link telah berhasil dieksekusi. Apakah Anda ingin mengunduh semua bukti screenshot dalam satu folder?</p>
+            <h3 class="text-3xl font-black text-slate-900 dark:text-white mb-3 tracking-tight">Misi Selesai!</h3>
+            <p class="text-slate-500 dark:text-slate-400 text-sm mb-10 leading-relaxed font-medium">Semua link telah berhasil dieksekusi. Apakah Anda ingin mengunduh semua bukti screenshot dalam satu folder archive?</p>
             
-            <div class="space-y-3">
-                <button @click="downloadAllScreenshots()" class="w-full bg-primary hover:bg-primary/90 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-3 shadow-lg shadow-primary/20 transition-all active:scale-95">
-                    <span class="material-symbols-outlined">download_for_offline</span> Unduh Semua (.ZIP)
+            <div class="space-y-4">
+                <button @click="downloadAllScreenshots()" class="w-full bg-primary hover:bg-primary/90 text-white py-4 rounded-2xl font-black flex items-center justify-center gap-3 shadow-xl shadow-primary/30 transition-all active:scale-95 uppercase text-xs tracking-widest">
+                    <span class="material-symbols-outlined text-xl">download_for_offline</span> Unduh Semua (.ZIP)
                 </button>
-                <button @click="showCompleteModal = false" class="w-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 py-4 rounded-2xl font-bold transition-all hover:bg-slate-200 dark:hover:bg-slate-700">
+                <button @click="showCompleteModal = false" class="w-full bg-slate-100/80 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 py-4 rounded-2xl font-bold transition-all hover:bg-slate-200 dark:hover:bg-slate-700 uppercase text-[10px] tracking-widest">
                     Nanti Saja
                 </button>
             </div>
