@@ -30,6 +30,7 @@ document.addEventListener('alpine:init', () => {
         showScreenshot: false,
         activeScreenshot: '',
         showCompleteModal: false,
+        showEntryPopup: true,
 
         // Extension State
         showExtTutorial: false,
