@@ -5,13 +5,19 @@ console.log("[Pulse Bridge] Extension terpasang di Web UI.");
 document.documentElement.setAttribute('data-pulse-extension', 'installed');
 
 // Menerima perintah dari Web UI (pulse.js)
-window.addEventListener('PULSE_EXECUTE_TIKTOK', (e) => {
-    const { links, comment, mode } = e.detail;
-    console.log("[Pulse Bridge] Menerima tugas dari UI:", links.length, "link", "Mode:", mode);
+window.addEventListener('PULSE_EXECUTE_LOCAL', (e) => {
+    const { links, comment, comments, mode } = e.detail;
+    console.log("[Pulse Bridge] Menerima tugas lokal dari UI:", links.length, "link", "Mode:", mode);
     
-    // Teruskan ke Background Worker
     try {
-        chrome.runtime.sendMessage({ action: 'START_TIKTOK_QUEUE', links, comment, mode }, (response) => {
+        chrome.runtime.sendMessage({ 
+            action: 'START_QUEUE', 
+            platform: 'mixed',
+            links, 
+            comment: comment || (comments && comments[0]) || '',
+            comments: comments || [],
+            mode 
+        }, (response) => {
             if (chrome.runtime.lastError) {
                 console.error("[Pulse Bridge] Runtime Error:", chrome.runtime.lastError.message);
                 window.dispatchEvent(new CustomEvent('PULSE_EXT_LOG', { 

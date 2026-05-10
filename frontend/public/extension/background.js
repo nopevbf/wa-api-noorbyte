@@ -2,24 +2,27 @@
 // State harus disimpan di storage agar tidak hilang saat service worker inactive
 
 const saveState = (data) => chrome.storage.local.set(data);
-const getState = () => chrome.storage.local.get(['queue', 'currentComment', 'currentMode', 'isRunning', 'currentTabId', 'currentWindowId', 'currentUrl', 'totalLinks']);
+const getState = () => chrome.storage.local.get(['queue', 'commentsQueue', 'currentComment', 'currentMode', 'isRunning', 'currentTabId', 'currentWindowId', 'currentUrl', 'totalLinks', 'platform']);
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.action === 'START_TIKTOK_QUEUE') {
+    if (request.action === 'START_TIKTOK_QUEUE' || request.action === 'START_QUEUE') {
+        const platform = request.platform || (request.action === 'START_TIKTOK_QUEUE' ? 'tiktok' : 'unknown');
         const state = {
             queue: request.links || [],
+            commentsQueue: request.comments || [],
             totalLinks: (request.links || []).length,
             currentComment: request.comment || '',
             currentMode: request.mode || 'tab',
             isRunning: true,
             currentUrl: null,
             currentTabId: null,
-            currentWindowId: null
+            currentWindowId: null,
+            platform: platform
         };
         saveState(state).then(() => {
             processNext();
         });
-        sendResponse({ status: 'started' });
+        sendResponse({ status: 'started', platform });
     } 
     else if (request.type === 'LOG') {
         sendLog(request.message, request.logType || 'info');
@@ -55,7 +58,7 @@ async function handleActionsDone(results) {
         chrome.tabs.query({ active: true, currentWindow: true }, (activeTabs) => {
             const originalTabId = (activeTabs && activeTabs.length > 0 && activeTabs[0].id !== state.currentTabId) ? activeTabs[0].id : null;
             
-            // Pindah sebentar ke tab TikTok untuk jepret, lalu balik lagi tanpa disadari
+            // Pindah sebentar ke tab target untuk jepret, lalu balik lagi tanpa disadari
             chrome.tabs.update(state.currentTabId, { active: true }, (tab) => {
                 setTimeout(() => {
                     chrome.tabs.captureVisibleTab(tab && tab.windowId ? tab.windowId : null, { format: 'png' }, (dataUrl) => {
@@ -79,8 +82,9 @@ function captureAndNext(state, results, preCapturedDataUrl = undefined) {
             sendLog(`⚠️ Screenshot info: ${chrome.runtime.lastError.message}`, 'warning');
         }
         
+        const currentPlat = state.currentUrl.includes('instagram.com') ? 'instagram' : 'tiktok';
         const dashboardResult = {
-            platform: 'tiktok',
+            platform: currentPlat,
             url: state.currentUrl,
             screenshot: dataUrl || null,
             like: results.find(r => r.action === 'like') || {},
@@ -114,7 +118,8 @@ function captureAndNext(state, results, preCapturedDataUrl = undefined) {
 async function handleActionsError(error) {
     const state = await getState();
     sendLog(`Gagal di ${state.currentUrl}: ${error}`, 'error');
-    broadcastToUI('PULSE_PROGRESS', { platform: 'tiktok', url: state.currentUrl, error: error });
+    const currentPlat = state.currentUrl.includes('instagram.com') ? 'instagram' : 'tiktok';
+    broadcastToUI('PULSE_PROGRESS', { platform: currentPlat, url: state.currentUrl, error: error });
     
     if (state.currentMode === 'window' && state.currentWindowId) {
         chrome.windows.remove(state.currentWindowId).catch(() => {});
@@ -127,32 +132,35 @@ async function handleActionsError(error) {
 
 async function processNext() {
     const state = await getState();
-    let { queue, currentMode, currentComment, totalLinks } = state;
+    let { queue, commentsQueue, currentMode, currentComment, totalLinks } = state;
 
     if (!queue || queue.length === 0) {
         await saveState({ isRunning: false });
-        sendLog('🔥 Semua link TikTok selesai dieksekusi secara lokal!', 'success');
+        sendLog(`🔥 Semua link lokal selesai dieksekusi!`, 'success');
         broadcastToUI('PULSE_EXT_DONE', {});
         return;
     }
     
     const nextUrl = queue.shift();
-    await saveState({ queue, currentUrl: nextUrl });
+    const nextComment = (commentsQueue && commentsQueue.length > 0) ? commentsQueue.shift() : currentComment;
+    
+    await saveState({ queue, commentsQueue, currentUrl: nextUrl });
 
     const total = totalLinks || 1;
     const current = total - queue.length;
-    sendLog(`[EXT] 🔗 Memproses Link ${current}/${total} | Membuka ${currentMode === 'window' ? 'Jendela' : 'Tab'}`, 'info');
+    const currentPlat = nextUrl.includes('instagram.com') ? 'Instagram' : 'TikTok';
+    sendLog(`[EXT] 🔗 Memproses Link ${current}/${total} (${currentPlat}) | Membuka ${currentMode === 'window' ? 'Jendela' : 'Tab'}`, 'info');
     
     if (currentMode === 'window') {
         chrome.windows.create({ url: nextUrl, focused: true, width: 1280, height: 850 }, (win) => {
             const tid = win.tabs[0].id;
             saveState({ currentWindowId: win.id, currentTabId: tid });
-            setupTabListener(tid, currentComment);
+            setupTabListener(tid, nextComment);
         });
     } else {
         chrome.tabs.create({ url: nextUrl, active: true }, (tab) => {
             saveState({ currentTabId: tab.id, currentWindowId: null });
-            setupTabListener(tab.id, currentComment);
+            setupTabListener(tab.id, nextComment);
         });
     }
 }

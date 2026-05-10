@@ -323,7 +323,7 @@ async function instagramLogin(page, username, password, sessionId = 'default') {
 // ==========================================
 // TIKTOK: LOGIN
 // ==========================================
-async function tiktokLogin(page, username, password, sessionId = 'default') {
+async function tiktokLogin(page, username, password, sessionId = 'default', sessionState = {}) {
     const RATE_LIMIT_KEYWORDS = [
         'maximum number of attempts', 'too many attempts', 'try again later', 'too fast', 
         'too many login', 'maximum attempt', 'login too frequently'
@@ -333,17 +333,9 @@ async function tiktokLogin(page, username, password, sessionId = 'default') {
         return RATE_LIMIT_KEYWORDS.some(k => text.includes(k));
     };
 
-    const nukeSessionDir = () => {
-        const sessionName = (global.__lcrSessionNames && global.__lcrSessionNames[sessionId]) || 'default';
-        const sessionDir = path.join(__dirname, `lcr_session_${sessionName}`);
-        if (fs.existsSync(sessionDir)) {
-            try {
-                fs.rmSync(sessionDir, { recursive: true, force: true });
-                sendPulseLog(`🗑️ Folder session "${path.basename(sessionDir)}" dihapus dari disk.`, 'info', sessionId);
-            } catch (e) {
-                sendPulseLog(`⚠️ Gagal hapus folder session: ${e.message}`, 'warning', sessionId);
-            }
-        }
+    const markForNuke = () => {
+        if (sessionState) sessionState.nukeOnClose = true;
+        sendPulseLog(`🚫 TikTok RATE LIMIT terdeteksi! Folder session akan dibersihkan setelah browser ditutup.`, 'error', sessionId);
     };
 
     sendPulseLog('🔐 Mengecek status login TikTok...', 'info', sessionId);
@@ -363,8 +355,7 @@ async function tiktokLogin(page, username, password, sessionId = 'default') {
     await sleep(2000);
 
     if (await checkRateLimit()) {
-        sendPulseLog('🚫 TikTok RATE LIMIT terdeteksi SEBELUM login!', 'error', sessionId);
-        nukeSessionDir();
+        markForNuke();
         return false;
     }
 
@@ -388,8 +379,7 @@ async function tiktokLogin(page, username, password, sessionId = 'default') {
             await sleep(8000);
 
             if (await checkRateLimit()) {
-                sendPulseLog('🚫 TikTok RATE LIMIT setelah submit!', 'error', sessionId);
-                nukeSessionDir();
+                markForNuke();
                 return false;
             }
         } catch (err) {
@@ -404,8 +394,7 @@ async function tiktokLogin(page, username, password, sessionId = 'default') {
         await page.evaluate(() => window.__LCR_UTILS__?.killPopups?.()).catch(() => { });
 
         if (await checkRateLimit()) {
-            sendPulseLog('🚫 Rate limit masih aktif di halaman.', 'error', sessionId);
-            nukeSessionDir();
+            markForNuke();
             return false;
         }
 
@@ -441,11 +430,12 @@ async function instagramActions(page, commentText) {
             unlikeSvg: 'svg[aria-label="Unlike"][height="24"], svg[aria-label="Tidak Suka"][height="24"]',
             commentSvg: 'svg[aria-label="Comment"], svg[aria-label="Komentar"]',
             commentInput: 'textarea[aria-label*="Add a comment" i], textarea[placeholder*="comment" i], textarea[placeholder*="komentar" i], [role="textbox"]',
-            repostSvg: 'svg[aria-label="Repost"][height="24"]:not(:has(circle)), svg[aria-label="Repost"]'
+            repostSvg: 'svg[aria-label="Repost"][height="24"]:not(:has(circle))'
         };
 
         await utils.killPopups();
 
+        // 1. LIKE
         try {
             if (document.querySelector(SELS.unlikeSvg)) {
                 results.push({ action: 'like', skipped: true });
@@ -453,7 +443,7 @@ async function instagramActions(page, commentText) {
                 const btn = utils.findClickable(SELS.likeSvg);
                 if (btn) {
                     utils.triggerClick(btn);
-                    await utils.sleep(1000);
+                    await utils.sleep(1500);
                     results.push({ action: 'like', skipped: false });
                 } else {
                     results.push({ action: 'like', skipped: true, error: 'Like button not found' });
@@ -461,22 +451,34 @@ async function instagramActions(page, commentText) {
             }
         } catch (e) { results.push({ action: 'like', error: e.message }); }
 
-        await utils.sleep(1500);
+        await utils.sleep(2000);
+
+        // 2. COMMENT
         try {
             if (cmt) {
                 let input = document.querySelector(SELS.commentInput);
                 if (!input) {
                     const trig = utils.findClickable(SELS.commentSvg);
-                    if (trig) { utils.triggerClick(trig); await utils.sleep(1000); }
+                    if (trig) { 
+                        utils.triggerClick(trig); 
+                        await utils.sleep(2000); 
+                    }
                 }
+                
                 input = document.querySelector(SELS.commentInput);
                 if (input) {
                     utils.simulateTyping(input, cmt);
-                    await utils.sleep(800);
-                    const postBtn = [...document.querySelectorAll('[role="button"], button')].find(el => /^(Post|Kirim)$/i.test(el.textContent.trim()));
+                    await utils.sleep(1500);
+
+                    const form = input.closest('form');
+                    const findSubmit = () => [...document.querySelectorAll('[role="button"], button')].find(
+                        el => /^(Post|Kirim|Bagikan)$/i.test(el.textContent.trim()) && (!form || el.closest('form') === form)
+                    );
+                    
+                    const postBtn = findSubmit();
                     if (postBtn) {
                         utils.triggerClick(postBtn);
-                        await utils.sleep(2000);
+                        await utils.sleep(3000);
                         results.push({ action: 'comment', skipped: false });
                     } else {
                         results.push({ action: 'comment', error: 'Post button not found' });
@@ -489,20 +491,26 @@ async function instagramActions(page, commentText) {
             }
         } catch (e) { results.push({ action: 'comment', error: e.message }); }
 
-        await utils.sleep(1500);
+        await utils.sleep(2000);
+
+        // 3. REPOST
         try {
-            const repostSvg = document.querySelector(SELS.repostSvg);
+            const scope = document.querySelector('article') || document;
+            const repostSvg = scope.querySelector(SELS.repostSvg);
+            
             if (repostSvg) {
                 const pathD = repostSvg.querySelector('path')?.getAttribute('d') ?? '';
+                // Robust check for already reposted: path 'd' attribute usually has more 'M' commands when active
                 if ((pathD.match(/[Mm]/g)?.length ?? 0) >= 3) {
                     results.push({ action: 'repost', skipped: true });
                 } else {
                     const btn = utils.findClickable(SELS.repostSvg);
                     utils.triggerClick(btn);
-                    await utils.sleep(1000);
+                    await utils.sleep(2000);
                     results.push({ action: 'repost', skipped: false });
                 }
             } else {
+                // FALLBACK: TRY SAVE IF REPOST NOT FOUND
                 const saveSvg = document.querySelector('svg[aria-label="Save"], svg[aria-label="Simpan"]');
                 if (saveSvg) {
                     const isSaved = !!document.querySelector('svg[aria-label="Remove"], svg[aria-label="Hapus"]');
@@ -511,7 +519,7 @@ async function instagramActions(page, commentText) {
                     } else {
                         const btn = saveSvg.closest('[role="button"], button') || saveSvg.parentElement;
                         utils.triggerClick(btn);
-                        await utils.sleep(1000);
+                        await utils.sleep(2000);
                         results.push({ action: 'repost', skipped: false, note: 'Saved as fallback' });
                     }
                 } else {
@@ -538,7 +546,7 @@ async function tiktokActions(page, commentText) {
 
         const SELS = {
             likeBtn: 'button:has([data-e2e="like-icon"])',
-            likeBtnActive: 'button[aria-pressed="true"]:has([data-e2e="like-icon"]), button:has([data-e2e="like-icon"][style*="fill: rgb(255, 43, 85)"])',
+            likeBtnActive: 'button[aria-pressed="true"]:has([data-e2e="like-icon"]), button:has([data-e2e="like-icon"][style*="fill: rgb(255, 43, 85)"]), button:has([data-e2e="like-icon"][style*="fill: rgb(254, 44, 85)"])',
             commentBtn: 'button:has([data-e2e="comment-icon"])',
             commentInput: '[data-e2e="comment-text"] [contenteditable="true"]',
             commentPost: 'button[data-e2e="comment-post"]',
@@ -568,7 +576,36 @@ async function tiktokActions(page, commentText) {
 
         await utils.killPopups();
 
-        // 1. COMMENT
+        // 1. LIKE
+        try {
+            const checkLiked = () => {
+                if (document.querySelector(SELS.likeBtnActive)) return true;
+                const activeIcon = document.querySelector('[data-e2e="like-active-icon"]');
+                if (activeIcon) return true;
+                const icon = document.querySelector('[data-e2e="like-icon"]');
+                if (!icon) return false;
+                const btn = icon.closest('button');
+                return (btn && btn.getAttribute('aria-pressed') === 'true') || 
+                       /255,\s*43,\s*85|254,\s*44,\s*85|255,\s*59,\s*92|255,\s*76,\s*58/.test(window.getComputedStyle(icon).fill || '');
+            };
+
+            if (checkLiked()) {
+                results.push({ action: 'like', skipped: true });
+            } else {
+                const selector = '[data-e2e="like-icon"]';
+                if (window.puppeteerClickLcr) await window.puppeteerClickLcr(selector);
+                else {
+                    const btn = document.querySelector(SELS.likeBtn);
+                    if (btn) utils.triggerClick(btn);
+                }
+                await utils.sleep(2000);
+                results.push({ action: 'like', skipped: !checkLiked() });
+            }
+        } catch (e) { results.push({ action: 'like', error: e.message }); }
+
+        await randomDelay(2000, 4000);
+
+        // 2. COMMENT
         try {
             if (cmt) {
                 let input = document.querySelector(SELS.commentInput);
@@ -577,18 +614,18 @@ async function tiktokActions(page, commentText) {
                     if (btn) {
                         if (window.puppeteerClickLcr) await window.puppeteerClickLcr(SELS.commentBtn);
                         else utils.triggerClick(btn);
-                        await utils.sleep(1500);
+                        await utils.sleep(2000);
                     }
                 }
 
                 input = await utils.waitForEl(SELS.commentInput, 7000);
                 if (window.puppeteerClickLcr) await window.puppeteerClickLcr(SELS.commentInput);
                 else utils.triggerClick(input);
-                await utils.sleep(500);
+                await utils.sleep(1000);
                 input.focus();
 
                 utils.simulatePaste(input, cmt);
-                await utils.sleep(1000);
+                await utils.sleep(1500);
 
                 const postBtn = await waitForEnabled(SELS.commentPost, 5000);
                 if (postBtn) {
@@ -604,15 +641,15 @@ async function tiktokActions(page, commentText) {
             }
         } catch (e) { results.push({ action: 'comment', error: e.message }); }
 
-        await randomDelay(3000, 5000);
+        await randomDelay(2000, 4000);
 
-        // 2. REPOST
+        // 3. REPOST
         try {
             const shareBtn = document.querySelector(SELS.shareBtn);
             if (shareBtn) {
                 if (window.puppeteerClickLcr) await window.puppeteerClickLcr(SELS.shareBtn);
                 else utils.triggerClick(shareBtn);
-                await utils.sleep(1500);
+                await utils.sleep(2000);
 
                 const repostEl = await utils.waitForEl(SELS.repostOption, 7000);
                 const label = repostEl.querySelector('p')?.textContent.trim() ?? '';
@@ -626,32 +663,10 @@ async function tiktokActions(page, commentText) {
                     await utils.sleep(3000);
                     results.push({ action: 'repost', skipped: false });
                 }
+            } else {
+                results.push({ action: 'repost', skipped: true, error: 'Share button not found' });
             }
         } catch (e) { results.push({ action: 'repost', error: e.message }); }
-
-        await randomDelay(3000, 5000);
-
-        // 3. LIKE
-        try {
-            const checkLiked = () => {
-                const activeIcon = document.querySelector('[data-e2e="like-active-icon"]');
-                if (activeIcon) return true;
-                const icon = document.querySelector('[data-e2e="like-icon"]');
-                if (!icon) return false;
-                const btn = icon.closest('button');
-                return (btn && btn.getAttribute('aria-pressed') === 'true') || 
-                       /255,\s*43,\s*85|254,\s*44,\s*85|255,\s*59,\s*92|255,\s*76,\s*58/.test(window.getComputedStyle(icon).fill || '');
-            };
-
-            if (checkLiked()) {
-                results.push({ action: 'like', skipped: true });
-            } else {
-                const selector = '[data-e2e="like-icon"]';
-                if (window.puppeteerClickLcr) await window.puppeteerClickLcr(selector);
-                await utils.sleep(5000);
-                results.push({ action: 'like', skipped: !checkLiked() });
-            }
-        } catch (e) { results.push({ action: 'like', error: e.message }); }
 
         return results;
     }, commentText);
@@ -735,7 +750,7 @@ async function executeLCR(identity, payload, options = {}) {
                 if (platform === 'instagram') {
                     loginDone['instagram'] = await instagramLogin(page, identity.ig_email, identity.ig_password, sessionId);
                 } else if (platform === 'tiktok') {
-                    loginDone['tiktok'] = await tiktokLogin(page, identity.tt_email, identity.tt_password, sessionId);
+                    loginDone['tiktok'] = await tiktokLogin(page, identity.tt_email, identity.tt_password, sessionId, sessionState);
                 } else {
                     loginDone[platform] = true;
                 }
@@ -750,9 +765,14 @@ async function executeLCR(identity, payload, options = {}) {
             try {
                 await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 45000 });
                 await sleep(4000);
+                
+                // 🛠️ RE-INJECT after goto (Navigation clears window)
+                await injectLcrUtilities(page);
+
                 const isReady = await waitForPostReady(page, platform, sessionId);
                 if (!isReady) throw new Error('Post not ready');
 
+                // 🛠️ RE-INJECT after post is ready (just in case of redirects)
                 await injectLcrUtilities(page);
                 let actionResults = platform === 'instagram' ? await instagramActions(page, comment) : await tiktokActions(page, comment);
                 
@@ -781,7 +801,22 @@ async function executeLCR(identity, payload, options = {}) {
         sessionState.status = 'error';
         sessionState.error = err.message;
     } finally {
-        if (browser) await browser.close();
+        if (browser) {
+            const userDataDir = browser.process()?.spawnargs.find(arg => arg.startsWith('--user-data-dir='))?.split('=')[1];
+            await browser.close();
+            
+            // 🛠️ CLEANUP: Nuke folder session jika ditandai (e.g. Rate Limit)
+            if (sessionState.nukeOnClose && userDataDir && fs.existsSync(userDataDir)) {
+                try {
+                    // Beri jeda sedikit agar OS melepas lock file
+                    await sleep(2000);
+                    fs.rmSync(userDataDir, { recursive: true, force: true });
+                    sendPulseLog(`🗑️ Folder session dibersihkan karena Rate Limit.`, 'info', sessionId);
+                } catch (e) {
+                    sendPulseLog(`⚠️ Gagal membersihkan folder session: ${e.message}`, 'warning', sessionId);
+                }
+            }
+        }
     }
 
     return { status: true, results: sessionState.results };

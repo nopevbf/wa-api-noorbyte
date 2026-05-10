@@ -40,7 +40,7 @@ document.addEventListener('alpine:init', () => {
         // Session-based Tracking
         sessions: {
             main: { status: 'idle', results: [] },
-            tiktok: { status: 'idle', results: [] }
+            local: { status: 'idle', results: [] }
         },
         statusPollInterval: null,
 
@@ -63,14 +63,14 @@ document.addEventListener('alpine:init', () => {
             window.addEventListener('PULSE_EXT_PROGRESS', (e) => {
                 const result = e.detail;
                 // Reaktivitas Alpine: gunakan assignment instead of push
-                this.sessions.tiktok.results = [...this.sessions.tiktok.results, result];
-                this.addLog('Progress', `[EXTENSION] Link TikTok diproses: ${result.url.substring(0, 25)}...`, 'text-rose-400');
+                this.sessions.local.results = [...this.sessions.local.results, result];
+                this.addLog('Progress', `[EXTENSION] Link ${result.platform} diproses: ${result.url.substring(0, 25)}...`, 'text-rose-400');
             });
 
             // Listener untuk Queue Selesai dari Extension
             window.addEventListener('PULSE_EXT_DONE', () => {
-                this.addLog('Success', '🔥 Semua tugas local TikTok selesai!', 'text-emerald-400');
-                if (this.sessions.tiktok) this.sessions.tiktok.status = 'done';
+                this.addLog('Success', '🔥 Semua tugas local selesai!', 'text-emerald-400');
+                if (this.sessions.local) this.sessions.local.status = 'done';
                 this.showCompleteModal = true; // Tampilkan popup intuitif
             });
 
@@ -88,7 +88,8 @@ document.addEventListener('alpine:init', () => {
                     if (!this.sessions[sid]) this.sessions[sid] = { status: 'running', results: [] };
                     
                     if (data.result) {
-                        this.sessions[sid].results.push(data.result);
+                        // Reaktivitas Alpine: gunakan assignment instead of push
+                        this.sessions[sid].results = [...this.sessions[sid].results, data.result];
                     }
                     this.addLog('Progress', `[${sid.toUpperCase()}] Link ${data.current}/${data.total} selesai.`, 'text-purple-400');
 
@@ -167,8 +168,20 @@ document.addEventListener('alpine:init', () => {
             const map = {
                 'info': 'text-blue-400',
                 'success': 'text-emerald-400',
+                'Success': 'text-emerald-400',
                 'warning': 'text-amber-400',
-                'error': 'text-red-500'
+                'Warning': 'text-amber-400',
+                'error': 'text-red-500',
+                'Error': 'text-red-500',
+                'Extension': 'text-rose-400',
+                'Progress': 'text-purple-400',
+                'Action': 'text-indigo-400',
+                'Randomizer': 'text-slate-400',
+                'Socket': 'text-green-400',
+                'System': 'text-blue-400',
+                'Ready': 'text-emerald-400',
+                'Active': 'text-green-400',
+                'Fatal': 'text-red-600'
             };
             return map[type] || 'text-slate-300';
         },
@@ -215,7 +228,7 @@ document.addEventListener('alpine:init', () => {
 
         // Get combined results for the UI
         get allResults() {
-            return [...this.sessions.main.results, ...this.sessions.tiktok.results];
+            return [...this.sessions.main.results, ...this.sessions.local.results];
         },
 
         // EKSEKUSI MODE MANUAL
@@ -228,61 +241,84 @@ document.addEventListener('alpine:init', () => {
             this.isWaiting = false;
             this.saveConfig();
 
-            const allLinks = this.manual.links.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+            const allLinks = this.manual.links.split(/\n|,/).map(l => l.trim()).filter(l => l.length > 0);
+            const commentPool = this.manual.comments.split(/\n|,/).map(c => c.trim()).filter(c => c.length > 0);
             
-            let tiktokLinks = [];
+            const getRandomComment = () => {
+                if (commentPool.length === 0) return '';
+                return commentPool[Math.floor(Math.random() * commentPool.length)];
+            };
+
+            let localLinks = [];
             let mainLinks = [];
 
             if (this.tiktokLocal.enabled) {
-                tiktokLinks = allLinks.filter(l => l.toLowerCase().includes('tiktok.com'));
-                mainLinks = allLinks.filter(l => !l.toLowerCase().includes('tiktok.com'));
+                localLinks = allLinks.filter(l => l.toLowerCase().includes('tiktok.com') || l.toLowerCase().includes('instagram.com'));
+                mainLinks = allLinks.filter(l => !l.toLowerCase().includes('tiktok.com') && !l.toLowerCase().includes('instagram.com'));
             } else {
                 mainLinks = allLinks;
             }
 
             // Reset States
             this.sessions.main = { status: mainLinks.length > 0 ? 'running' : 'idle', results: [], isLocal: false };
-            this.sessions.tiktok = { status: tiktokLinks.length > 0 ? 'running' : 'idle', results: [], isLocal: false };
+            this.sessions.local = { status: localLinks.length > 0 ? 'running' : 'idle', results: [], isLocal: false };
 
-            // Start TikTok Session (Extension / Local)
-            if (tiktokLinks.length > 0) {
+            // Start Local Session (Extension)
+            if (localLinks.length > 0) {
                 const isExtInstalled = document.documentElement.hasAttribute('data-pulse-extension');
                 
                 if (isExtInstalled) {
-                    this.sessions.tiktok.isLocal = true;
-                    this.addLog('Extension', `Mengirim ${tiktokLinks.length} link TikTok ke Chrome Extension...`, 'text-rose-400');
-                    const commentToUse = this.manual.comments.split('\n').filter(c => c.trim())[0] || '';
+                    this.sessions.local.isLocal = true;
+                    this.addLog('Extension', `Mengirim ${localLinks.length} link ke Chrome Extension...`, 'text-rose-400');
                     
-                    window.dispatchEvent(new CustomEvent('PULSE_EXECUTE_TIKTOK', {
-                        detail: { 
-                            links: tiktokLinks, 
-                            comment: commentToUse,
-                            mode: this.tiktokLocal.mode // 'tab' | 'window'
-                        }
+                    const localComments = localLinks.map(l => {
+                        const c = getRandomComment();
+                        const platName = l.toLowerCase().includes('instagram.com') ? 'IG' : 'TT';
+                        this.addLog('Randomizer', `Extension (${platName}): ${l.substring(0,20)}... -> "${c}"`, 'text-slate-400');
+                        return c;
+                    });
+
+                    window.dispatchEvent(new CustomEvent('PULSE_EXECUTE_LOCAL', {
+                        detail: { links: localLinks, comments: localComments, mode: this.tiktokLocal.mode }
                     }));
                 } else {
                     this.addLog('Warning', `Extension belum terinstall! Jalankan mode server (Visible Browser)...`, 'text-amber-500');
-                    this.sendToBackend(tiktokLinks, 'tiktok', false);
+                    const randomizedComments = localLinks.map(l => {
+                        const c = getRandomComment();
+                        this.addLog('Randomizer', `Server Local: ${l.substring(0,20)}... -> "${c}"`, 'text-slate-400');
+                        return c;
+                    }).join('\n');
+                    this.sendToBackend(localLinks, 'local', false, randomizedComments);
                 }
             }
 
             // Start Main Session (PHANTOM/STEALTH)
             if (mainLinks.length > 0) {
                 this.addLog('Action', `🚀 Memulai Sesi Utama (Phantom Mode)...`, 'text-purple-400');
-                this.sendToBackend(mainLinks, 'main', true);
+                const randomizedComments = mainLinks.map(l => {
+                    const c = getRandomComment();
+                    this.addLog('Randomizer', `Main: ${l.substring(0,20)}... -> "${c}"`, 'text-slate-400');
+                    return c;
+                }).join('\n');
+                this.sendToBackend(mainLinks, 'main', true, randomizedComments);
             }
 
             this.startStatusPolling();
         },
 
-        async sendToBackend(links, sessionId, stealth) {
+        async sendToBackend(links, sessionId, stealth, customComments) {
             try {
+                const payload = { ...this.manual, links: links.join('\n') };
+                if (customComments) {
+                    payload.comments = customComments;
+                }
+
                 const response = await fetch('/api/pulse/execute-manual', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         identity: this.config,
-                        payload: { ...this.manual, links: links.join('\n') },
+                        payload: payload,
                         options: { sessionId, stealthMode: stealth }
                     })
                 });

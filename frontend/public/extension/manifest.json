@@ -11,7 +11,8 @@
     "storage"
   ],
   "host_permissions": [
-    "<all_urls>"
+    "<all_urls>",
+    "*://*.instagram.com/*"
   ],
   "content_scripts": [
     {
@@ -22,6 +23,11 @@
     {
       "matches": ["*://*.tiktok.com/*"],
       "js": ["tiktok_bot.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["*://*.instagram.com/*"],
+      "js": ["instagram_bot.js"],
       "run_at": "document_idle"
     }
   ],
