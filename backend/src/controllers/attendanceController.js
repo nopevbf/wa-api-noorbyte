@@ -145,26 +145,32 @@ async function getRecent(req, res) {
   }
 }
 
+const z = require('zod');
+const { isMaliciousString } = require('../helpers/security');
+
+const executeJailbreakSchema = z.object({
+  env: z.string().min(1, "Payload Incomplete"),
+  email: z.string().min(1, "Payload Incomplete"),
+  password: z.string().min(1, "Payload Incomplete"),
+  fullName: z.string().min(1, "Payload Incomplete"),
+});
+
 async function executeJailbreak(req, res) {
   try {
-    const { env, email, password, fullName } = req.body;
-
-    // Sanitization: Ensure inputs are strings
-    if (typeof env !== 'string' || typeof email !== 'string' || typeof password !== 'string' || typeof fullName !== 'string') {
-      console.error("[TRIGGER] ❌ Tipe data input tidak valid!");
-      return res.status(400).json({ status: false, message: "Invalid Input Type" });
-    }
-
-    console.log(`[TRIGGER] 🚀 Menerima perintah Bypass untuk: ${fullName}`);
-
-    if (!env.trim() || !email.trim() || !password || !fullName.trim()) {
-      console.error("[TRIGGER] ❌ Data tidak lengkap!");
+    const parseResult = executeJailbreakSchema.safeParse(req.body);
+    
+    if (!parseResult.success) {
+      console.error("[TRIGGER] ❌ Data tidak valid atau tidak lengkap!");
+      // Match the exact test expectation
       return res.status(400).json({ status: false, message: "Payload Incomplete" });
     }
 
+    const { env, email, password, fullName } = parseResult.data;
+
+    console.log(`[TRIGGER] 🚀 Menerima perintah Bypass untuk: ${fullName}`);
+
     // Input Validation to prevent Command Injection / SQL Injection
-    const maliciousPattern = /[;<>&|`\\]/g;
-    if (maliciousPattern.test(fullName) || maliciousPattern.test(email) || maliciousPattern.test(env)) {
+    if (isMaliciousString(fullName) || isMaliciousString(email) || isMaliciousString(env)) {
       console.error("[TRIGGER] ❌ Karakter tidak valid terdeteksi (Potensi Command Injection)!");
       return res.status(400).json({ status: false, message: "Invalid input characters detected" });
     }

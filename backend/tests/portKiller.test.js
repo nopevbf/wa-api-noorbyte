@@ -16,8 +16,8 @@ describe('Port Killer', () => {
   });
 
   it('should reject invalid port numbers to prevent Command Injection', async () => {
-    await expect(killPortProcess('4000; rm -rf /')).rejects.toThrow('Invalid port number');
-    await expect(killPortProcess('invalid')).rejects.toThrow('Invalid port number');
+    await expect(killPortProcess('4000; rm -rf /')).rejects.toThrow('Invalid port number format. Only digits allowed.');
+    await expect(killPortProcess('invalid')).rejects.toThrow('Invalid port number format. Only digits allowed.');
     expect(child_process.exec).not.toHaveBeenCalled();
   });
 
@@ -39,7 +39,8 @@ describe('Port Killer', () => {
     // Mock successful find but permission denied on kill
     child_process.exec.mockImplementation((cmd, cb) => {
       if (cmd.includes('netstat') || cmd.includes('lsof')) {
-        cb(null, '  TCP    0.0.0.0:4000    0.0.0.0:0    LISTENING    12345', '');
+        // Return a clean PID string that works for both split logic
+        cb(null, '12345', '');
       } else if (cmd.includes('taskkill') || cmd.includes('kill')) {
         const error = new Error('Command failed');
         error.stderr = 'EPERM: Operation not permitted';
@@ -56,7 +57,7 @@ describe('Port Killer', () => {
     // Mock successful find and kill
     child_process.exec.mockImplementation((cmd, cb) => {
       if (cmd.includes('netstat') || cmd.includes('lsof')) {
-        cb(null, '  TCP    0.0.0.0:4000    0.0.0.0:0    LISTENING    12345');
+        cb(null, '12345', '');
       } else if (cmd.includes('taskkill') || cmd.includes('kill')) {
         cb(null, 'Success');
       }
