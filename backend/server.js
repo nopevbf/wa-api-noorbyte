@@ -84,8 +84,9 @@ function startServer(port) {
         
         const killed = await killPortProcess(port);
         if (killed) {
-          console.log(`✅ [BACKEND] Proses di port ${port} berhasil dimatikan. Restart server dalam 1 detik...`);
-          setTimeout(() => startServer(port), 1000);
+          const backoffDelay = Math.pow(2, portRetryCount - 1) * 1000;
+          console.log(`✅ [BACKEND] Proses di port ${port} berhasil dimatikan. Restart server dalam ${backoffDelay/1000} detik...`);
+          setTimeout(() => startServer(port), backoffDelay);
         } else {
           console.error(`❌ [BACKEND] Gagal menemukan proses di port ${port}. Matikan manual lalu coba lagi.`);
           process.exit(1);
@@ -119,20 +120,48 @@ const { executeLCR, getLcrStatus } = require('./src/services/lcrEngine');
 const { activateWatcher } = require('./src/services/pulseWatcher');
 
 // EXECUTE MANUAL LCR — Jalankan Like/Comment/Repost di background
+const { z } = require("zod");
+
+const executeManualSchema = z.object({
+  identity: z.object({
+    name: z.string().optional(),
+    ig_email: z.string().optional(),
+    ig_password: z.string().optional(),
+    tt_email: z.string().optional(),
+    tt_password: z.string().optional()
+  }).passthrough(),
+  payload: z.object({
+    links: z.string().optional(),
+    comments: z.string().optional()
+  }).passthrough(),
+  options: z.object({
+    stealthMode: z.boolean().optional(),
+    sessionId: z.string().optional()
+  }).passthrough().optional()
+});
+
 app.post('/api/pulse/execute-manual', (req, res) => {
-    // 😈 Tangkap 'options' yang berisi stealthMode
-    const { identity, payload, options } = req.body; 
+    try {
+        const validated = executeManualSchema.parse(req.body);
+        const { identity, payload, options } = validated;
 
-    console.log(`😈 Menerima perintah LCR untuk: ${identity.name} | Phantom: ${options?.stealthMode}`);
+        console.log(`😈 Menerima perintah LCR untuk: ${identity.name || 'Unknown'} | Phantom: ${options?.stealthMode}`);
 
-    res.json({ status: 'success', message: 'Misi disuntikkan! Pantau Terminal.' });
+        res.json({ status: 'success', message: 'Misi disuntikkan! Pantau Terminal.' });
 
-    // 😈 Teruskan 'options' ke mesin eksekusi
-    executeLCR(identity, payload, options).then(result => {
-        console.log("Misi LCR Selesai di latar belakang!");
-    }).catch(err => {
-        console.error("LCR Background Error:", err.message);
-    });
+        // 😈 Teruskan 'options' ke mesin eksekusi
+        executeLCR(identity, payload, options).then(result => {
+            console.log("Misi LCR Selesai di latar belakang!");
+        }).catch(err => {
+            console.error("LCR Background Error:", err.message);
+        });
+    } catch (error) {
+        if (error instanceof z.ZodError) {
+            console.warn(`[SECURITY] Invalid input detected in execute-manual:`, error.errors);
+            return res.status(400).json({ status: false, message: 'Invalid Input Payload', errors: error.errors });
+        }
+        res.status(500).json({ status: false, message: 'Internal Server Error' });
+    }
 });
 
 // STATUS LCR — Polling dari frontend

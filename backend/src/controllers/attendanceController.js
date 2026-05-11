@@ -7,7 +7,12 @@ let lastScrapeTime = null;
 async function getHistory(req, res) {
   try {
     const targetPage = parseInt(req.query.page) || 1;
-    const fullName = req.query.name || "";
+    let fullName = req.query.name;
+
+    // Sanitization: Ensure fullName is a valid string
+    if (typeof fullName !== "string") {
+      fullName = "";
+    }
 
     if (!fullName || fullName.trim() === "" || fullName === "UNKNOWN USER") {
       console.log(`[SYSTEM] 🛑 Blokir Akses History Page ${targetPage}: Menunggu User Login...`);
@@ -81,7 +86,12 @@ async function getHistory(req, res) {
 async function getRecent(req, res) {
   try {
     const forceSync = req.query.force === "true";
-    const fullName = req.query.name || "";
+    let fullName = req.query.name;
+
+    // Sanitization: Ensure fullName is a valid string
+    if (typeof fullName !== "string") {
+      fullName = "";
+    }
 
     if (!fullName || fullName.trim() === "" || fullName === "UNKNOWN USER") {
       console.log("[SYSTEM] 🛑 Blokir Akses Widget: Menunggu User Login...");
@@ -139,9 +149,15 @@ async function executeJailbreak(req, res) {
   try {
     const { env, email, password, fullName } = req.body;
 
+    // Sanitization: Ensure inputs are strings
+    if (typeof env !== 'string' || typeof email !== 'string' || typeof password !== 'string' || typeof fullName !== 'string') {
+      console.error("[TRIGGER] ❌ Tipe data input tidak valid!");
+      return res.status(400).json({ status: false, message: "Invalid Input Type" });
+    }
+
     console.log(`[TRIGGER] 🚀 Menerima perintah Bypass untuk: ${fullName}`);
 
-    if (!env || !email || !password || !fullName) {
+    if (!env.trim() || !email.trim() || !password || !fullName.trim()) {
       console.error("[TRIGGER] ❌ Data tidak lengkap!");
       return res.status(400).json({ status: false, message: "Payload Incomplete" });
     }
