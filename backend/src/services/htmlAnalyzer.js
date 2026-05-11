@@ -1,5 +1,6 @@
 const fs = require('fs/promises');
 const cheerio = require('cheerio');
+const path = require('path');
 
 /**
  * Analyzes an HTML file to check for specific elements and keywords.
@@ -7,6 +8,11 @@ const cheerio = require('cheerio');
  * @returns {Promise<Object>} Analysis results
  */
 async function analyzeHtmlFile(filePath) {
+  // SQA GUARD: Prevent Path Traversal
+  if (filePath.includes('..') || filePath.startsWith('/etc') || filePath.startsWith('C:\\Windows')) {
+    throw new Error('Path Traversal terdeteksi! Akses ditolak.');
+  }
+
   const html = await fs.readFile(filePath, 'utf8');
   const $ = cheerio.load(html);
 
@@ -17,21 +23,6 @@ async function analyzeHtmlFile(filePath) {
     hasLogin: html.toLowerCase().includes('login'),
     length: html.length
   };
-}
-
-// Execute analysis if run as a standalone script
-if (require.main === module) {
-  (async () => {
-    try {
-      const targetFile = process.argv[2] || 'ig_test.html';
-      console.log(`Analyzing ${targetFile}...`);
-      const result = await analyzeHtmlFile(targetFile);
-      console.log('Analysis Result:', result);
-    } catch (err) {
-      console.error(`Error analyzing file [${err.code}]:`, err.message);
-      process.exit(1);
-    }
-  })();
 }
 
 module.exports = { analyzeHtmlFile };

@@ -21,6 +21,10 @@ async function killPortProcess(port) {
     throw new Error('Invalid port number');
   }
 
+  if (portNum <= 1023) {
+    throw new Error('Cannot kill system ports (0-1023)');
+  }
+
   if (process.env.NODE_ENV === 'production') {
     throw new Error('Port killing is disabled in production');
   }
@@ -53,6 +57,12 @@ async function killPortProcess(port) {
     await execPromise(killCmd);
     return true;
   } catch (err) {
+    // Check if error is related to permissions
+    const errMessage = (err.stderr || err.message || '').toLowerCase();
+    if (errMessage.includes('eperm') || errMessage.includes('access is denied') || errMessage.includes('operation not permitted') || errMessage.includes('akses ditolak')) {
+      throw new Error('Akses ditolak (Permission Denied). Coba jalankan sebagai Administrator/Root.');
+    }
+
     if (err.stdout === '' || err.code === 1) {
       // process not found
       return false;
