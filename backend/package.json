@@ -5,7 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "npx jest"
+    "test": "npx jest --runInBand"
   },
   "dependencies": {
     "@whiskeysockets/baileys": "^7.0.0-rc.9",

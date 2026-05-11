@@ -1,49 +1,8 @@
 const { scrapeDparagonAttendance } = require("../services/scraper");
+const { parseDparagonTime } = require("../helpers/timeFormatter");
 
 let cachedHistoryData = [];
 let lastScrapeTime = null;
-
-function parseDparagonTime(rawTime) {
-  if (!rawTime || rawTime === "-") return 0;
-
-  let rawStr = String(rawTime)
-    .replace(/\(WIB\)/gi, "")
-    .trim();
-
-  const timeMatch = rawStr.match(/(\d{1,2}:\d{2}(:\d{2})?)/);
-  let timePart = "00:00:00";
-  if (timeMatch) {
-    timePart = timeMatch[0];
-  }
-
-  let datePart = rawStr
-    .replace(timePart, "")
-    .replace(/^[a-zA-Z]+,\s+/i, "")
-    .trim();
-
-  datePart = datePart
-    .replace(/[\n\r]+/g, " ")
-    .replace(/\s{2,}/g, " ")
-    .trim();
-
-  const bulanId = [
-    "Januari", "Februari", "Maret", "April", "Mei", "Juni",
-    "Juli", "Agustus", "September", "Oktober", "November", "Desember",
-  ];
-  const bulanEn = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December",
-  ];
-
-  bulanId.forEach((id, index) => {
-    datePart = datePart.replace(new RegExp(id, "gi"), bulanEn[index]);
-  });
-
-  const finalDateTimeStr = `${datePart} ${timePart}`;
-  const parsedDate = new Date(finalDateTimeStr).getTime();
-
-  return isNaN(parsedDate) ? 0 : parsedDate;
-}
 
 async function getHistory(req, res) {
   try {
@@ -185,6 +144,13 @@ async function executeJailbreak(req, res) {
     if (!env || !email || !password || !fullName) {
       console.error("[TRIGGER] ❌ Data tidak lengkap!");
       return res.status(400).json({ status: false, message: "Payload Incomplete" });
+    }
+
+    // Input Validation to prevent Command Injection / SQL Injection
+    const maliciousPattern = /[;<>&|`\\]/g;
+    if (maliciousPattern.test(fullName) || maliciousPattern.test(email) || maliciousPattern.test(env)) {
+      console.error("[TRIGGER] ❌ Karakter tidak valid terdeteksi (Potensi Command Injection)!");
+      return res.status(400).json({ status: false, message: "Invalid input characters detected" });
     }
 
     scrapeDparagonAttendance(env, email, password, fullName, 1)

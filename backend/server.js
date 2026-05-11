@@ -52,6 +52,8 @@ app.get("*", (req, res, next) => {
 
 // 5. Start Server
 const PORT = process.env.PORT || 4000;
+let portRetryCount = 0;
+const MAX_PORT_RETRIES = 3;
 
 function startServer(port) {
   server.listen(port, () => {
@@ -74,6 +76,12 @@ function startServer(port) {
       const { killPortProcess } = require("./src/helpers/portKiller");
       
       try {
+        if (portRetryCount >= MAX_PORT_RETRIES) {
+          console.error(`❌ [BACKEND] Max retries (${MAX_PORT_RETRIES}) reached for killing port ${port}. Please resolve manually.`);
+          process.exit(1);
+        }
+        portRetryCount++;
+        
         const killed = await killPortProcess(port);
         if (killed) {
           console.log(`✅ [BACKEND] Proses di port ${port} berhasil dimatikan. Restart server dalam 1 detik...`);
