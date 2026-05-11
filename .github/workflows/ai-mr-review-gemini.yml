@@ -1,4 +1,4 @@
-name: 🤖 AI MR Review (ISTQB-Based — Gemini)
+name: 🤖 AI MR Review + Test (ISTQB-Based — Gemini)
 
 on:
   pull_request:
@@ -15,10 +15,10 @@ permissions:
   pull-requests: write
 
 jobs:
-  ai-review:
-    name: AI Code Review (Gemini)
+  test-and-ai-review:
+    name: Test + AI Code Review (Gemini)
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     steps:
       - name: Checkout repository
@@ -29,10 +29,29 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: '20'
+          cache: npm
 
-      - name: Install dependencies
-        run: npm install @google/generative-ai
+      - name: Install project dependencies
+        run: npm ci
+
+      - name: Install Gemini SDK
+        run: npm install @google/generative-ai --no-save
+
+      - name: Run Jest tests
+        id: tests
+        continue-on-error: true
+        run: |
+          set +e
+          npm test > /tmp/test_result.txt 2>&1
+          TEST_EXIT_CODE=$?
+
+          echo "TEST_EXIT_CODE=$TEST_EXIT_CODE" >> $GITHUB_ENV
+
+          echo "===== TEST RESULT ====="
+          cat /tmp/test_result.txt
+
+          exit 0
 
       - name: Get PR diff
         id: diff
@@ -40,13 +59,14 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git fetch origin ${{ github.base_ref }}
-          DIFF=$(git diff origin/${{ github.base_ref }}...HEAD -- '*.js' '*.ts' '*.jsx' '*.tsx' '*.mjs' '*.cjs' | head -c 8000)
+          DIFF=$(git diff origin/${{ github.base_ref }}...HEAD -- '*.js' '*.ts' '*.jsx' '*.tsx' '*.mjs' '*.cjs' | head -c 10000)
           CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | head -50 | tr '\n' ', ')
 
           echo "CHANGED_FILES=$CHANGED_FILES" >> $GITHUB_ENV
           echo "$DIFF" > /tmp/pr_diff.txt
 
       - name: Run AI Review (Gemini)
+        if: always()
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           PR_TITLE: ${{ github.event.pull_request.title }}
@@ -54,16 +74,28 @@ jobs:
           PR_AUTHOR: ${{ github.event.pull_request.user.login }}
           BASE_BRANCH: ${{ github.base_ref }}
           HEAD_BRANCH: ${{ github.head_ref }}
+          TEST_EXIT_CODE: ${{ env.TEST_EXIT_CODE }}
         run: |
           node << 'EOF'
           const { GoogleGenerativeAI } = require("@google/generative-ai");
           const fs = require("fs");
 
           const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-          const diff = fs.readFileSync("/tmp/pr_diff.txt", "utf8");
+
+          const diff = fs.existsSync("/tmp/pr_diff.txt")
+            ? fs.readFileSync("/tmp/pr_diff.txt", "utf8")
+            : "";
+
+          const testResultRaw = fs.existsSync("/tmp/test_result.txt")
+            ? fs.readFileSync("/tmp/test_result.txt", "utf8")
+            : "Test result tidak ditemukan.";
+
+          const testResult = testResultRaw.slice(-8000);
+          const testExitCode = process.env.TEST_EXIT_CODE || "unknown";
+          const testStatus = testExitCode === "0" ? "PASSED" : "FAILED";
 
           const prompt = [
-            "Lo adalah Senior QA Engineer dan Code Reviewer yang literally expert banget di ISTQB standards, STLC methodology, sama Node.js / TypeScript best practices.",
+            "Lo adalah Senior QA Engineer dan Code Reviewer yang expert di ISTQB standards, STLC methodology, sama Node.js / TypeScript best practices.",
             "",
             "Gaya bahasa lo: Indonesia campur dikit English, casual tapi tetep professional — ala anak Jaksel yang works in tech.",
             "Pakai kata kayak 'which is', 'literally', 'actually', 'kind of', 'basically', 'so', 'anyway', 'honestly', 'lowkey'.",
@@ -76,9 +108,17 @@ jobs:
             "- **File yang berubah:** " + (process.env.CHANGED_FILES || "N/A"),
             "- **Deskripsi:** " + (process.env.PR_BODY || "_(ga ada deskripsi, which is agak susah di-review tbh)_"),
             "",
+            "## Hasil Automated Test",
+            "- **Status:** " + testStatus,
+            "- **Exit Code:** " + testExitCode,
+            "",
+            "```text",
+            testResult || "_(test output kosong)_",
+            "```",
+            "",
             "## Code Diff",
             "```diff",
-            (diff || "_(diff kosong, mungkin binary files atau ga ada perubahan JS/TS)_"),
+            diff || "_(diff kosong, mungkin binary files atau ga ada perubahan JS/TS)_",
             "```",
             "",
             "---",
@@ -86,96 +126,103 @@ jobs:
             "Review PR ini dengan format Markdown yang clean buat GitHub PR comment. Spesifik ya, sebut nama file dan konteks baris kalau bisa.",
             "",
             "### 1. Rangkuman Perubahan",
-            "Jelasin secara singkat ini PR ngubah apa dan ngaruh ke modul atau komponen mana aja. Basically kasih gambaran besarnya dulu.",
+            "Jelasin secara singkat ini PR ngubah apa dan ngaruh ke modul atau komponen mana aja.",
             "",
-            "### 2. Test Coverage (ISTQB)",
+            "### 2. Hasil Automated Test",
+            "- Jelaskan apakah test passed atau failed.",
+            "- Kalau failed, jelaskan kemungkinan penyebab dari output test.",
+            "- Kalau passed, tetap cek apakah coverage dan skenario test-nya udah meaningful.",
+            "",
+            "### 3. Test Coverage (ISTQB)",
             "- Unit test udah di-update buat logic yang berubah?",
             "- Happy path, negative case, boundary value (BVA), sama edge case udah ke-cover?",
             "- Assertion-nya spesifik atau masih terlalu loose?",
             "- List skenario yang belum di-test — honestly ini bagian paling penting.",
             "",
-            "### 3. Code Quality",
+            "### 4. Code Quality",
             "- Logic-nya bener ga? Error handling-nya gimana?",
             "- Null/undefined safety — ada yang bisa meledak ga?",
             "- DRY dan SOLID — ada yang violasi?",
             "- Readability — nama variabel/fungsi-nya makes sense?",
-            "- Performance — ada N+1, blocking call, atau loop yang ga perlu?",
+            "- Performance — ada blocking call, loop ga perlu, atau memory risk?",
             "",
-            "### 4. Security (OWASP-Aware)",
-            "Flag kalau ada: input validation yang kurang, hardcoded secret, celah auth/authz, injection vector, atau XSS risk.",
+            "### 5. Security (OWASP-Aware)",
+            "Flag kalau ada: input validation kurang, hardcoded secret, celah auth/authz, injection vector, XSS risk, atau sensitive data exposure.",
             "",
-            "### 5. Verdict",
+            "### 6. Verdict",
             "",
             "**Overall Risk:** [Low / Medium / High / Critical]",
             "",
             "**Status:** [Approved / Approved with Comments / Changes Requested]",
             "",
             "**Blocking Issues (wajib fix sebelum merge):**",
-            "- (list atau tulis 'Ga ada, which is bagus!')",
+            "- Kalau automated test failed, jadikan blocking issue.",
+            "- Kalau ga ada, tulis 'Ga ada, which is bagus!'",
             "",
             "**Saran non-blocking tapi worth it:**",
-            "- (list atau tulis 'Ga ada saran tambahan')",
+            "- List improvement yang ga wajib tapi bagus.",
             "",
             "**Yang udah bagus:**",
-            "- (list hal positif — jangan lupa appreciate yang udah bener)",
+            "- List hal positif dari PR.",
             "",
-            "Intinya: jujur, konstruktif, dan to the point. Jangan terlalu panjang tapi jangan sampai ada yang kelewat.",
-            "",
-            "PENTING: Gunakan emoji dan icon yang relevan di tiap section biar enak dibaca. Contoh penggunaan:",
-            "- Section header pakai: 🎯 🧪 🔍 🔐 🚦",
-            "- Hal positif/oke pakai: ✅ 👍 🙌 💚",
-            "- Perlu perhatian/warning pakai: ⚠️ 🟡 👀",
-            "- Blocking issue/berbahaya pakai: ❌ 🚫 🔴 💥",
-            "- Saran/ide improvement pakai: 💡 🛠️ 📝 🔧",
-            "- Security-related pakai: 🔒 🛡️",
-            "- Performance issue pakai: ⚡ 🐢",
-            "- Testing pakai: 🧬 🎯",
-            "Tapi jangan lebay, pake yang makes sense aja dan natural."
+            "PENTING: Gunakan emoji dan icon yang relevan di tiap section biar enak dibaca. Jangan lebay."
           ].join("\n");
 
-          // --- Error classification ---
           function classifyError(err) {
             const msg = err.message || "";
+
             if (msg.includes("429") || msg.toLowerCase().includes("rate limit") || msg.toLowerCase().includes("quota")) {
               return "rate_limit";
             }
+
             if (msg.includes("400") || msg.toLowerCase().includes("invalid") || msg.toLowerCase().includes("api key")) {
               return "auth";
             }
+
             if (msg.includes("500") || msg.includes("503") || msg.toLowerCase().includes("unavailable")) {
               return "server";
             }
+
             return "unknown";
           }
 
-          // --- Retry with exponential backoff ---
           async function callGeminiWithRetry(modelName, maxRetries) {
             maxRetries = maxRetries || 3;
-            var lastErr;
-            for (var attempt = 1; attempt <= maxRetries; attempt++) {
+            let lastErr;
+
+            for (let attempt = 1; attempt <= maxRetries; attempt++) {
               try {
                 console.log("Attempt " + attempt + "/" + maxRetries + " — model: " + modelName);
-                var model = genAI.getGenerativeModel({ model: modelName });
-                var result = await model.generateContent(prompt);
+
+                const model = genAI.getGenerativeModel({
+                  model: modelName
+                });
+
+                const result = await model.generateContent(prompt);
                 return result.response.text();
               } catch (err) {
                 lastErr = err;
-                var type = classifyError(err);
+                const type = classifyError(err);
+
                 console.error("Attempt " + attempt + " gagal [" + type + "]: " + err.message);
 
-                if (type === "auth") throw err;
+                if (type === "auth") {
+                  throw err;
+                }
 
                 if (attempt < maxRetries) {
-                  var waitMs = [10000, 30000, 60000][attempt - 1] || 60000;
+                  const waitMs = [10000, 30000, 60000][attempt - 1] || 60000;
                   console.log("Nunggu " + (waitMs / 1000) + "s sebelum retry...");
-                  await new Promise(function(r) { setTimeout(r, waitMs); });
+                  await new Promise(function(resolve) {
+                    setTimeout(resolve, waitMs);
+                  });
                 }
               }
             }
+
             throw lastErr;
           }
 
-          // --- Fallback: flash first, then pro ---
           async function runReview() {
             try {
               return await callGeminiWithRetry("gemini-3-flash-preview", 3);
@@ -185,23 +232,54 @@ jobs:
             }
           }
 
-          // --- Error comment builder ---
           function buildErrorComment(err) {
-            var type = classifyError(err);
-            var messages = {
-              rate_limit: "> ⚠️ **Rate limit kena nih** — kuota Gemini free tier habis (15 req/menit atau 1500 req/hari).\n> Udah di-retry 3x tapi tetep gagal, which is unfortunate.\n> Review akan jalan otomatis di push berikutnya.\n\n**Tip:** Kalau ini sering kejadian, consider upgrade ke paid plan.",
-              auth:       "> ❌ **Auth error** — GEMINI_API_KEY-nya ga valid atau belum di-set.\n> Cek di: **Repo Settings → Secrets → GEMINI_API_KEY**",
-              server:     "> 🔴 **Gemini API lagi down** (error 5xx) — ini dari sisi Google-nya.\n> Review akan jalan otomatis di push berikutnya.",
-              unknown:    "> ⚠️ **Ada error ga terduga** — cek workflow logs buat detail-nya.\n\n```\n" + err.message + "\n```"
+            const type = classifyError(err);
+
+            const messages = {
+              rate_limit: "> ⚠️ **Rate limit kena nih** — kuota Gemini lagi mentok.\n> Test tetap sudah dijalankan, tapi AI review gagal digenerate.\n> Review akan jalan otomatis di push berikutnya.",
+              auth: "> ❌ **Auth error** — GEMINI_API_KEY ga valid atau belum di-set.\n> Cek di: **Repo Settings → Secrets → GEMINI_API_KEY**",
+              server: "> 🔴 **Gemini API lagi error/down** dari sisi provider.\n> Test tetap sudah jalan, AI review bisa dicoba lagi di push berikutnya.",
+              unknown: "> ⚠️ **Ada error ga terduga** — cek workflow logs buat detail-nya.\n\n```\n" + err.message + "\n```"
             };
-            return "## 🤖 AI Code Review — ISTQB-Based (Gemini)\n\n" + (messages[type] || messages.unknown) + "\n\n---\n<sub>Workflow: ai-mr-review-gemini</sub>";
+
+            return [
+              "## 🤖 AI Code Review — ISTQB-Based (Gemini)",
+              "",
+              "## 🧪 Automated Test Result",
+              "",
+              "- **Status:** " + testStatus,
+              "- **Exit Code:** " + testExitCode,
+              "",
+              "```text",
+              testResult || "_(test output kosong)_",
+              "```",
+              "",
+              "---",
+              "",
+              messages[type] || messages.unknown,
+              "",
+              "---",
+              "<sub>Workflow: ai-mr-review-gemini</sub>"
+            ].join("\n");
           }
 
-          // --- Main ---
           (async function() {
             try {
-              var review = await runReview();
-              var comment = "## 🤖 AI Code Review — ISTQB-Based (Gemini)\n\n> _Auto-review by Google Gemini. Ini quality gate ya, bukan pengganti human review._\n\n---\n\n" + review + "\n\n---\n<sub>Workflow: ai-mr-review-gemini</sub>";
+              const review = await runReview();
+
+              const comment = [
+                "## 🤖 AI Code Review — ISTQB-Based (Gemini)",
+                "",
+                "> _Auto-review by Google Gemini. Ini quality gate ya, bukan pengganti human review._",
+                "",
+                "---",
+                "",
+                review,
+                "",
+                "---",
+                "<sub>Workflow: ai-mr-review-gemini</sub>"
+              ].join("\n");
+
               fs.writeFileSync("/tmp/review_comment.txt", comment);
               console.log("Review berhasil digenerate!");
             } catch (err) {
@@ -213,9 +291,20 @@ jobs:
           EOF
 
       - name: Post review comment to PR
+        if: always()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           COMMENT=$(cat /tmp/review_comment.txt)
           gh pr comment "$PR_NUMBER" --body "$COMMENT"
+
+      - name: Fail workflow if tests failed
+        if: always()
+        run: |
+          if [ "${TEST_EXIT_CODE}" != "0" ]; then
+            echo "❌ Tests failed. Blocking merge."
+            exit 1
+          fi
+
+          echo "✅ Tests passed."
