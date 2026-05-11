@@ -561,9 +561,35 @@ function extractMessage(data, stepLabel) {
   return message;
 }
 
+async function fetchDparagonReport(dpApiUrl, dpEmail, dpPassword, logger = null, manualTasks = []) {
+  try {
+    const { dpToken, tasksList, baseApiUrl } = await executeStep1And2(
+      dpApiUrl,
+      dpEmail,
+      dpPassword,
+      logger,
+      manualTasks
+    );
+    return await executeStep3To5(baseApiUrl, dpToken, tasksList, logger);
+  } catch (err) {
+    if (err.isCloudflareChallengeError) {
+      if (logger) logger("WARNING", "Terdeteksi Cloudflare, beralih ke browser fallback...", "text-amber-400");
+      return await runDailyReportViaBrowser(
+        dpApiUrl,
+        dpEmail,
+        dpPassword,
+        logger,
+        manualTasks
+      );
+    }
+    throw err;
+  }
+}
+
 module.exports = {
   executeStep1And2,
   executeStep3To5,
   runDailyReportViaBrowser,
   isCloudflareChallengeError,
+  fetchDparagonReport,
 };
