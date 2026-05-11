@@ -58,4 +58,22 @@ describe("portKiller - killPortProcess", () => {
     const result = await killPortProcess(4000);
     expect(result).toBe(false);
   });
+
+  it("should handle race condition where process is dead before kill command runs", async () => {
+    // Simulate finding a process
+    childProcess.exec.mockImplementationOnce((cmd, callback) => {
+      callback(null, "1234", ""); 
+    });
+
+    // Simulate process already dead (no such process)
+    childProcess.exec.mockImplementationOnce((cmd, callback) => {
+      const error = new Error("kill: (1234): No such process");
+      error.stderr = "kill: (1234): No such process";
+      error.code = 1; // commonly exit code 1 when process not found
+      callback(error, "", error.stderr);
+    });
+
+    const result = await killPortProcess(4000);
+    expect(result).toBe(false); // Gracefully handles and returns false
+  });
 });

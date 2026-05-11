@@ -16,6 +16,11 @@ function execPromise(cmd) {
 }
 
 async function killPortProcess(port) {
+  // Strict regex validation to prevent any shell injection
+  if (!/^\d+$/.test(String(port))) {
+    throw new Error('Invalid port number format. Only digits allowed.');
+  }
+
   const portNum = Number(port);
   if (isNaN(portNum) || portNum < 1 || portNum > 65535 || !Number.isInteger(portNum)) {
     throw new Error('Invalid port number');

@@ -7,6 +7,7 @@ const path = require("path");
 
 const apiRoutes = require("./src/routes/apiRoutes");
 const { initAllSessions } = require("./src/services/waEngine");
+const { startAutomationEngine } = require("./src/services/automationEngine");
 const appConfig = require("./src/config/appConfig");
 
 const app = express();
@@ -51,7 +52,7 @@ app.get("*", (req, res, next) => {
 });
 
 // 5. Start Server
-const PORT = process.env.PORT || 4000;
+const PORT = appConfig.port;
 let portRetryCount = 0;
 const MAX_PORT_RETRIES = 3;
 
@@ -66,7 +67,6 @@ function startServer(port) {
     initAllSessions(global.io);
 
     // 5. Start Automation Engine (background scheduler)
-    const { startAutomationEngine } = require("./src/services/automationEngine");
     startAutomationEngine();
   });
 
@@ -131,7 +131,16 @@ const executeManualSchema = z.object({
     tt_password: z.string().optional()
   }).passthrough(),
   payload: z.object({
-    links: z.string().optional(),
+    links: z.string().optional().refine(val => {
+      if (!val) return true;
+      const lines = val.split('\n').filter(l => l.trim() !== '');
+      try {
+        lines.forEach(line => new URL(line.trim()));
+        return true;
+      } catch (e) {
+        return false;
+      }
+    }, { message: "Contains invalid URL formats" }),
     comments: z.string().optional()
   }).passthrough(),
   options: z.object({

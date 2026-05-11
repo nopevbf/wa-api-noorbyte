@@ -19,6 +19,9 @@ const config = {
   dparagonApiUrl: isProd
     ? (process.env.DPARAGON_API_URL_PROD || "https://api.dparagon.com/v2")
     : (process.env.DPARAGON_API_URL_DEV || "https://api.dparagon6.persona-it.com/v2"),
+    
+  // Server Configuration
+  port: parseInt(process.env.PORT || process.env.APP_PORT || '4000', 10),
 };
 
 module.exports = config;
