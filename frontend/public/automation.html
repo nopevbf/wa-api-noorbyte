@@ -20,59 +20,15 @@
       theme: {
         extend: {
           colors: {
-            "surface-dim": "#f8fafc",
-            "surface-container-highest": "#e2e8f0",
-            error: "#ef4444",
-            secondary: "#64748b",
-            "on-tertiary-container": "#064e3b",
-            "on-primary-container": "#ffffff",
-            "inverse-surface": "#1e293b",
-            "surface-container-high": "#f1f5f9",
-            "tertiary-fixed-dim": "#a7f3d0",
-            "surface-tint": "#6366f1",
-            "on-primary-fixed": "#1e1b4b",
-            "on-error-container": "#7f1d1d",
-            "on-error": "#ffffff",
-            "on-tertiary-fixed-variant": "#065f46",
-            "on-secondary": "#ffffff",
-            "on-primary-fixed-variant": "#4338ca",
-            "secondary-fixed": "#f1f5f9",
-            "on-surface": "#1e1b4b",
-            "on-surface-variant": "#475569",
-            "on-tertiary-fixed": "#064e3b",
-            "tertiary-fixed": "#ecfdf5",
-            "surface-container": "#f8fafc",
-            "inverse-primary": "#a5b4fc",
-            "surface-container-lowest": "#ffffff",
-            "tertiary-container": "#d1fae5",
-            "inverse-on-surface": "#f8fafc",
-            "on-primary": "#ffffff",
-            "secondary-container": "#f1f5f9",
-            "error-container": "#fee2e2",
-            "on-secondary-container": "#1e293b",
-            "surface-variant": "#f1f5f9",
-            outline: "#e2e8f0",
-            tertiary: "#10b981",
-            "surface-container-low": "#ffffff",
-            "surface-bright": "#ffffff",
-            "primary-fixed-dim": "#c7d2fe",
-            surface: "#ffffff",
-            "on-background": "#1e1b4b",
-            "secondary-fixed-dim": "#f1f5f9",
-            "primary-container": "#6366f1",
-            "outline-variant": "#cbd5e1",
-            "on-secondary-fixed-variant": "#475569",
-            "on-secondary-fixed": "#1e1b4b",
-            background: "#f5f3ff",
-            "on-tertiary": "#ffffff",
-            "primary-fixed": "#e0e7ff",
             primary: "#6366f1",
+            "background-light": "#f5f3ff",
+            "background-dark": "#0f172a",
+            surface: "#ffffff",
+            outline: "#e2e8f0",
           },
           fontFamily: {
             display: ["Plus Jakarta Sans", "Inter", "sans-serif"],
-            headline: ["Plus Jakarta Sans", "Inter", "sans-serif"],
             body: ["Plus Jakarta Sans", "Inter", "sans-serif"],
-            label: ["Plus Jakarta Sans", "Inter", "sans-serif"],
           },
         },
       },
@@ -130,7 +86,7 @@
         <div class="grid grid-cols-1 xl:grid-cols-12 gap-8">
           <div class="xl:col-span-7 space-y-8">
             <section class="bg-surface rounded-xl border border-outline shadow-sm overflow-hidden">
-              <div class="px-6 py-4 border-b border-outline bg-slate-50 flex items-center justify-between">
+              <div class="px-6 py-4 border-b border-outline dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 flex items-center justify-between">
                 <div class="flex items-center gap-3">
                   <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
                     <span class="material-symbols-outlined">cloud_sync</span>
@@ -178,7 +134,7 @@
             </section>
 
             <section class="bg-surface rounded-xl border border-outline shadow-sm overflow-hidden">
-              <div class="px-6 py-4 border-b border-outline bg-slate-50 flex items-center justify-between">
+              <div class="px-6 py-4 border-b border-outline dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 flex items-center justify-between">
                 <div class="flex items-center gap-3">
                   <div class="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center text-purple-600">
                     <span class="material-symbols-outlined">schedule</span>
@@ -314,7 +270,7 @@
             </section>
 
             <section class="bg-surface rounded-xl border border-outline shadow-sm overflow-hidden">
-              <div class="px-6 py-4 border-b border-outline bg-slate-50 flex items-center justify-between">
+              <div class="px-6 py-4 border-b border-outline dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 flex items-center justify-between">
                 <div class="flex items-center gap-3">
                   <div class="w-8 h-8 rounded-lg bg-[#25D366]/10 flex items-center justify-center text-[#25D366]">
                     <span class="material-symbols-outlined">send</span>
@@ -371,7 +327,7 @@
             </section>
 
             <section class="bg-surface rounded-xl border border-outline shadow-sm overflow-hidden flex flex-col">
-              <div class="px-6 py-4 border-b border-outline bg-slate-50 flex items-center justify-between">
+              <div class="px-6 py-4 border-b border-outline dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 flex items-center justify-between">
                 <h3 class="text-[10px] font-bold uppercase tracking-widest text-slate-500">
                   Message Preview
                 </h3>
@@ -407,7 +363,7 @@
 
             <!-- Manual Task Input Section -->
             <section class="bg-surface rounded-xl border border-outline shadow-sm overflow-hidden flex flex-col">
-              <div class="px-6 py-4 border-b border-outline bg-slate-50 flex items-center justify-between">
+              <div class="px-6 py-4 border-b border-outline dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 flex items-center justify-between">
                 <h3 class="text-[10px] font-bold uppercase tracking-widest text-slate-500">
                   Manual Task Input
                 </h3>
@@ -519,12 +475,12 @@
   <div id="manualTaskModal"
     class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] hidden flex justify-center items-center transition-opacity p-4">
     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg border border-slate-200 overflow-hidden">
-      <div class="px-6 py-4 border-b border-outline bg-slate-50 flex items-center justify-between">
+      <div class="px-6 py-4 border-b border-outline dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 flex items-center justify-between">
         <div class="flex items-center gap-3">
           <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
             <span class="material-symbols-outlined text-lg">list_alt</span>
           </div>
-          <h3 class="font-bold text-slate-800">Tambah Task Baru</h3>
+          <h3 class="font-bold text-slate-800 dark:text-white">Tambah Task Baru</h3>
         </div>
         <button id="btnCloseTaskModal" class="text-slate-400 hover:text-slate-600 transition-colors">
           <span class="material-symbols-outlined">close</span>
