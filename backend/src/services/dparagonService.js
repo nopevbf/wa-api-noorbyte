@@ -261,7 +261,14 @@ async function executeStep1And2(dpApiUrl, dpEmail, dpPassword, logger = null, ma
   }));
 
   if (manualTasks.length > 0) {
-    tasksList.push(...manualTasks);
+    manualTasks.forEach((mTask) => {
+        const isDuplicate = tasksList.some(
+            (t) => t.dates === mTask.dates && t.task_description === mTask.task_description
+        );
+        if (!isDuplicate) {
+            tasksList.push(mTask);
+        }
+    });
   }
 
   if (logger) logger("STEP 2", `Ditemukan ${tasksList.length} tasks.`, "text-emerald-400");
@@ -488,7 +495,16 @@ async function runDailyReportViaBrowser(dpApiUrl, dpEmail, dpPassword, logger = 
             dates: `${t.start_date || ""} - ${t.end_date || ""}`,
             task_description: t.task_description || "",
           }));
-          if (manualTasks.length > 0) tasksList.push(...manualTasks);
+          if (manualTasks.length > 0) {
+            manualTasks.forEach((mTask) => {
+              const isDuplicate = tasksList.some(
+                (t) => t.dates === mTask.dates && t.task_description === mTask.task_description
+              );
+              if (!isDuplicate) {
+                tasksList.push(mTask);
+              }
+            });
+          }
           log("STEP 2", `Ditemukan ${tasksList.length} tasks.`, "text-emerald-400");
 
           // --- Step 3: post new task ---

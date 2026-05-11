@@ -18,7 +18,8 @@ document.addEventListener('alpine:init', () => {
         },
         manual: {
             comments: '',
-            poolText: ''
+            poolTags: [], // Array to store raw tag content
+            currentInput: '' // Active typing area
         },
         auto: {
             monitorId: '',
@@ -114,6 +115,30 @@ document.addEventListener('alpine:init', () => {
                     if (parsed.tiktokLocal) this.tiktokLocal = parsed.tiktokLocal;
                 } catch(e) { /* ignore */ }
             }
+        },
+
+        addTag() {
+            let text = this.manual.currentInput.trim();
+            if (!text) return;
+
+            // Split by comma if user pasted a bulk report
+            const newTags = text.split(',').map(t => t.trim()).filter(t => t.length > 0);
+            this.manual.poolTags.push(...newTags);
+            this.manual.currentInput = '';
+        },
+
+        removeTag(index) {
+            this.manual.poolTags.splice(index, 1);
+        },
+
+        getTagLabel(rawText) {
+            // Find all occurrences of "[Number]. [Name...]"
+            const matches = [...rawText.matchAll(/(\d+\.\s+[^http\n]+)/g)];
+            if (matches.length > 0) {
+                const lastMatch = matches[matches.length - 1][1].trim();
+                return lastMatch.substring(0, 30) + '...';
+            }
+            return rawText.substring(0, 20) + '...';
         },
 
         // FUNGSI DOWNLOAD SEMUA SCREENSHOT (ZIP)
@@ -233,29 +258,41 @@ document.addEventListener('alpine:init', () => {
         },
 
         get parsedDate() {
-            if (!this.manual.poolText) return '...';
-            const dateMatch = this.manual.poolText.match(/(?:(?:Senin|Selasa|Rabu|Kamis|Jumat|Sabtu|Minggu),\s+)?(\d{1,2}\s+[A-Za-z]+\s+\d{4})/);
+            // Check tags first, then current input
+            const combined = [...this.manual.poolTags, this.manual.currentInput].join('\n');
+            if (!combined) return '...';
+            const dateMatch = combined.match(/(?:(?:Senin|Selasa|Rabu|Kamis|Jumat|Sabtu|Minggu),\s+)?(\d{1,2}\s+[A-Za-z]+\s+\d{4})/);
             return dateMatch ? dateMatch[1] : '...';
         },
 
         get parsedLinks() {
-            if (!this.manual.poolText) return [];
+            const combinedText = this.manual.poolTags.join('\n');
+            if (!combinedText) return [];
             
-            // 1. Pecah teks menggunakan pola nomor sebagai pemisah, tapi tetap simpan nomornya
-            // Hasil split: ["teks awal", "26. ", "isi link 26", "27. ", "isi link 27", ...]
-            const parts = this.manual.poolText.split(/(\d+\.\s)/);
+            // Pecah teks menggunakan pola nomor sebagai pemisah, tapi tetap simpan nomornya
+            const parts = combinedText.split(/(\d+\.\s)/);
             const items = [];
 
+            // 1. Handle text BEFORE the first number (if any)
+            const leadingText = parts[0];
+            const leadingLinks = leadingText.match(/https?:\/\/[^\s]+/g);
+            if (leadingLinks) {
+                const links = leadingLinks.filter(l => l.includes('instagram.com') || l.includes('tiktok.com'));
+                if (links.length > 0) {
+                    items.push({ number: '{{no_link}}', links });
+                }
+            }
+
+            // 2. Handle numbered blocks
             for (let i = 1; i < parts.length; i += 2) {
-                const numberLabel = parts[i]; // "26. "
-                const content = parts[i + 1] || ""; // Teks setelah nomor
+                const numberLabel = parts[i]; 
+                const content = parts[i + 1] || ""; 
                 
                 const numMatch = numberLabel.match(/(\d+)\./);
                 if (numMatch) {
                     const number = numMatch[1];
                     const links = [];
                     
-                    // Cari link di bagian konten setelah nomor ini
                     const linksInPart = content.match(/https?:\/\/[^\s]+/g);
                     if (linksInPart) {
                         linksInPart.forEach(link => {
@@ -275,16 +312,39 @@ document.addEventListener('alpine:init', () => {
         get captionPreview() {
             const name = this.config.name || '{{full_name}}';
             const date = this.parsedDate;
-            const items = this.parsedLinks;
-
-            if (items.length === 0) {
-                return `${name} / {{no_link}} ${date}\n\nIG : ${this.config.ig || '-'}\nTT : ${this.config.tt || '-'}`;
+            
+            if (this.manual.poolTags.length === 0) {
+                return `${name} / {{no_link}} / ${date}\n\nIG : ${this.config.ig || '-'}\nTT : ${this.config.tt || '-'}`;
             }
 
-            const previewLines = items.map(item => `${name} / ${item.number} / ${date}`);
+            let allPreviewBlocks = [];
+
+            this.manual.poolTags.forEach(tagContent => {
+                // Cari semua nomor di tag ini
+                const parts = tagContent.split(/(\d+\.\s)/);
+                const numbersInTag = [];
+                
+                for (let i = 1; i < parts.length; i += 2) {
+                    const numMatch = parts[i].match(/(\d+)\./);
+                    if (numMatch) numbersInTag.push(numMatch[1]);
+                }
+
+                // Cek juga link tanpa nomor di tag ini (misal cuma paste link doang)
+                const linksInTag = tagContent.match(/https?:\/\/[^\s]+/g);
+                const hasSocialLinks = linksInTag && linksInTag.some(l => l.includes('instagram.com') || l.includes('tiktok.com'));
+
+                if (numbersInTag.length > 0) {
+                    const blockLines = numbersInTag.map(num => `${name} / ${num} / ${date}`);
+                    allPreviewBlocks.push(blockLines.join('\n'));
+                } else if (hasSocialLinks) {
+                    allPreviewBlocks.push(`${name} / {{no_link}} / ${date}`);
+                }
+            });
+
+            const body = allPreviewBlocks.join('\n\n');
             const handles = `IG : ${this.config.ig || '-'}\nTT : ${this.config.tt || '-'}`;
             
-            return previewLines.join('\n') + '\n\n' + handles;
+            return (body + '\n\n' + handles).trim();
         },
 
         // EKSEKUSI MODE MANUAL
@@ -292,7 +352,7 @@ document.addEventListener('alpine:init', () => {
             const allLinks = this.parsedLinks.flatMap(item => item.links);
 
             if(!this.config.name || allLinks.length === 0) {
-                this.addLog('Error', 'Identitas atau Link tidak boleh kosong!', 'text-red-500');
+                this.addLog('Error', 'Identitas atau Link tidak boleh kosong! (Pastikan sudah tekan koma)', 'text-red-500');
                 return;
             }
 

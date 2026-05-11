@@ -510,4 +510,6 @@ module.exports = {
   stopAutomationEngine,
   getScheduleLogs,
   clearScheduleLogs,
+  filterAndCleanManualTasks,
+  getTodayDateWIB,
 };
