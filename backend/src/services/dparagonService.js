@@ -146,7 +146,7 @@ async function requestWithContext(config, stepLabel) {
       }
 
       throw new Error(
-        `[${stepLabel}] Request gagal dengan status ${status}. Response: ${payload}`,
+        `[${stepLabel}] Request gagal with status ${status}. Response: ${payload}`,
       );
     }
 
@@ -261,17 +261,20 @@ async function executeStep1And2(dpApiUrl, dpEmail, dpPassword, logger = null, ma
   }));
 
   if (manualTasks.length > 0) {
-    tasksList.push(...manualTasks);
+    manualTasks.forEach((mTask) => {
+        const isDuplicate = tasksList.some(
+            (t) => t.dates === mTask.dates && t.task_description === mTask.task_description
+        );
+        if (!isDuplicate) {
+            tasksList.push(mTask);
+        }
+    });
   }
 
   if (logger) logger("STEP 2", `Ditemukan ${tasksList.length} tasks.`, "text-emerald-400");
 
   return { dpToken, tasksList, baseApiUrl };
 }
-
-// ---------------------------------------------------------------------------
-// STEP 3–5 — axios direct (fast path)
-// ---------------------------------------------------------------------------
 
 async function executeStep3To5(dpApiUrl, dpToken, tasksList, logger = null) {
   const baseApiUrl = normalizeDpApiUrl(dpApiUrl);
@@ -400,7 +403,6 @@ async function runDailyReportViaBrowser(dpApiUrl, dpEmail, dpPassword, logger = 
       }
 
       // Jalankan semua step via fetch() di dalam konteks browser
-      // (sudah punya CF clearance cookie dari warmup di atas)
       const result = await page.evaluate(
         async ({ baseApiUrl, managementOrigin, dpEmail, dpPassword, manualTasks }) => {
           const log = (label, text, color) => {
@@ -432,26 +434,10 @@ async function runDailyReportViaBrowser(dpApiUrl, dpEmail, dpPassword, logger = 
           // --- Login ---
           log("STEP 1", "Mencoba login via browser...", "text-blue-400");
           const loginAttempts = [
-            {
-              label: "login/email",
-              url: `${baseApiUrl}/login`,
-              body: { email: dpEmail, password: dpPassword },
-            },
-            {
-              label: "login/username",
-              url: `${baseApiUrl}/login`,
-              body: { username: dpEmail, password: dpPassword },
-            },
-            {
-              label: "auth/email",
-              url: `${baseApiUrl}/auth/login`,
-              body: { email: dpEmail, password: dpPassword },
-            },
-            {
-              label: "auth/username",
-              url: `${baseApiUrl}/auth/login`,
-              body: { username: dpEmail, password: dpPassword },
-            },
+            { label: "login/email", url: `${baseApiUrl}/login`, body: { email: dpEmail, password: dpPassword } },
+            { label: "login/username", url: `${baseApiUrl}/login`, body: { username: dpEmail, password: dpPassword } },
+            { label: "auth/email", url: `${baseApiUrl}/auth/login`, body: { email: dpEmail, password: dpPassword } },
+            { label: "auth/username", url: `${baseApiUrl}/auth/login`, body: { username: dpEmail, password: dpPassword } },
           ];
 
           let dpToken = "";
@@ -461,10 +447,7 @@ async function runDailyReportViaBrowser(dpApiUrl, dpEmail, dpPassword, logger = 
             const res = await toJsonSafe(
               await fetch(attempt.url, {
                 method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  Accept: "application/json",
-                },
+                headers: { "Content-Type": "application/json", Accept: "application/json" },
                 credentials: "include",
                 body: JSON.stringify(attempt.body),
               }),
@@ -474,17 +457,10 @@ async function runDailyReportViaBrowser(dpApiUrl, dpEmail, dpPassword, logger = 
               dpToken = extractToken(res.parsed || {});
               if (dpToken) break;
             }
-
-            loginErrors.push(
-              `${attempt.label} -> HTTP ${res.status} (${(res.raw || "").slice(0, 120)})`,
-            );
+            loginErrors.push(`${attempt.label} -> HTTP ${res.status} (${(res.raw || "").slice(0, 120)})`);
           }
 
-          if (!dpToken) {
-            throw new Error(
-              `[BROWSER LOGIN] Gagal token. ${loginErrors.join(" | ")}`,
-            );
-          }
+          if (!dpToken) throw new Error(`[BROWSER LOGIN] Gagal token. ${loginErrors.join(" | ")}`);
           log("STEP 1", "Login browser berhasil.", "text-emerald-400");
 
           // --- Fetch helper ---
@@ -503,24 +479,13 @@ async function runDailyReportViaBrowser(dpApiUrl, dpEmail, dpPassword, logger = 
                 },
               }),
             );
-
-            if (!res.ok) {
-              throw new Error(
-                `[${label}] HTTP ${res.status}: ${(res.raw || "").slice(0, 240)}`,
-              );
-            }
-
+            if (!res.ok) throw new Error(`[${label}] HTTP ${res.status}: ${(res.raw || "").slice(0, 240)}`);
             return res.parsed || {};
           };
 
           // --- Step 2: on-progress task ---
           log("STEP 2", "Mengambil data on-progress task...", "text-blue-400");
-          const taskData = await apiFetch(
-            `${baseApiUrl}/daily-reports/on-progress-task`,
-            { method: "GET" },
-            "BROWSER STEP 2",
-          );
-
+          const taskData = await apiFetch(`${baseApiUrl}/daily-reports/on-progress-task`, { method: "GET" }, "BROWSER STEP 2");
           const payloadData = taskData.payload || [];
           if ((!Array.isArray(payloadData) || payloadData.length === 0) && manualTasks.length === 0) {
             throw new Error("[BROWSER STEP 2] Data payload kosong.");
@@ -530,70 +495,42 @@ async function runDailyReportViaBrowser(dpApiUrl, dpEmail, dpPassword, logger = 
             dates: `${t.start_date || ""} - ${t.end_date || ""}`,
             task_description: t.task_description || "",
           }));
-
           if (manualTasks.length > 0) {
-            tasksList.push(...manualTasks);
+            manualTasks.forEach((mTask) => {
+              const isDuplicate = tasksList.some(
+                (t) => t.dates === mTask.dates && t.task_description === mTask.task_description
+              );
+              if (!isDuplicate) {
+                tasksList.push(mTask);
+              }
+            });
           }
           log("STEP 2", `Ditemukan ${tasksList.length} tasks.`, "text-emerald-400");
 
           // --- Step 3: post new task ---
           log("STEP 3", "Mendaftarkan task baru...", "text-blue-400");
           const now = new Date();
-          const todayDate = [
-            now.getFullYear(),
-            String(now.getMonth() + 1).padStart(2, "0"),
-            String(now.getDate()).padStart(2, "0"),
-          ].join("-");
-
-          await apiFetch(
-            `${baseApiUrl}/daily-reports/new-task`,
-            {
-              method: "POST",
-              body: JSON.stringify({ daily_date: todayDate, tasks: tasksList }),
-            },
-            "BROWSER STEP 3",
-          );
+          const todayDate = [now.getFullYear(), String(now.getMonth() + 1).padStart(2, "0"), String(now.getDate()).padStart(2, "0")].join("-");
+          await apiFetch(`${baseApiUrl}/daily-reports/new-task`, {
+            method: "POST",
+            body: JSON.stringify({ daily_date: todayDate, tasks: tasksList }),
+          }, "BROWSER STEP 3");
           log("STEP 3", "Task berhasil didaftarkan.", "text-emerald-400");
 
           // --- Step 4: get report code ---
           log("STEP 4", "Mengambil kode laporan harian...", "text-blue-400");
-          const listData = await apiFetch(
-            `${baseApiUrl}/daily-reports/list?dates=&employee_position_id=`,
-            { method: "GET" },
-            "BROWSER STEP 4",
-          );
-
+          const listData = await apiFetch(`${baseApiUrl}/daily-reports/list?dates=&employee_position_id=`, { method: "GET" }, "BROWSER STEP 4");
           const group = listData?.payload?.group || {};
           const keys = Object.keys(group);
-          if (keys.length === 0)
-            throw new Error("[BROWSER STEP 4] Keys length 0.");
-
+          if (keys.length === 0) throw new Error("[BROWSER STEP 4] Keys length 0.");
           const reportCode = group[keys[keys.length - 1]]?.daily_report_code;
-          if (!reportCode)
-            throw new Error(
-              "[BROWSER STEP 4] daily_report_code tidak ditemukan.",
-            );
-          log("STEP 4", `Kode laporan: ${reportCode}`, "text-emerald-400");
+          if (!reportCode) throw new Error("[BROWSER STEP 4] daily_report_code tidak ditemukan.");
 
           // --- Step 5: summary ---
           log("STEP 5", "Menghasilkan ringkasan laporan...", "text-blue-400");
-          const summaryData = await apiFetch(
-            `${baseApiUrl}/daily-reports/summary-daily-report?code=${reportCode}`,
-            { method: "GET" },
-            "BROWSER STEP 5",
-          );
-
-          const msg =
-            summaryData.payload?.message ||
-            (typeof summaryData.payload === "string"
-              ? summaryData.payload
-              : null) ||
-            summaryData.data?.message ||
-            (summaryData.message?.length > 50 ? summaryData.message : null);
-
-          if (!msg)
-            throw new Error("[BROWSER STEP 5] Message laporan tidak ditemukan.");
-
+          const summaryData = await apiFetch(`${baseApiUrl}/daily-reports/summary-daily-report?code=${reportCode}`, { method: "GET" }, "BROWSER STEP 5");
+          const msg = summaryData.payload?.message || (typeof summaryData.payload === "string" ? summaryData.payload : null) || summaryData.data?.message || (summaryData.message?.length > 50 ? summaryData.message : null);
+          if (!msg) throw new Error("[BROWSER STEP 5] Message laporan tidak ditemukan.");
           log("STEP 5", "Ringkasan laporan berhasil dihasilkan.", "text-emerald-400");
           return msg;
         },
@@ -607,64 +544,52 @@ async function runDailyReportViaBrowser(dpApiUrl, dpEmail, dpPassword, logger = 
     }
 }
 
-// ---------------------------------------------------------------------------
-// Shared helper
-// ---------------------------------------------------------------------------
+function extractMessage(data, stepLabel) {
+  const payload = data.payload || data.data || data;
+  const message =
+    payload.message ||
+    (typeof payload === "string" ? payload : null) ||
+    data.message ||
+    "";
 
-function extractMessage(summaryData, stepLabel) {
-    const msg =
-      summaryData.payload?.message ||
-      (typeof summaryData.payload === "string" ? summaryData.payload : null) ||
-      summaryData.data?.message ||
-      (summaryData.message?.length > 50 ? summaryData.message : null);
-
-    if (!msg)
-      throw new Error(
-        `[${stepLabel}] Message laporan tidak ditemukan atau kosong!`,
-      );
-    return msg;
+  if (!message || message.length < 5) {
+    throw new Error(
+      `[${stepLabel}] Format response summary tidak dikenal atau kosong. ` +
+      `Response: ${JSON.stringify(data)}`,
+    );
   }
+  return message;
+}
 
-  // ---------------------------------------------------------------------------
-  // Full pipeline
-  // ---------------------------------------------------------------------------
-
-  async function fetchDparagonReport(dpApiUrl, dpEmail, dpPassword, logger = null, manualTasks = []) {
-    const baseApiUrl = normalizeDpApiUrl(dpApiUrl);
-
-    try {
-      const { dpToken, tasksList } = await executeStep1And2(
-        baseApiUrl,
+async function fetchDparagonReport(dpApiUrl, dpEmail, dpPassword, logger = null, manualTasks = []) {
+  try {
+    const { dpToken, tasksList, baseApiUrl } = await executeStep1And2(
+      dpApiUrl,
+      dpEmail,
+      dpPassword,
+      logger,
+      manualTasks
+    );
+    return await executeStep3To5(baseApiUrl, dpToken, tasksList, logger);
+  } catch (err) {
+    if (err.isCloudflareChallengeError) {
+      if (logger) logger("WARNING", "Terdeteksi Cloudflare, beralih ke browser fallback...", "text-amber-400");
+      return await runDailyReportViaBrowser(
+        dpApiUrl,
         dpEmail,
         dpPassword,
         logger,
         manualTasks
       );
-      return await executeStep3To5(baseApiUrl, dpToken, tasksList, logger);
-    } catch (err) {
-      const isCF =
-        err.isCloudflareChallengeError || isCloudflareChallengeError(err);
-      if (!isCF) throw err;
-
-      console.warn(
-        "[fetchDparagonReport] Cloudflare challenge detected, switching to browser fallback...",
-      );
-
-      try {
-        return await runDailyReportViaBrowser(baseApiUrl, dpEmail, dpPassword, logger, manualTasks);
-      } catch (browserErr) {
-        throw new Error(
-          `[fetchDparagonReport] Browser fallback juga gagal.\n` +
-          `  Original  : ${err.message}\n` +
-          `  Browser   : ${browserErr.message}`,
-        );
-      }
     }
+    throw err;
   }
-
+}
 
 module.exports = {
   executeStep1And2,
   executeStep3To5,
+  runDailyReportViaBrowser,
+  isCloudflareChallengeError,
   fetchDparagonReport,
 };

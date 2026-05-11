@@ -1,0 +1,697 @@
+FAIL tests/attendanceController.test.js
+  ΓùÅ Console
+
+    console.log
+      Γùç injecting env (0) from .env // tip: Γîÿ suppress logs { quiet: true }
+
+      at _log (node_modules/dotenv/lib/main.js:131:11)
+
+    console.log
+      ==========================================
+
+      at Object.log (src/services/scraper.js:31:9)
+
+    console.log
+      [DEBUG ENV] NODE_ENV saat ini: test
+
+      at Object.log (src/services/scraper.js:32:9)
+
+    console.log
+      [DEBUG ENV] URL PROD: TIDAK DITEMUKAN
+
+      at Object.log (src/services/scraper.js:33:9)
+
+    console.log
+      ==========================================
+
+      at Object.log (src/services/scraper.js:34:9)
+
+    console.log
+      [TRIGGER] ≡ƒÜÇ Menerima perintah Bypass untuk: John Doe; rm -rf /
+
+      at log (src/controllers/attendanceController.js:158:13)
+
+    console.error
+      [TRIGGER] Γ¥î Karakter tidak valid terdeteksi (Potensi Command Injection)!
+
+      166 |     const maliciousPattern = /[;<>&|`\\]/g;
+      167 |     if (maliciousPattern.test(fullName) || maliciousPattern.test(email) || maliciousPattern.test(env)) {
+    > 168 |       console.error("[TRIGGER] Γ¥î Karakter tidak valid terdeteksi (Potensi Command Injection)!");
+          |               ^
+      169 |       return res.status(400).json({ status: false, message: "Invalid input characters detected" });
+      170 |     }
+      171 |
+
+      at error (src/controllers/attendanceController.js:168:15)
+      at Object.executeJailbreak (tests/attendanceController.test.js:18:11)
+
+    console.error
+      [TRIGGER] Γ¥î Tipe data input tidak valid!
+
+      152 |     // Sanitization: Ensure inputs are strings
+      153 |     if (typeof env !== 'string' || typeof email !== 'string' || typeof password !== 'string' || typeof fullName !== 'string') {
+    > 154 |       console.error("[TRIGGER] Γ¥î Tipe data input tidak valid!");
+          |               ^
+      155 |       return res.status(400).json({ status: false, message: "Invalid Input Type" });
+      156 |     }
+      157 |
+
+      at error (src/controllers/attendanceController.js:154:15)
+      at Object.executeJailbreak (tests/attendanceController.test.js:34:11)
+
+  ΓùÅ attendanceController - executeJailbreak (Sanitization) ΓÇ║ should handle missing fields gracefully without Uncaught TypeError
+
+    expect(jest.fn()).toHaveBeenCalledWith(...expected)
+
+    - Expected
+    + Received
+
+      Object {
+    -   "message": "Payload Incomplete",
+    +   "message": "Invalid Input Type",
+        "status": false,
+      },
+
+    Number of calls: 1
+
+      35 |
+      36 |     expect(res.status).toHaveBeenCalledWith(400);
+    > 37 |     expect(res.json).toHaveBeenCalledWith({
+         |                      ^
+      38 |       status: false,
+      39 |       message: 'Payload Incomplete'
+      40 |     });
+
+      at Object.toHaveBeenCalledWith (tests/attendanceController.test.js:37:22)
+
+PASS tests/automation-cancel.test.js (5.883 s)
+  ΓùÅ Console
+
+    console.log
+      Γùç injecting env (0) from .env // tip: Γîÿ suppress logs { quiet: true }
+
+      at _log (node_modules/dotenv/lib/main.js:131:11)
+
+    console.log
+      ==========================================
+
+      at Object.log (src/services/scraper.js:31:9)
+
+    console.log
+      [DEBUG ENV] NODE_ENV saat ini: test
+
+      at Object.log (src/services/scraper.js:32:9)
+
+    console.log
+      [DEBUG ENV] URL PROD: TIDAK DITEMUKAN
+
+      at Object.log (src/services/scraper.js:33:9)
+
+    console.log
+      ==========================================
+
+      at Object.log (src/services/scraper.js:34:9)
+
+PASS tests/apiKeyHelper.test.js
+FAIL tests/device-auth-regression.test.js (7.089 s)
+  ΓùÅ Console
+
+    console.log
+      Γùç injecting env (0) from .env // tip: Γùê encrypted .env [www.dotenvx.com]
+
+      at _log (node_modules/dotenv/lib/main.js:131:11)
+
+    console.log
+      ==========================================
+
+      at Object.log (src/services/scraper.js:31:9)
+
+    console.log
+      [DEBUG ENV] NODE_ENV saat ini: test
+
+      at Object.log (src/services/scraper.js:32:9)
+
+    console.log
+      [DEBUG ENV] URL PROD: TIDAK DITEMUKAN
+
+      at Object.log (src/services/scraper.js:33:9)
+
+    console.log
+      ==========================================
+
+      at Object.log (src/services/scraper.js:34:9)
+
+  ΓùÅ Regression: device management via body api_key ΓÇ║ should delete a device when api_key is sent in body (no Authorization header)
+
+    expect(received).toBeUndefined()
+
+    Received: {"api_key": "token1", "id": 1507, "phone": "111", "role": "user", "status": "Connected", "username": "User1", "webhook_url": null}
+
+      35 |     expect(res.statusCode).toBe(200);
+      36 |     const deleted = db.prepare('SELECT * FROM users WHERE api_key = ?').get('token1');
+    > 37 |     expect(deleted).toBeUndefined();
+         |                     ^
+      38 |   });
+      39 |
+      40 |   // --- Happy path: disconnect-device using body api_key ---
+
+      at Object.toBeUndefined (tests/device-auth-regression.test.js:37:21)
+
+  ΓùÅ Regression: device management via body api_key ΓÇ║ should NOT grant admin role when a regular api_key is sent in body
+
+    expect(received).toBeDefined()
+
+    Received: undefined
+
+      70 |     // If admin bypass was triggered, ALL users would be accessible; here only token1 is deleted
+      71 |     const adminStillExists = db.prepare('SELECT * FROM users WHERE api_key = ?').get('admin-token');
+    > 72 |     expect(adminStillExists).toBeDefined(); // admin row must be untouched
+         |                              ^
+      73 |   });
+      74 |
+      75 |   // --- Edge: missing api_key in body ΓÇö middleware 401 fires before route 400 ---
+
+      at Object.toBeDefined (tests/device-auth-regression.test.js:72:30)
+
+FAIL tests/blocking-issues.test.js (7.341 s)
+  ΓùÅ Console
+
+    console.log
+      Γùç injecting env (0) from .env // tip: Γîü auth for agents [www.vestauth.com]
+
+      at _log (node_modules/dotenv/lib/main.js:131:11)
+
+    console.log
+      ==========================================
+
+      at Object.log (src/services/scraper.js:31:9)
+
+    console.log
+      [DEBUG ENV] NODE_ENV saat ini: test
+
+      at Object.log (src/services/scraper.js:32:9)
+
+    console.log
+      [DEBUG ENV] URL PROD: TIDAK DITEMUKAN
+
+      at Object.log (src/services/scraper.js:33:9)
+
+    console.log
+      ==========================================
+
+      at Object.log (src/services/scraper.js:34:9)
+
+  ΓùÅ Blocking Issues TDD ΓÇ║ Auth Consistency ΓÇ║ should not allow overriding api_key via req.body in /automation/run-manual
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 200
+    Received: 400
+
+      48 |         });
+      49 |
+    > 50 |       expect(res.statusCode).toBe(200);
+         |                              ^
+      51 |
+      52 |       // Verify whose schedule was updated
+      53 |       const schedule2 = db.prepare('SELECT * FROM automation_schedules WHERE api_key = ?').get('token2');
+
+      at Object.toBe (tests/blocking-issues.test.js:50:30)
+
+  ΓùÅ Blocking Issues TDD ΓÇ║ Auth Consistency ΓÇ║ should not allow overriding api_key via req.query in /automation/status
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 200
+    Received: 400
+
+      70 |
+      71 |       // Should return User 1's status (null or undefined), NOT User 2's
+    > 72 |       expect(res.statusCode).toBe(200);
+         |                              ^
+      73 |       expect(res.body.data).toBeNull(); // Because User 1 has no schedule
+      74 |     });
+      75 |   });
+
+      at Object.toBe (tests/blocking-issues.test.js:72:30)
+
+PASS tests/automationAdminFix.test.js
+  ΓùÅ Console
+
+    console.log
+      Γùç injecting env (0) from .env // tip: Γùê encrypted .env [www.dotenvx.com]
+
+      at _log (node_modules/dotenv/lib/main.js:131:11)
+
+    console.log
+      ==========================================
+
+      at Object.log (src/services/scraper.js:31:9)
+
+    console.log
+      [DEBUG ENV] NODE_ENV saat ini: test
+
+      at Object.log (src/services/scraper.js:32:9)
+
+    console.log
+      [DEBUG ENV] URL PROD: TIDAK DITEMUKAN
+
+      at Object.log (src/services/scraper.js:33:9)
+
+    console.log
+      ==========================================
+
+      at Object.log (src/services/scraper.js:34:9)
+
+PASS tests/automation.test.js
+  ΓùÅ Console
+
+    console.log
+      Γùç injecting env (0) from .env // tip: Γîü auth for agents [www.vestauth.com]
+
+      at _log (node_modules/dotenv/lib/main.js:131:11)
+
+    console.log
+      ==========================================
+
+      at Object.log (src/services/scraper.js:31:9)
+
+    console.log
+      [DEBUG ENV] NODE_ENV saat ini: test
+
+      at Object.log (src/services/scraper.js:32:9)
+
+    console.log
+      [DEBUG ENV] URL PROD: TIDAK DITEMUKAN
+
+      at Object.log (src/services/scraper.js:33:9)
+
+    console.log
+      ==========================================
+
+      at Object.log (src/services/scraper.js:34:9)
+
+PASS tests/htmlAnalyzer.test.js
+PASS tests/manualTaskMerging.test.js
+PASS tests/scraper.test.js
+  ΓùÅ Console
+
+    console.log
+      Γùç injecting env (0) from .env // tip: Γîÿ override existing { override: true }
+
+      at _log (node_modules/dotenv/lib/main.js:131:11)
+
+    console.log
+      ==========================================
+
+      at Object.log (src/services/scraper.js:31:9)
+
+    console.log
+      [DEBUG ENV] NODE_ENV saat ini: test
+
+      at Object.log (src/services/scraper.js:32:9)
+
+    console.log
+      [DEBUG ENV] URL PROD: TIDAK DITEMUKAN
+
+      at Object.log (src/services/scraper.js:33:9)
+
+    console.log
+      ==========================================
+
+      at Object.log (src/services/scraper.js:34:9)
+
+PASS tests/dashboard.test.js
+  ΓùÅ Console
+
+    console.log
+      Γùç injecting env (0) from .env // tip: Γùê encrypted .env [www.dotenvx.com]
+
+      at _log (node_modules/dotenv/lib/main.js:131:11)
+
+    console.log
+      ==========================================
+
+      at Object.log (src/services/scraper.js:31:9)
+
+    console.log
+      [DEBUG ENV] NODE_ENV saat ini: test
+
+      at Object.log (src/services/scraper.js:32:9)
+
+    console.log
+      [DEBUG ENV] URL PROD: TIDAK DITEMUKAN
+
+      at Object.log (src/services/scraper.js:33:9)
+
+    console.log
+      ==========================================
+
+      at Object.log (src/services/scraper.js:34:9)
+
+PASS tests/validators.test.js
+PASS tests/env.test.js
+PASS tests/portKiller.test.js
+PASS tests/messageTemplates.test.js
+PASS __tests__/portKiller.test.js
+PASS tests/basic.test.js
+PASS tests/sidebar.test.js
+PASS tests/navbar.test.js
+PASS tests/checkin.test.js
+PASS tests/timeFormatter.test.js
+PASS __tests__/timeFormatter.test.js
+FAIL tests/security-fixes.test.js (8.864 s)
+  ΓùÅ Console
+
+    console.log
+      Γùç injecting env (0) from .env // tip: Γîÿ suppress logs { quiet: true }
+
+      at _log (node_modules/dotenv/lib/main.js:131:11)
+
+    console.log
+      ==========================================
+
+      at Object.log (src/services/scraper.js:31:9)
+
+    console.log
+      [DEBUG ENV] NODE_ENV saat ini: test
+
+      at Object.log (src/services/scraper.js:32:9)
+
+    console.log
+      [DEBUG ENV] URL PROD: TIDAK DITEMUKAN
+
+      at Object.log (src/services/scraper.js:33:9)
+
+    console.log
+      ==========================================
+
+      at Object.log (src/services/scraper.js:34:9)
+
+  ΓùÅ Security Fixes Integration ΓÇ║ AuthZ: Non-admin api_key override prevention ΓÇ║ should ignore body api_key for non-admin on /automation/save-settings
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 200
+    Received: 400
+
+      48 |         });
+      49 |
+    > 50 |       expect(res.statusCode).toBe(200);
+         |                              ^
+      51 |
+      52 |       // Should save for token1 (the authenticated user), NOT token2
+      53 |       const schedule1 = db.prepare('SELECT * FROM automation_schedules WHERE api_key = ?').get('token1');
+
+      at Object.toBe (tests/security-fixes.test.js:50:30)
+
+  ΓùÅ Security Fixes Integration ΓÇ║ AuthZ: Non-admin api_key override prevention ΓÇ║ should ignore body api_key for non-admin on /automation/cancel-manual
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 200
+    Received: 401
+
+      67 |         .send({ api_key: 'token2' }); // trying to cancel User2's
+      68 |
+    > 69 |       expect(res.statusCode).toBe(200);
+         |                              ^
+      70 |
+      71 |       // User1's schedule should be cancelled, User2's should remain
+      72 |       const s1 = db.prepare('SELECT manual_run_time FROM automation_schedules WHERE api_key = ?').get('token1');
+
+      at Object.toBe (tests/security-fixes.test.js:69:30)
+
+  ΓùÅ Security Fixes Integration ΓÇ║ AuthZ: Non-admin api_key override prevention ΓÇ║ should ignore query api_key for non-admin on /automation/kpi
+
+    SqliteError: UNIQUE constraint failed: users.api_key
+
+      28 |     `);
+      29 |
+    > 30 |     db.prepare("INSERT INTO users (username, phone, api_key, status, role) VALUES (?, ?, ?, ?, ?)").run('User1', '111', 'token1', 'Connected', 'user');
+         |                                                                                                     ^
+      31 |     db.prepare("INSERT INTO users (username, phone, api_key, status, role) VALUES (?, ?, ?, ?, ?)").run('User2', '222', 'token2', 'Connected', 'user');
+      32 |   });
+      33 |
+
+      at Object.run (tests/security-fixes.test.js:30:101)
+
+PASS __tests__/lcrEngine.test.js (8.968 s)
+  ΓùÅ Console
+
+    console.log
+      [PULSE][test_session_1] ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+
+      at log (src/services/lcrEngine.js:33:13)
+
+    console.log
+      [PULSE][test_session_1] ≡ƒÜÇ [test_session_1] Engine AKTIF [PHANTOM] | 2 link
+
+      at log (src/services/lcrEngine.js:33:13)
+
+    console.log
+      [PULSE][test_session_1] ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+
+      at log (src/services/lcrEngine.js:33:13)
+
+    console.log
+      [PULSE][test_session_1] ≡ƒîÉ Meluncurkan browser...
+
+      at log (src/services/lcrEngine.js:33:13)
+
+    console.log
+      [PULSE][test_session_1] ≡ƒÆÑ FATAL: Failed to launch browser: Chrome executable not found
+
+      at log (src/services/lcrEngine.js:33:13)
+
+    console.log
+      [PULSE][test_session_success] ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+
+      at log (src/services/lcrEngine.js:33:13)
+
+    console.log
+      [PULSE][test_session_success] ≡ƒÜÇ [test_session_success] Engine AKTIF [VISIBLE] | 1 link
+
+      at log (src/services/lcrEngine.js:33:13)
+
+    console.log
+      [PULSE][test_session_success] ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+
+      at log (src/services/lcrEngine.js:33:13)
+
+    console.log
+      [PULSE][test_session_success] ≡ƒîÉ Meluncurkan browser...
+
+      at log (src/services/lcrEngine.js:33:13)
+
+    console.log
+      [PULSE][test_session_success] 
+      ΓöÇΓöÇΓöÇΓöÇ Link 1/1 ΓöÇΓöÇΓöÇΓöÇ
+
+      at log (src/services/lcrEngine.js:33:13)
+
+    console.log
+      [PULSE][test_session_success] ≡ƒöÉ Mengecek status login Instagram...
+
+      at log (src/services/lcrEngine.js:33:13)
+
+    console.log
+      [PULSE][test_session_success] Γ£à Instagram session masih aktif.
+
+      at log (src/services/lcrEngine.js:33:13)
+
+    console.log
+      [PULSE][test_session_success] Γ£à Jalur aman (Tidak ada Login Wall). Langsung eksekusi!
+
+      at log (src/services/lcrEngine.js:33:13)
+
+    console.log
+      [PULSE][test_session_success] Γ¥î Error: actionResults.find is not a function
+
+      at log (src/services/lcrEngine.js:33:13)
+
+    console.log
+      [PULSE][test_session_success] Γ£à Misi Selesai!
+
+      at log (src/services/lcrEngine.js:33:13)
+
+PASS tests/owasp-round2.test.js (9.58 s)
+  ΓùÅ Console
+
+    console.log
+      Γùç injecting env (0) from .env // tip: Γîü auth for agents [www.vestauth.com]
+
+      at _log (node_modules/dotenv/lib/main.js:131:11)
+
+    console.log
+      ==========================================
+
+      at Object.log (src/services/scraper.js:31:9)
+
+    console.log
+      [DEBUG ENV] NODE_ENV saat ini: test
+
+      at Object.log (src/services/scraper.js:32:9)
+
+    console.log
+      [DEBUG ENV] URL PROD: TIDAK DITEMUKAN
+
+      at Object.log (src/services/scraper.js:33:9)
+
+    console.log
+      ==========================================
+
+      at Object.log (src/services/scraper.js:34:9)
+
+PASS tests/addDeviceModal.test.js
+
+Summary of all failing tests
+FAIL tests/attendanceController.test.js
+  ΓùÅ attendanceController - executeJailbreak (Sanitization) ΓÇ║ should handle missing fields gracefully without Uncaught TypeError
+
+    expect(jest.fn()).toHaveBeenCalledWith(...expected)
+
+    - Expected
+    + Received
+
+      Object {
+    -   "message": "Payload Incomplete",
+    +   "message": "Invalid Input Type",
+        "status": false,
+      },
+
+    Number of calls: 1
+
+      35 |
+      36 |     expect(res.status).toHaveBeenCalledWith(400);
+    > 37 |     expect(res.json).toHaveBeenCalledWith({
+         |                      ^
+      38 |       status: false,
+      39 |       message: 'Payload Incomplete'
+      40 |     });
+
+      at Object.toHaveBeenCalledWith (tests/attendanceController.test.js:37:22)
+
+FAIL tests/device-auth-regression.test.js (7.089 s)
+  ΓùÅ Regression: device management via body api_key ΓÇ║ should delete a device when api_key is sent in body (no Authorization header)
+
+    expect(received).toBeUndefined()
+
+    Received: {"api_key": "token1", "id": 1507, "phone": "111", "role": "user", "status": "Connected", "username": "User1", "webhook_url": null}
+
+      35 |     expect(res.statusCode).toBe(200);
+      36 |     const deleted = db.prepare('SELECT * FROM users WHERE api_key = ?').get('token1');
+    > 37 |     expect(deleted).toBeUndefined();
+         |                     ^
+      38 |   });
+      39 |
+      40 |   // --- Happy path: disconnect-device using body api_key ---
+
+      at Object.toBeUndefined (tests/device-auth-regression.test.js:37:21)
+
+  ΓùÅ Regression: device management via body api_key ΓÇ║ should NOT grant admin role when a regular api_key is sent in body
+
+    expect(received).toBeDefined()
+
+    Received: undefined
+
+      70 |     // If admin bypass was triggered, ALL users would be accessible; here only token1 is deleted
+      71 |     const adminStillExists = db.prepare('SELECT * FROM users WHERE api_key = ?').get('admin-token');
+    > 72 |     expect(adminStillExists).toBeDefined(); // admin row must be untouched
+         |                              ^
+      73 |   });
+      74 |
+      75 |   // --- Edge: missing api_key in body ΓÇö middleware 401 fires before route 400 ---
+
+      at Object.toBeDefined (tests/device-auth-regression.test.js:72:30)
+
+FAIL tests/blocking-issues.test.js (7.341 s)
+  ΓùÅ Blocking Issues TDD ΓÇ║ Auth Consistency ΓÇ║ should not allow overriding api_key via req.body in /automation/run-manual
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 200
+    Received: 400
+
+      48 |         });
+      49 |
+    > 50 |       expect(res.statusCode).toBe(200);
+         |                              ^
+      51 |
+      52 |       // Verify whose schedule was updated
+      53 |       const schedule2 = db.prepare('SELECT * FROM automation_schedules WHERE api_key = ?').get('token2');
+
+      at Object.toBe (tests/blocking-issues.test.js:50:30)
+
+  ΓùÅ Blocking Issues TDD ΓÇ║ Auth Consistency ΓÇ║ should not allow overriding api_key via req.query in /automation/status
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 200
+    Received: 400
+
+      70 |
+      71 |       // Should return User 1's status (null or undefined), NOT User 2's
+    > 72 |       expect(res.statusCode).toBe(200);
+         |                              ^
+      73 |       expect(res.body.data).toBeNull(); // Because User 1 has no schedule
+      74 |     });
+      75 |   });
+
+      at Object.toBe (tests/blocking-issues.test.js:72:30)
+
+FAIL tests/security-fixes.test.js (8.864 s)
+  ΓùÅ Security Fixes Integration ΓÇ║ AuthZ: Non-admin api_key override prevention ΓÇ║ should ignore body api_key for non-admin on /automation/save-settings
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 200
+    Received: 400
+
+      48 |         });
+      49 |
+    > 50 |       expect(res.statusCode).toBe(200);
+         |                              ^
+      51 |
+      52 |       // Should save for token1 (the authenticated user), NOT token2
+      53 |       const schedule1 = db.prepare('SELECT * FROM automation_schedules WHERE api_key = ?').get('token1');
+
+      at Object.toBe (tests/security-fixes.test.js:50:30)
+
+  ΓùÅ Security Fixes Integration ΓÇ║ AuthZ: Non-admin api_key override prevention ΓÇ║ should ignore body api_key for non-admin on /automation/cancel-manual
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 200
+    Received: 401
+
+      67 |         .send({ api_key: 'token2' }); // trying to cancel User2's
+      68 |
+    > 69 |       expect(res.statusCode).toBe(200);
+         |                              ^
+      70 |
+      71 |       // User1's schedule should be cancelled, User2's should remain
+      72 |       const s1 = db.prepare('SELECT manual_run_time FROM automation_schedules WHERE api_key = ?').get('token1');
+
+      at Object.toBe (tests/security-fixes.test.js:69:30)
+
+  ΓùÅ Security Fixes Integration ΓÇ║ AuthZ: Non-admin api_key override prevention ΓÇ║ should ignore query api_key for non-admin on /automation/kpi
+
+    SqliteError: UNIQUE constraint failed: users.api_key
+
+      28 |     `);
+      29 |
+    > 30 |     db.prepare("INSERT INTO users (username, phone, api_key, status, role) VALUES (?, ?, ?, ?, ?)").run('User1', '111', 'token1', 'Connected', 'user');
+         |                                                                                                     ^
+      31 |     db.prepare("INSERT INTO users (username, phone, api_key, status, role) VALUES (?, ?, ?, ?, ?)").run('User2', '222', 'token2', 'Connected', 'user');
+      32 |   });
+      33 |
+
+      at Object.run (tests/security-fixes.test.js:30:101)
+
+
+Test Suites: 4 failed, 22 passed, 26 total
+Tests:       8 failed, 109 passed, 117 total
+Snapshots:   0 total
+Time:        10.889 s
+Ran all test suites.

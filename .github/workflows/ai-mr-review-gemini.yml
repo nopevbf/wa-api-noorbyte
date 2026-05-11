@@ -18,7 +18,7 @@ jobs:
   test-and-ai-review:
     name: Test + AI Code Review (Gemini)
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     steps:
       - name: Checkout repository
@@ -31,18 +31,23 @@ jobs:
         with:
           node-version: '20'
           cache: npm
+          cache-dependency-path: backend/package-lock.json
 
       - name: Install project dependencies
+        working-directory: backend
         run: npm ci
 
       - name: Install Gemini SDK
+        working-directory: backend
         run: npm install @google/generative-ai --no-save
 
       - name: Run Jest tests
         id: tests
+        working-directory: backend
         continue-on-error: true
         run: |
           set +e
+
           npm test > /tmp/test_result.txt 2>&1
           TEST_EXIT_CODE=$?
 
@@ -59,14 +64,24 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git fetch origin ${{ github.base_ref }}
-          DIFF=$(git diff origin/${{ github.base_ref }}...HEAD -- '*.js' '*.ts' '*.jsx' '*.tsx' '*.mjs' '*.cjs' | head -c 10000)
-          CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | head -50 | tr '\n' ', ')
+
+          DIFF=$(git diff origin/${{ github.base_ref }}...HEAD -- \
+            'backend/**/*.js' \
+            'backend/**/*.ts' \
+            'backend/**/*.jsx' \
+            'backend/**/*.tsx' \
+            'backend/**/*.mjs' \
+            'backend/**/*.cjs' \
+            | head -c 12000)
+
+          CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD -- backend | head -50 | tr '\n' ', ')
 
           echo "CHANGED_FILES=$CHANGED_FILES" >> $GITHUB_ENV
           echo "$DIFF" > /tmp/pr_diff.txt
 
       - name: Run AI Review (Gemini)
         if: always()
+        working-directory: backend
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           PR_TITLE: ${{ github.event.pull_request.title }}
@@ -74,6 +89,7 @@ jobs:
           PR_AUTHOR: ${{ github.event.pull_request.user.login }}
           BASE_BRANCH: ${{ github.base_ref }}
           HEAD_BRANCH: ${{ github.head_ref }}
+          CHANGED_FILES: ${{ env.CHANGED_FILES }}
           TEST_EXIT_CODE: ${{ env.TEST_EXIT_CODE }}
         run: |
           node << 'EOF'
@@ -118,7 +134,7 @@ jobs:
             "",
             "## Code Diff",
             "```diff",
-            diff || "_(diff kosong, mungkin binary files atau ga ada perubahan JS/TS)_",
+            diff || "_(diff kosong, mungkin binary files atau ga ada perubahan JS/TS di folder backend)_",
             "```",
             "",
             "---",
@@ -137,10 +153,11 @@ jobs:
             "- Unit test udah di-update buat logic yang berubah?",
             "- Happy path, negative case, boundary value (BVA), sama edge case udah ke-cover?",
             "- Assertion-nya spesifik atau masih terlalu loose?",
-            "- List skenario yang belum di-test — honestly ini bagian paling penting.",
+            "- List skenario yang belum di-test.",
             "",
             "### 4. Code Quality",
-            "- Logic-nya bener ga? Error handling-nya gimana?",
+            "- Logic-nya bener ga?",
+            "- Error handling-nya gimana?",
             "- Null/undefined safety — ada yang bisa meledak ga?",
             "- DRY dan SOLID — ada yang violasi?",
             "- Readability — nama variabel/fungsi-nya makes sense?",
@@ -171,15 +188,27 @@ jobs:
           function classifyError(err) {
             const msg = err.message || "";
 
-            if (msg.includes("429") || msg.toLowerCase().includes("rate limit") || msg.toLowerCase().includes("quota")) {
+            if (
+              msg.includes("429") ||
+              msg.toLowerCase().includes("rate limit") ||
+              msg.toLowerCase().includes("quota")
+            ) {
               return "rate_limit";
             }
 
-            if (msg.includes("400") || msg.toLowerCase().includes("invalid") || msg.toLowerCase().includes("api key")) {
+            if (
+              msg.includes("400") ||
+              msg.toLowerCase().includes("invalid") ||
+              msg.toLowerCase().includes("api key")
+            ) {
               return "auth";
             }
 
-            if (msg.includes("500") || msg.includes("503") || msg.toLowerCase().includes("unavailable")) {
+            if (
+              msg.includes("500") ||
+              msg.includes("503") ||
+              msg.toLowerCase().includes("unavailable")
+            ) {
               return "server";
             }
 
@@ -213,6 +242,7 @@ jobs:
                 if (attempt < maxRetries) {
                   const waitMs = [10000, 30000, 60000][attempt - 1] || 60000;
                   console.log("Nunggu " + (waitMs / 1000) + "s sebelum retry...");
+
                   await new Promise(function(resolve) {
                     setTimeout(resolve, waitMs);
                   });
@@ -237,7 +267,7 @@ jobs:
 
             const messages = {
               rate_limit: "> ⚠️ **Rate limit kena nih** — kuota Gemini lagi mentok.\n> Test tetap sudah dijalankan, tapi AI review gagal digenerate.\n> Review akan jalan otomatis di push berikutnya.",
-              auth: "> ❌ **Auth error** — GEMINI_API_KEY ga valid atau belum di-set.\n> Cek di: **Repo Settings → Secrets → GEMINI_API_KEY**",
+              auth: "> ❌ **Auth error** — GEMINI_API_KEY ga valid atau belum di-set.\n> Cek di: **Repo Settings → Secrets and variables → Actions → GEMINI_API_KEY**",
               server: "> 🔴 **Gemini API lagi error/down** dari sisi provider.\n> Test tetap sudah jalan, AI review bisa dicoba lagi di push berikutnya.",
               unknown: "> ⚠️ **Ada error ga terduga** — cek workflow logs buat detail-nya.\n\n```\n" + err.message + "\n```"
             };

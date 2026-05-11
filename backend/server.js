@@ -7,6 +7,7 @@ const path = require("path");
 
 const apiRoutes = require("./src/routes/apiRoutes");
 const { initAllSessions } = require("./src/services/waEngine");
+const { startAutomationEngine } = require("./src/services/automationEngine");
 const appConfig = require("./src/config/appConfig");
 
 const app = express();
@@ -34,11 +35,15 @@ const frontendPath = path.join(__dirname, "../frontend/public");
 app.use(express.static(frontendPath));
 
 // ROUTE UNTUK HALAMAN UI
-const uiPages = ["login", "dashboard", "devices", "groups", "tester", "automation", "verify", "jailbreak"];
+const uiPages = ["login", "dashboard", "devices", "groups", "tester", "automation", "verify", "jailbreak", "pulse"];
 uiPages.forEach(page => {
     app.get(`/${page}`, (req, res) => res.sendFile(path.join(frontendPath, `${page}.html`)));
 });
 app.get("/jailbreak/checkin", (req, res) => res.sendFile(path.join(frontendPath, "checkin.html")));
+
+// Extension Download Route
+const { downloadExtensionZip } = require('./src/services/extensionService');
+app.get('/api/extension/download', downloadExtensionZip);
 
 // Default redirect & 404 handler
 app.get("*", (req, res, next) => {
@@ -47,15 +52,154 @@ app.get("*", (req, res, next) => {
 });
 
 // 5. Start Server
-const PORT = process.env.PORT || 4000;
-server.listen(PORT, () => {
-  console.log(`⚙️  [BACKEND] Service API & WA Engine berjalan di http://localhost:${PORT}`);
-  console.log(`🌍 [ENV] Mode: ${appConfig.env.toUpperCase()} | DParagon API: ${appConfig.dparagonApiUrl}`);
-  
-  // Initialize sessions
-  initAllSessions(global.io);
+const PORT = appConfig.port;
+let portRetryCount = 0;
+const MAX_PORT_RETRIES = 3;
 
-  // Start Automation Engine
-  const { startAutomationEngine } = require("./src/services/automationEngine");
-  startAutomationEngine();
+function startServer(port) {
+  server.listen(port, () => {
+    console.log(
+      `⚙️  [BACKEND] Service API & WA Engine berjalan di http://localhost:${port}`,
+    );
+    console.log(
+      `🌍 [ENV] Mode: ${appConfig.env.toUpperCase()} | DParagon API: ${appConfig.dparagonApiUrl}`,
+    );
+    initAllSessions(global.io);
+
+    // 5. Start Automation Engine (background scheduler)
+    startAutomationEngine();
+  });
+
+  server.on("error", async (err) => {
+    if (err.code === "EADDRINUSE") {
+      console.warn(`⚠️  [BACKEND] Port ${port} sedang dipakai! Mencoba kill proses lama...`);
+      const { killPortProcess } = require("./src/helpers/portKiller");
+      
+      try {
+        if (portRetryCount >= MAX_PORT_RETRIES) {
+          console.error(`❌ [BACKEND] Max retries (${MAX_PORT_RETRIES}) reached for killing port ${port}. Please resolve manually.`);
+          process.exit(1);
+        }
+        portRetryCount++;
+        
+        const killed = await killPortProcess(port);
+        if (killed) {
+          const backoffDelay = Math.pow(2, portRetryCount - 1) * 1000;
+          console.log(`✅ [BACKEND] Proses di port ${port} berhasil dimatikan. Restart server dalam ${backoffDelay/1000} detik...`);
+          setTimeout(() => startServer(port), backoffDelay);
+        } else {
+          console.error(`❌ [BACKEND] Gagal menemukan proses di port ${port}. Matikan manual lalu coba lagi.`);
+          process.exit(1);
+        }
+      } catch (killErr) {
+        console.error(`❌ [BACKEND] Gagal mematikan proses di port ${port}:`, killErr.message);
+        process.exit(1);
+      }
+    } else {
+      console.error("❌ [BACKEND] Server error:", err);
+      process.exit(1);
+    }
+  });
+}
+
+startServer(PORT);
+
+const attendanceController = require("./src/controllers/attendanceController");
+
+app.get("/api/attendance/history", attendanceController.getHistory);
+app.get("/api/attendance/recent", attendanceController.getRecent);
+app.post("/api/jailbreak/execute", attendanceController.executeJailbreak);
+
+
+
+
+// ==========================================
+// PULSE LCR ENGINE ENDPOINTS
+// ==========================================
+const { executeLCR, getLcrStatus } = require('./src/services/lcrEngine');
+const { activateWatcher } = require('./src/services/pulseWatcher');
+
+// EXECUTE MANUAL LCR — Jalankan Like/Comment/Repost di background
+const { z } = require("zod");
+
+const executeManualSchema = z.object({
+  identity: z.object({
+    name: z.string().optional(),
+    ig_email: z.string().optional(),
+    ig_password: z.string().optional(),
+    tt_email: z.string().optional(),
+    tt_password: z.string().optional()
+  }).passthrough(),
+  payload: z.object({
+    links: z.string().optional().refine(val => {
+      if (!val) return true;
+      const lines = val.split('\n').filter(l => l.trim() !== '');
+      try {
+        lines.forEach(line => new URL(line.trim()));
+        return true;
+      } catch (e) {
+        return false;
+      }
+    }, { message: "Contains invalid URL formats" }),
+    comments: z.string().optional()
+  }).passthrough(),
+  options: z.object({
+    stealthMode: z.boolean().optional(),
+    sessionId: z.string().optional()
+  }).passthrough().optional()
 });
+
+app.post('/api/pulse/execute-manual', (req, res) => {
+    try {
+        const validated = executeManualSchema.parse(req.body);
+        const { identity, payload, options } = validated;
+
+        console.log(`😈 Menerima perintah LCR untuk: ${identity.name || 'Unknown'} | Phantom: ${options?.stealthMode}`);
+
+        res.json({ status: 'success', message: 'Misi disuntikkan! Pantau Terminal.' });
+
+        // 😈 Teruskan 'options' ke mesin eksekusi
+        executeLCR(identity, payload, options).then(result => {
+            console.log("Misi LCR Selesai di latar belakang!");
+        }).catch(err => {
+            console.error("LCR Background Error:", err.message);
+        });
+    } catch (error) {
+        if (error instanceof z.ZodError) {
+            console.warn(`[SECURITY] Invalid input detected in execute-manual:`, error.errors);
+            return res.status(400).json({ status: false, message: 'Invalid Input Payload', errors: error.errors });
+        }
+        res.status(500).json({ status: false, message: 'Internal Server Error' });
+    }
+});
+
+// STATUS LCR — Polling dari frontend
+app.get('/api/pulse/status', (req, res) => {
+    const sessionId = req.query.sessionId || 'default';
+    const status = getLcrStatus(sessionId);
+    res.json({ status: true, data: status });
+});
+
+// ACTIVATE WATCHER (Auto-Parse mode)
+app.post('/api/pulse/activate-watcher', (req, res) => {
+    const { identity, monitor } = req.body;
+    
+    // Use first available device for now, or you could pass apiKey from frontend
+    // For this implementation, we'll assume the frontend would want to use a specific device
+    // but since Pulse UI doesn't have a device selector yet, we'll try to find one.
+    const db = require('./src/config/database');
+    const device = db.prepare("SELECT api_key FROM users WHERE status = 'Connected' LIMIT 1").get();
+    
+    if (!device) {
+        return res.status(400).json({ status: false, message: 'Tidak ada device WA yang aktif (Connected).' });
+    }
+
+    const success = activateWatcher(device.api_key, identity, monitor);
+    
+    if (success) {
+        res.json({ status: true, message: `The Watcher AKTIF pada grup: ${monitor.monitorId}` });
+    } else {
+        res.status(500).json({ status: false, message: 'Gagal mengaktifkan watcher.' });
+    }
+});
+

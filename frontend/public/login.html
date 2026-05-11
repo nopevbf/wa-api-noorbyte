@@ -89,7 +89,7 @@
       >
         <!-- Left Side: Branding & Features -->
         <div
-          class="hidden md:flex flex-col justify-between p-12 bg-[#0f172a] text-white relative overflow-hidden"
+          class="hidden md:flex flex-col p-12 bg-[#0f172a] text-white relative overflow-hidden"
         >
           <div
             class="absolute inset-0 opacity-10 pointer-events-none"
@@ -105,92 +105,116 @@
           <div
             class="absolute -right-20 -top-20 w-64 h-64 bg-primary/10 rounded-full blur-3xl"
           ></div>
-          <div class="relative z-10">
-            <div
-              class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-[10px] font-bold uppercase tracking-widest mb-6"
-            >
-              <span
-                class="w-2 h-2 rounded-full bg-primary animate-pulse"
-              ></span>
-              Enterprise Gateway
+          
+          <div class="relative z-10 space-y-12">
+            <!-- Top Section -->
+            <div class="space-y-6">
+              <div
+                class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-[10px] font-bold uppercase tracking-widest"
+              >
+                <span
+                  class="w-2 h-2 rounded-full bg-primary animate-pulse"
+                ></span>
+                All-in-One Business Hub
+              </div>
+              <h1
+                class="text-4xl font-extrabold tracking-tight leading-tight"
+              >
+                Empowering Business with
+                <span class="text-primary">Next-Gen Automation</span> & API Gateway.
+              </h1>
+              <p class="text-slate-400 text-lg max-w-md leading-relaxed font-medium">
+                From high-performance WhatsApp messaging to cross-platform automation and secure attendance tracking.
+              </p>
+              <div class="flex flex-wrap gap-2">
+                <span
+                  class="px-3 py-1.5 bg-slate-800/50 border border-slate-700/50 rounded-xl text-xs font-bold text-slate-300 flex items-center gap-2"
+                >
+                  <span
+                    class="material-symbols-outlined text-primary text-base"
+                    >bolt</span
+                  >
+                  Real-time Scraper
+                </span>
+                <span
+                  class="px-3 py-1.5 bg-slate-800/50 border border-slate-700/50 rounded-xl text-xs font-bold text-slate-300 flex items-center gap-2"
+                >
+                  <span
+                    class="material-symbols-outlined text-primary text-base"
+                    >monitoring</span
+                  >
+                  Pulse Monitoring
+                </span>
+              </div>
             </div>
-            <h1
-              class="text-4xl font-extrabold tracking-tight leading-tight mb-6"
-            >
-              The Ultimate
-              <span class="text-primary">WhatsApp API Gateway</span> for
-              Developers.
-            </h1>
-            <p class="text-slate-400 text-lg max-w-md leading-relaxed font-medium">
-              Scale your business communications with our high-performance
-              WhatsApp infrastructure. Direct connectivity, zero latency.
-            </p>
-            <div class="mt-8 flex flex-wrap gap-2">
-              <span
-                class="px-3 py-1.5 bg-slate-800/50 border border-slate-700/50 rounded-xl text-xs font-bold text-slate-300 flex items-center gap-2"
-              >
-                <span
-                  class="material-symbols-outlined text-primary text-base"
-                  >devices</span
+
+            <!-- Middle Section: Features -->
+            <div class="space-y-6">
+              <div class="flex items-start gap-4 group">
+                <div
+                  class="p-3 bg-primary/10 border border-primary/20 rounded-2xl group-hover:bg-primary/20 transition-colors"
                 >
-                Multi-Device
-              </span>
-              <span
-                class="px-3 py-1.5 bg-slate-800/50 border border-slate-700/50 rounded-xl text-xs font-bold text-slate-300 flex items-center gap-2"
-              >
-                <span
-                  class="material-symbols-outlined text-primary text-base"
-                  >webhook</span
+                  <span
+                    class="material-symbols-outlined text-primary"
+                    >forum</span
+                  >
+                </div>
+                <div>
+                  <h3
+                    class="font-bold text-sm uppercase tracking-widest text-slate-200"
+                  >
+                    WhatsApp Gateway
+                  </h3>
+                  <p class="text-slate-500 text-sm font-medium">
+                    High-performance API for messaging.
+                  </p>
+                </div>
+              </div>
+              <div class="flex items-start gap-4 group">
+                <div
+                  class="p-3 bg-primary/10 border border-primary/20 rounded-2xl group-hover:bg-primary/20 transition-colors"
                 >
-                Real-time Hooks
-              </span>
+                  <span
+                    class="material-symbols-outlined text-primary"
+                    >smart_toy</span
+                  >
+                </div>
+                <div>
+                  <h3
+                    class="font-bold text-sm uppercase tracking-widest text-slate-200"
+                  >
+                    Automation Suite
+                  </h3>
+                  <p class="text-slate-500 text-sm font-medium">
+                    Cross-platform bots for social media.
+                  </p>
+                </div>
+              </div>
+              <div class="flex items-start gap-4 group">
+                <div
+                  class="p-3 bg-primary/10 border border-primary/20 rounded-2xl group-hover:bg-primary/20 transition-colors"
+                >
+                  <span
+                    class="material-symbols-outlined text-primary"
+                    >fingerprint</span
+                  >
+                </div>
+                <div>
+                  <h3
+                    class="font-bold text-sm uppercase tracking-widest text-slate-200"
+                  >
+                    Secure Attendance
+                  </h3>
+                  <p class="text-slate-500 text-sm font-medium">
+                    Biometric-grade tracking system.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div class="relative z-10 space-y-6">
-            <div class="flex items-start gap-4 group">
-              <div
-                class="p-3 bg-primary/10 border border-primary/20 rounded-2xl group-hover:bg-primary/20 transition-colors"
-              >
-                <span
-                  class="material-symbols-outlined text-primary"
-                  >chat_bubble</span
-                >
-              </div>
-              <div>
-                <h3
-                  class="font-bold text-sm uppercase tracking-widest text-slate-200"
-                >
-                  Programmable Messaging
-                </h3>
-                <p class="text-slate-500 text-sm font-medium">
-                  Automate conversations with 99.9% delivery success rates.
-                </p>
-              </div>
-            </div>
-            <div class="flex items-start gap-4 group">
-              <div
-                class="p-3 bg-primary/10 border border-primary/20 rounded-2xl group-hover:bg-primary/20 transition-colors"
-              >
-                <span
-                  class="material-symbols-outlined text-primary"
-                  >settings_input_component</span
-                >
-              </div>
-              <div>
-                <h3
-                  class="font-bold text-sm uppercase tracking-widest text-slate-200"
-                >
-                  Seamless Integration
-                </h3>
-                <p class="text-slate-500 text-sm font-medium">
-                  RESTful endpoints designed for modern engineering teams.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div class="relative z-10 mt-12 flex items-center gap-3">
+          <!-- Bottom Section: Avatars -->
+          <div class="relative z-10 mt-auto pt-12 flex items-center gap-3">
             <div class="flex -space-x-3">
               <div
                 class="w-10 h-10 rounded-full border-2 border-slate-900 bg-slate-800 flex items-center justify-center text-[10px] font-bold ring-4 ring-primary/5"
@@ -315,7 +339,7 @@
 
     <footer class="w-full border-t border-outline bg-white/50 backdrop-blur-sm">
       <div
-        class="flex flex-col md:flex-row justify-between items-center px-8 py-8 max-w-7xl mx-auto w-full"
+        class="flex flex-col md:flex-row justify-between items-center px-8 py-8 w-full"
       >
         <div class="flex items-center gap-3 mb-4 md:mb-0">
           <div
