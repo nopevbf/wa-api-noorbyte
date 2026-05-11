@@ -17,9 +17,8 @@ document.addEventListener('alpine:init', () => {
             tt: ''
         },
         manual: {
-            dates: '',
-            links: '',
-            comments: ''
+            comments: '',
+            poolText: ''
         },
         auto: {
             monitorId: '',
@@ -31,6 +30,7 @@ document.addEventListener('alpine:init', () => {
         activeScreenshot: '',
         showCompleteModal: false,
         showEntryPopup: true,
+        showCopyFeedback: false,
 
         // Extension State
         showExtTutorial: false,
@@ -232,9 +232,66 @@ document.addEventListener('alpine:init', () => {
             return [...this.sessions.main.results, ...this.sessions.local.results];
         },
 
+        get parsedDate() {
+            if (!this.manual.poolText) return '...';
+            const dateMatch = this.manual.poolText.match(/(?:(?:Senin|Selasa|Rabu|Kamis|Jumat|Sabtu|Minggu),\s+)?(\d{1,2}\s+[A-Za-z]+\s+\d{4})/);
+            return dateMatch ? dateMatch[1] : '...';
+        },
+
+        get parsedLinks() {
+            if (!this.manual.poolText) return [];
+            
+            // 1. Pecah teks menggunakan pola nomor sebagai pemisah, tapi tetap simpan nomornya
+            // Hasil split: ["teks awal", "26. ", "isi link 26", "27. ", "isi link 27", ...]
+            const parts = this.manual.poolText.split(/(\d+\.\s)/);
+            const items = [];
+
+            for (let i = 1; i < parts.length; i += 2) {
+                const numberLabel = parts[i]; // "26. "
+                const content = parts[i + 1] || ""; // Teks setelah nomor
+                
+                const numMatch = numberLabel.match(/(\d+)\./);
+                if (numMatch) {
+                    const number = numMatch[1];
+                    const links = [];
+                    
+                    // Cari link di bagian konten setelah nomor ini
+                    const linksInPart = content.match(/https?:\/\/[^\s]+/g);
+                    if (linksInPart) {
+                        linksInPart.forEach(link => {
+                            if (link.includes('instagram.com') || link.includes('tiktok.com')) {
+                                links.push(link);
+                            }
+                        });
+                    }
+                    
+                    items.push({ number, links });
+                }
+            }
+            
+            return items;
+        },
+
+        get captionPreview() {
+            const name = this.config.name || '{{full_name}}';
+            const date = this.parsedDate;
+            const items = this.parsedLinks;
+
+            if (items.length === 0) {
+                return `${name} / {{no_link}} ${date}\n\nIG : ${this.config.ig || '-'}\nTT : ${this.config.tt || '-'}`;
+            }
+
+            const previewLines = items.map(item => `${name} / ${item.number} / ${date}`);
+            const handles = `IG : ${this.config.ig || '-'}\nTT : ${this.config.tt || '-'}`;
+            
+            return previewLines.join('\n') + '\n\n' + handles;
+        },
+
         // EKSEKUSI MODE MANUAL
         async startManual() {
-            if(!this.config.name || !this.manual.links) {
+            const allLinks = this.parsedLinks.flatMap(item => item.links);
+
+            if(!this.config.name || allLinks.length === 0) {
                 this.addLog('Error', 'Identitas atau Link tidak boleh kosong!', 'text-red-500');
                 return;
             }
@@ -242,7 +299,6 @@ document.addEventListener('alpine:init', () => {
             this.isWaiting = false;
             this.saveConfig();
 
-            const allLinks = this.manual.links.split(/\n|,/).map(l => l.trim()).filter(l => l.length > 0);
             const commentPool = this.manual.comments.split(/\n|,/).map(c => c.trim()).filter(c => c.length > 0);
             
             const getRandomComment = () => {
@@ -363,6 +419,19 @@ document.addEventListener('alpine:init', () => {
                 this.addLog('Fatal', error.message, 'text-red-500');
             } finally {
                 this.isWaiting = true;
+            }
+        },
+
+        async copyToClipboard() {
+            try {
+                await navigator.clipboard.writeText(this.captionPreview);
+                this.showCopyFeedback = true;
+                this.addLog('Success', 'Caption berhasil disalin ke clipboard!', 'text-emerald-400');
+                setTimeout(() => {
+                    this.showCopyFeedback = false;
+                }, 2000);
+            } catch (err) {
+                this.addLog('Error', 'Gagal menyalin teks: ' + err.message, 'text-red-500');
             }
         }
     }));

@@ -144,12 +144,8 @@
                             </div>
                             <div class="space-y-4">
                                 <div>
-                                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1.5 ml-1">Pool Tanggal (One per line)</label>
-                                    <textarea x-model="manual.dates" class="w-full bg-slate-50/50 dark:bg-slate-950/50 border border-outline dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none font-mono min-h-[80px] text-slate-900 dark:text-white transition-all" placeholder="2 April 2026"></textarea>
-                                </div>
-                                <div>
-                                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1.5 ml-1">Pool Link (One per line)</label>
-                                    <textarea x-model="manual.links" class="w-full bg-slate-50/50 dark:bg-slate-950/50 border border-outline dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none font-mono min-h-[100px] text-slate-900 dark:text-white transition-all" placeholder="https://instagram.com/p/..."></textarea>
+                                    <label class="block text-[10px] font-bold text-primary uppercase mb-1.5 ml-1">POOL LINK (PASTE HERE)</label>
+                                    <textarea x-model="manual.poolText" class="w-full bg-slate-50/50 dark:bg-slate-950/50 border border-primary/30 dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none font-mono min-h-[150px] text-slate-900 dark:text-white transition-all" placeholder="Paste report text here..."></textarea>
                                 </div>
                                 <div>
                                     <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1.5 ml-1">Pool Komen (One per line)</label>
@@ -291,13 +287,18 @@
                     </section>
 
                     <section class="bg-surface dark:bg-slate-900/60 border border-outline dark:border-slate-800 rounded-2xl p-5 shadow-sm backdrop-blur-sm transition-all hover:shadow-md hover:border-primary/20">
-                        <div class="flex items-center gap-2 mb-4">
-                            <span class="material-symbols-outlined text-primary text-sm">description</span>
-                            <h3 class="text-[10px] font-bold uppercase tracking-widest text-slate-500">Caption Preview</h3>
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center gap-2">
+                                <span class="material-symbols-outlined text-primary text-sm">description</span>
+                                <h3 class="text-[10px] font-bold uppercase tracking-widest text-slate-500">Caption Preview</h3>
+                            </div>
+                            <button @click="copyToClipboard()" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-primary/10 hover:text-primary text-slate-400 transition-all active:scale-95 group" title="Copy to clipboard">
+                                <span class="material-symbols-outlined text-[16px]" x-text="showCopyFeedback ? 'check_circle' : 'content_copy'" :class="showCopyFeedback ? 'text-emerald-500' : ''"></span>
+                                <span class="text-[9px] font-bold uppercase tracking-wider" x-text="showCopyFeedback ? 'Copied!' : 'Copy'"></span>
+                            </button>
                         </div>
-                        <div class="bg-slate-50/50 dark:bg-slate-950/50 rounded-xl p-5 font-mono text-slate-700 dark:text-indigo-200 border border-outline dark:border-slate-800 leading-relaxed text-sm">
-                            <p class="font-bold" x-text="config.name + ' / ' + (manual.dates.split('\n')[0] || '...')"></p>
-                            <p class="text-[10px] mt-4 text-slate-500 dark:text-slate-400 italic font-medium">// Dynamic parser output preview</p>
+                        <div class="bg-slate-50/50 dark:bg-slate-950/50 rounded-xl p-5 font-mono text-slate-700 dark:text-indigo-200 border border-outline dark:border-slate-800 leading-relaxed text-sm whitespace-pre-wrap">
+                            <div x-text="captionPreview"></div>
                         </div>
                     </section>
                 </div>
