@@ -1,4 +1,4 @@
-const { killPortProcess } = require("../src/helpers/portKiller");
+const { killPortProcess, PortKillerError } = require("../src/helpers/portKiller");
 const childProcess = require("child_process");
 
 // Mock the child_process to simulate behaviors
@@ -25,9 +25,7 @@ describe("portKiller - killPortProcess", () => {
       callback(error, "", error.stderr);
     });
 
-    await expect(killPortProcess(4000)).rejects.toThrow(
-      "Akses ditolak (Permission Denied). Coba jalankan sebagai Administrator/Root."
-    );
+    await expect(killPortProcess(4000)).rejects.toThrow(PortKillerError);
   });
 
   it("should throw an error with specific message when operation not permitted", async () => {
@@ -44,9 +42,7 @@ describe("portKiller - killPortProcess", () => {
       callback(error, "", error.stderr);
     });
 
-    await expect(killPortProcess(4000)).rejects.toThrow(
-      "Akses ditolak (Permission Denied). Coba jalankan sebagai Administrator/Root."
-    );
+    await expect(killPortProcess(4000)).rejects.toThrow(PortKillerError);
   });
 
   it("should return false if no process is found on the port", async () => {

@@ -15,23 +15,31 @@ function execPromise(cmd) {
   });
 }
 
+class PortKillerError extends Error {
+  constructor(message, originalError = null) {
+    super(message);
+    this.name = 'PortKillerError';
+    this.originalError = originalError;
+  }
+}
+
 async function killPortProcess(port) {
   // Strict regex validation to prevent any shell injection
   if (!/^\d+$/.test(String(port))) {
-    throw new Error('Invalid port number format. Only digits allowed.');
+    throw new PortKillerError('Invalid port number format. Only digits allowed.');
   }
 
   const portNum = Number(port);
   if (isNaN(portNum) || portNum < 1 || portNum > 65535 || !Number.isInteger(portNum)) {
-    throw new Error('Invalid port number');
+    throw new PortKillerError('Invalid port number');
   }
 
   if (portNum <= 1023) {
-    throw new Error('Cannot kill system ports (0-1023)');
+    throw new PortKillerError('Cannot kill system ports (0-1023)');
   }
 
   if (process.env.NODE_ENV === 'production') {
-    throw new Error('Port killing is disabled in production');
+    throw new PortKillerError('Port killing is disabled in production');
   }
 
   const isWin = process.platform === "win32";
@@ -55,7 +63,7 @@ async function killPortProcess(port) {
     }
 
     if (!pid || isNaN(pid)) {
-      throw new Error(`PID tidak valid untuk port ${portNum}`);
+      throw new PortKillerError(`PID tidak valid untuk port ${portNum}`);
     }
 
     const killCmd = isWin ? `taskkill /PID ${pid} /F` : `kill -9 ${pid}`;
@@ -65,15 +73,20 @@ async function killPortProcess(port) {
     // Check if error is related to permissions
     const errMessage = (err.stderr || err.message || '').toLowerCase();
     if (errMessage.includes('eperm') || errMessage.includes('access is denied') || errMessage.includes('operation not permitted') || errMessage.includes('akses ditolak')) {
-      throw new Error('Akses ditolak (Permission Denied). Coba jalankan sebagai Administrator/Root.');
+      throw new PortKillerError('Akses ditolak (Permission Denied). Coba jalankan sebagai Administrator/Root.', err);
     }
 
     if (err.stdout === '' || err.code === 1) {
       // process not found
       return false;
     }
-    throw err;
+    
+    if (err instanceof PortKillerError) {
+      throw err;
+    }
+
+    throw new PortKillerError('Failed to kill process on port', err);
   }
 }
 
-module.exports = { killPortProcess };
+module.exports = { killPortProcess, PortKillerError };

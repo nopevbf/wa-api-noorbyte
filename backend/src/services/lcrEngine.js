@@ -776,6 +776,11 @@ async function executeLCR(identity, payload, options = {}) {
                 await injectLcrUtilities(page);
                 let actionResults = platform === 'instagram' ? await instagramActions(page, comment) : await tiktokActions(page, comment);
                 
+                // Fallback to empty array if actions return null/undefined to prevent .find crashes
+                if (!Array.isArray(actionResults)) {
+                    actionResults = [];
+                }
+
                 const finalResult = {
                     url, platform,
                     like: actionResults.find(r => r.action === 'like'),
