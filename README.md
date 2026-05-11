@@ -1,4 +1,4 @@
-# WhatsApp API (wa-api-noorbyte) - v1.2.0
+# WhatsApp API (wa-api-noorbyte) - v2.0.0
 
 Proyek ini adalah API backend terintegrasi WhatsApp menggunakan `whiskeysockets/baileys` dengan antarmuka frontend (UI) modern yang terpadu dalam satu layanan Node.js.
 
@@ -65,10 +65,9 @@ wa-api-noorbyte/
 
 Untuk riwayat perubahan versi selengkapnya, silakan lihat file [CHANGELOG.md](CHANGELOG.md).
 
-### v1.2.0 (Latest)
-- **Frontend & Dashboard**: Penambahan halaman *automation*, *dashboard*, dan manajemen grup beserta implementasi penuh logika autentikasinya.
-- **Design System**: Implementasi *design system generator* dengan *automated reasoning*.
-- **Branding**: Pembaruan nama brand menjadi NoorByteAPI di *sidebar*.
+### v2.0.0 (Latest)
+- **Keamanan & Stabilitas**: Autentikasi `Authorization` header yang ketat, pencegahan *command injection*, finalisasi modular *backend*, penerapan exception handler terpusat, dan pola *defensive programming* pada LCR Engine.
+- **Perbaikan UI & Bug**: Perbaikan bug *crash* saat automasi, pencegahan duplikasi kiriman WhatsApp manual, resolusi bug *z-index* UI kalender, dan perbaikan UX tampilan *Execution Log* yang lebih rapi.
 
 ## Troubleshooting & Known Warnings
 
