@@ -6,6 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const db = require('../config/database');
 const { handleIncomingPulseMessage } = require('./pulseWatcher');
+const { generateAiResponse } = require('./aiEngine');
 
 const activeSessions = new Map();
 
@@ -171,7 +172,24 @@ async function connectToWhatsApp(apiKey, io) {
 
             const sender = msg.key.remoteJid.replace('@s.whatsapp.net', '');
             const text = msg.message.conversation || msg.message.extendedTextMessage?.text || '';
-            const user = db.prepare('SELECT webhook_url FROM users WHERE api_key = ?').get(apiKey);
+
+            // AI Auto-Reply Integration
+            const user = db.prepare('SELECT ai_enabled, ai_source, ai_provider, ai_api_key, ai_system_prompt, ai_context_data, webhook_url FROM users WHERE api_key = ?').get(apiKey);
+            if (user && user.ai_enabled) {
+                const aiConfig = {
+                    source: user.ai_source,
+                    provider: user.ai_provider,
+                    customKey: user.ai_api_key,
+                    systemPrompt: user.ai_system_prompt,
+                    contextData: user.ai_context_data
+                };
+                try {
+                    const aiReply = await generateAiResponse(aiConfig, text);
+                    await sendMessageViaWa(apiKey, sender, aiReply, 'text');
+                } catch (e) {
+                    console.error(`[${apiKey}] AI Auto-Reply Error:`, e.message);
+                }
+            }
 
             if (user && user.webhook_url) {
                 try {

@@ -19,6 +19,7 @@ const { getTargetApiKey } = require("../helpers/apiKeyHelper");
 const { validateManualTasks, validateSaveSettings } = require("../helpers/validators");
 const { buildMagicLinkMessage } = require("../helpers/messageTemplates");
 const { scheduleTimebomb, cancelTimebomb, validateDpUrl } = require("../services/timebombService");
+const { encrypt } = require('../helpers/security');
 
 // Socks5 Proxy dari env — dipakai untuk semua request keluar ke DParagon (termasuk checkin handle)
 const proxyUrl = process.env.PROXY_URL || "";
@@ -523,6 +524,27 @@ router.post('/attendance/cancel-timebomb', (req, res) => {
   }
 
   res.json(result);
+});
+
+router.post("/ai/save-settings", checkApiKey, (req, res) => {
+  const { ai_enabled, ai_source, ai_provider, ai_api_key, ai_system_prompt, ai_context_data } = req.body;
+  const apiKey = req.user.api_key;
+  try {
+      db.prepare(`
+          UPDATE users SET 
+          ai_enabled = ?, ai_source = ?, ai_provider = ?, 
+          ai_api_key = ?, ai_system_prompt = ?, ai_context_data = ?
+          WHERE api_key = ?
+      `).run(
+          ai_enabled ? 1 : 0, ai_source, ai_provider,
+          ai_api_key ? encrypt(ai_api_key) : null,
+          ai_system_prompt, ai_context_data,
+          apiKey
+      );
+      res.json({ status: true, message: "Pengaturan AI berhasil disimpan." });
+  } catch (e) {
+      res.status(500).json({ status: false, message: "Gagal menyimpan pengaturan AI: " + e.message });
+  }
 });
 
 module.exports = router;
