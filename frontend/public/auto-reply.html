@@ -96,6 +96,16 @@
                             </div>
                         </div>
                         <div class="p-8 flex flex-col gap-6">
+                            <!-- Device Select -->
+                            <div class="flex flex-col gap-2">
+                                <label class="text-[11px] font-bold uppercase tracking-widest text-slate-500">Pilih Perangkat (Connected Device)</label>
+                                <div class="relative">
+                                    <select id="device-select" class="w-full h-12 bg-slate-50 dark:bg-slate-800/50 border border-outline dark:border-slate-700 rounded-xl text-sm font-bold focus:ring-4 focus:ring-primary/10 focus:border-primary appearance-none px-4 outline-none transition-all cursor-pointer">
+                                        <option value="" disabled selected>-- Pilih Nomor Perangkat --</option>
+                                    </select>
+                                    <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-[20px]">expand_more</span>
+                                </div>
+                            </div>
                             <!-- Target Input -->
                             <div class="flex flex-col gap-2">
                                 <label class="text-[11px] font-bold uppercase tracking-widest text-slate-500">Monitor Target</label>
@@ -111,9 +121,74 @@
                                     <p class="text-[12px] text-slate-500 font-medium">Process incoming messages without replying immediately.</p>
                                 </div>
                                 <label class="relative inline-flex items-center cursor-pointer">
-                                    <input checked="" type="checkbox" value="" class="sr-only peer">
+                                    <input id="ai-listening-toggle" checked="" type="checkbox" value="" class="sr-only peer">
                                     <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 dark:peer-focus:ring-primary/10 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
                                 </label>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- API Provider Configuration -->
+                    <section class="bg-surface dark:bg-slate-900/60 rounded-3xl border border-outline dark:border-slate-800 shadow-sm overflow-hidden flex flex-col backdrop-blur-sm">
+                        <div class="px-6 py-4 border-b border-outline dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 flex justify-between items-center">
+                            <div class="flex items-center gap-2">
+                                <span class="material-symbols-outlined text-primary text-[20px]">api</span>
+                                <h4 class="text-[11px] font-bold uppercase tracking-widest text-slate-900 dark:text-white">API Provider Configuration</h4>
+                            </div>
+                        </div>
+                        <div class="p-8 flex flex-col gap-6">
+                            <!-- Main Choice: System vs Private -->
+                            <div class="grid grid-cols-2 gap-4">
+                                <label class="cursor-pointer group">
+                                    <input type="radio" name="api_source" value="system" checked class="hidden peer">
+                                    <div class="p-4 rounded-2xl border-2 border-outline dark:border-slate-700 bg-slate-50/30 dark:bg-slate-800/30 peer-checked:border-primary peer-checked:bg-primary/5 transition-all text-center">
+                                        <p class="text-[11px] font-bold uppercase tracking-widest text-slate-500 peer-checked:text-primary">API Sistem</p>
+                                    </div>
+                                </label>
+                                <label class="cursor-pointer group">
+                                    <input type="radio" name="api_source" value="private" class="hidden peer" id="radio-api-private">
+                                    <div class="p-4 rounded-2xl border-2 border-outline dark:border-slate-700 bg-slate-50/30 dark:bg-slate-800/30 peer-checked:border-primary peer-checked:bg-primary/5 transition-all text-center">
+                                        <p class="text-[11px] font-bold uppercase tracking-widest text-slate-500 peer-checked:text-primary">API Pribadi</p>
+                                    </div>
+                                </label>
+                            </div>
+
+                            <!-- Private API Options (Hidden by default) -->
+                            <div id="private-api-options" class="hidden flex-col gap-6 animate-in fade-in slide-in-from-top-2 duration-300">
+                                <div class="grid grid-cols-3 gap-3">
+                                    <label class="cursor-pointer">
+                                        <input type="radio" name="private_provider" value="claude" class="hidden peer">
+                                        <div class="p-3 rounded-xl border border-outline dark:border-slate-700 bg-slate-50/30 dark:bg-slate-800/30 peer-checked:border-primary peer-checked:bg-primary/5 transition-all flex flex-col items-center gap-2">
+                                            <!-- Claude SVG Logo -->
+                                            <svg viewBox="0 0 24 24" class="size-6 fill-[#D97757]" xmlns="http://www.w3.org/2000/svg"><path d="M12 0L9.42857 2.57143L12 5.14286L14.5714 2.57143L12 0ZM5.14286 5.14286L2.57143 7.71429L5.14286 10.2857L7.71429 7.71429L5.14286 5.14286ZM18.8571 5.14286L16.2857 7.71429L18.8571 10.2857L21.4286 7.71429L18.8571 5.14286ZM2.57143 14.5714L0 17.1429L2.57143 19.7143L5.14286 17.1429L2.57143 14.5714ZM21.4286 14.5714L18.8571 17.1429L21.4286 19.7143L24 17.1429L21.4286 14.5714ZM7.71429 18.8571L5.14286 21.4286L7.71429 24L10.2857 21.4286L7.71429 18.8571ZM16.2857 18.8571L13.7143 21.4286L16.2857 24L18.8571 21.4286L16.2857 18.8571Z"/></svg>
+                                            <span class="text-[10px] font-bold uppercase tracking-widest text-slate-600 dark:text-slate-400 peer-checked:text-primary">Claude</span>
+                                        </div>
+                                    </label>
+                                    <label class="cursor-pointer">
+                                        <input type="radio" name="private_provider" value="gemini" class="hidden peer">
+                                        <div class="p-3 rounded-xl border border-outline dark:border-slate-700 bg-slate-50/30 dark:bg-slate-800/30 peer-checked:border-primary peer-checked:bg-primary/5 transition-all flex flex-col items-center gap-2">
+                                            <!-- Gemini SVG Logo -->
+                                            <svg viewBox="0 0 24 24" class="size-6" xmlns="http://www.w3.org/2000/svg"><path d="M12 0L14.5 9.5L24 12L14.5 14.5L12 24L9.5 14.5L0 12L9.5 9.5L12 0Z" fill="#4285F4"/></svg>
+                                            <span class="text-[10px] font-bold uppercase tracking-widest text-slate-600 dark:text-slate-400 peer-checked:text-primary">Gemini</span>
+                                        </div>
+                                    </label>
+                                    <label class="cursor-pointer">
+                                        <input type="radio" name="private_provider" value="codex" class="hidden peer">
+                                        <div class="p-3 rounded-xl border border-outline dark:border-slate-700 bg-slate-50/30 dark:bg-slate-800/30 peer-checked:border-primary peer-checked:bg-primary/5 transition-all flex flex-col items-center gap-2">
+                                            <span class="material-symbols-outlined text-slate-900 dark:text-white">code</span>
+                                            <span class="text-[10px] font-bold uppercase tracking-widest">Codex</span>
+                                        </div>
+                                    </label>
+                                </div>
+
+                                <!-- API Key Input -->
+                                <div id="private-key-container" class="hidden flex-col gap-2">
+                                    <label class="text-[11px] font-bold uppercase tracking-widest text-slate-500">API Key <span id="selected-provider-name"></span></label>
+                                    <div class="relative">
+                                        <input id="ai-api-key" type="password" class="w-full h-12 bg-slate-50 dark:bg-slate-800/50 border border-outline dark:border-slate-700 rounded-xl text-sm font-bold focus:ring-4 focus:ring-primary/10 focus:border-primary px-4 outline-none transition-all" placeholder="sk-...">
+                                        <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[20px]">vpn_key</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </section>
@@ -136,11 +211,11 @@
                             <div class="flex flex-col gap-6 h-full" id="view-simple">
                                 <div class="flex flex-col gap-2 flex-1">
                                     <label class="text-[11px] font-bold uppercase tracking-widest text-slate-500">System Prompt (Kepribadian)</label>
-                                    <textarea class="w-full flex-1 bg-slate-50 dark:bg-slate-800/50 border border-outline dark:border-slate-700 rounded-2xl p-4 text-sm font-bold focus:ring-4 focus:ring-primary/10 focus:border-primary text-slate-900 dark:text-white resize-none min-h-[120px] outline-none transition-all shadow-inner" placeholder="Contoh: Anda adalah asisten pendukung yang ramah dan ringkas untuk NoorByte. Selalu gunakan nada profesional..."></textarea>
+                                    <textarea id="ai-system-prompt" class="w-full flex-1 bg-slate-50 dark:bg-slate-800/50 border border-outline dark:border-slate-700 rounded-2xl p-4 text-sm font-bold focus:ring-4 focus:ring-primary/10 focus:border-primary text-slate-900 dark:text-white resize-none min-h-[120px] outline-none transition-all shadow-inner" placeholder="Contoh: Anda adalah asisten pendukung yang ramah dan ringkas untuk NoorByte. Selalu gunakan nada profesional..."></textarea>
                                 </div>
                                 <div class="flex flex-col gap-2 flex-1">
                                     <label class="text-[11px] font-bold uppercase tracking-widest text-slate-500">Data Konteks (Basis Pengetahuan)</label>
-                                    <textarea class="w-full flex-1 bg-slate-50 dark:bg-slate-800/50 border border-outline dark:border-slate-700 rounded-2xl p-4 text-sm font-bold focus:ring-4 focus:ring-primary/10 focus:border-primary text-slate-900 dark:text-white resize-none min-h-[120px] outline-none transition-all shadow-inner" placeholder="Tempelkan tautan FAQ atau data terstruktur di sini sebagai referensi AI..."></textarea>
+                                    <textarea id="ai-context-data" class="w-full flex-1 bg-slate-50 dark:bg-slate-800/50 border border-outline dark:border-slate-700 rounded-2xl p-4 text-sm font-bold focus:ring-4 focus:ring-primary/10 focus:border-primary text-slate-900 dark:text-white resize-none min-h-[120px] outline-none transition-all shadow-inner" placeholder="Tempelkan tautan FAQ atau data terstruktur di sini sebagai referensi AI..."></textarea>
                                 </div>
                             </div>
                             <!-- JSON Mode View (Hidden by default) -->
@@ -151,7 +226,7 @@
                                         <span class="text-[10px] text-slate-400 font-mono uppercase tracking-widest font-bold">config.json</span>
                                         <button class="text-slate-400 hover:text-white transition-colors"><span class="material-symbols-outlined text-sm">content_copy</span></button>
                                     </div>
-                                    <textarea class="w-full flex-1 bg-transparent p-6 text-[13px] text-emerald-400 font-mono focus:outline-none resize-none scrollbar-hide" spellcheck="false">{
+                                    <textarea id="ai-config-json" class="w-full flex-1 bg-transparent p-6 text-[13px] text-emerald-400 font-mono focus:outline-none resize-none scrollbar-hide" spellcheck="false">{
   "model": "gpt-4-turbo",
   "temperature": 0.3,
   "max_tokens": 150,
@@ -171,7 +246,7 @@
                             </div>
                         </div>
                         <div class="px-8 pb-8 flex justify-end">
-                            <button class="px-10 py-3 rounded-xl bg-primary text-white text-sm font-black shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all active:scale-[0.98] flex items-center gap-2">
+                            <button id="save-settings-btn" class="px-10 py-3 rounded-xl bg-primary text-white text-sm font-black shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all active:scale-[0.98] flex items-center gap-2">
                                 <span class="material-symbols-outlined text-lg">save</span>
                                 <span>Save Settings</span>
                             </button>
@@ -269,6 +344,190 @@
 
     btnSimple.addEventListener('click', () => switchView('simple'));
     btnJson.addEventListener('click', () => switchView('json'));
+
+    // API Provider Toggle Logic
+    const apiSourceRadios = document.querySelectorAll('input[name="api_source"]');
+    const privateApiOptions = document.getElementById('private-api-options');
+    const privateProviderRadios = document.querySelectorAll('input[name="private_provider"]');
+    const privateKeyContainer = document.getElementById('private-key-container');
+    const selectedProviderName = document.getElementById('selected-provider-name');
+
+    apiSourceRadios.forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            if (e.target.value === 'private') {
+                privateApiOptions.classList.remove('hidden');
+            } else {
+                privateApiOptions.classList.add('hidden');
+                privateKeyContainer.classList.add('hidden');
+            }
+        });
+    });
+
+    privateProviderRadios.forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            privateKeyContainer.classList.remove('hidden');
+            const provider = e.target.value.charAt(0).toUpperCase() + e.target.value.slice(1);
+            selectedProviderName.innerText = `(${provider})`;
+        });
+    });
+
+    // AI Listening Mode Toast Logic
+    const aiListeningToggle = document.getElementById('ai-listening-toggle');
+    if (aiListeningToggle) {
+        aiListeningToggle.addEventListener('change', (e) => {
+            const status = e.target.checked ? "Activated" : "Disabled";
+            const type = e.target.checked ? "success" : "warning";
+            const msg = `AI Listening Mode: ${status}`;
+            
+            if (typeof showToast === "function") {
+                showToast(msg, type);
+            }
+        });
+    }
+
+    // Load Devices Logic
+    async function loadDevices() {
+        const deviceSelect = document.getElementById('device-select');
+        const isAdmin = localStorage.getItem('connectApi_loggedIn') === 'true';
+        const guestApiKey = localStorage.getItem('noorbyte_session');
+        
+        const query = isAdmin 
+            ? `?role=admin&api_key=${guestApiKey || ''}` 
+            : (guestApiKey ? `?api_key=${guestApiKey}` : '');
+            
+        try {
+            const response = await fetch(`/api/get-devices${query}`);
+            const result = await response.json();
+
+            if (result.status && result.data.length > 0) {
+                // Clear existing dynamic options (keep first one)
+                while (deviceSelect.options.length > 1) {
+                    deviceSelect.remove(1);
+                }
+                
+                result.data.forEach(device => {
+                    const option = document.createElement('option');
+                    option.value = device.api_key;
+                    option.textContent = `${device.phone || 'No Phone'} (${device.username})`;
+                    deviceSelect.appendChild(option);
+                });
+            } else {
+                console.log('No devices found or error loading devices');
+            }
+        } catch (error) {
+            console.error('Error fetching devices:', error);
+        }
+    }
+
+    // Load settings when device changes
+    const deviceSelect = document.getElementById('device-select');
+    deviceSelect.addEventListener('change', async (e) => {
+        const deviceApiKey = e.target.value;
+        if (!deviceApiKey) return;
+        
+        try {
+            const response = await fetch(`/api/ai/settings`, {
+                headers: {
+                    'Authorization': `Bearer ${deviceApiKey}`
+                }
+            });
+            const result = await response.json();
+            
+            if (result.status && result.data) {
+                const settings = result.data;
+                
+                // Populate UI
+                document.getElementById('ai-listening-toggle').checked = !!settings.ai_enabled;
+                
+                // API Source
+                const sourceRadio = document.querySelector(`input[name="api_source"][value="${settings.ai_source || 'system'}"]`);
+                if (sourceRadio) {
+                    sourceRadio.checked = true;
+                    sourceRadio.dispatchEvent(new Event('change'));
+                }
+                
+                // Private Provider
+                if (settings.ai_provider) {
+                    const providerRadio = document.querySelector(`input[name="private_provider"][value="${settings.ai_provider}"]`);
+                    if (providerRadio) {
+                        providerRadio.checked = true;
+                        providerRadio.dispatchEvent(new Event('change'));
+                    }
+                }
+                
+                // API Key
+                document.getElementById('ai-api-key').value = settings.ai_api_key || '';
+                
+                // Prompts
+                document.getElementById('ai-system-prompt').value = settings.ai_system_prompt || '';
+                document.getElementById('ai-context-data').value = settings.ai_context_data || '';
+            }
+        } catch (error) {
+            console.error('Error loading AI settings:', error);
+        }
+    });
+
+    // Save settings
+    const saveBtn = document.getElementById('save-settings-btn');
+    saveBtn.addEventListener('click', async () => {
+        const deviceApiKey = deviceSelect.value;
+        if (!deviceApiKey) {
+            if (typeof showToast === "function") showToast('Pilih perangkat terlebih dahulu', 'error');
+            else alert('Pilih perangkat terlebih dahulu');
+            return;
+        }
+        
+        const ai_enabled = document.getElementById('ai-listening-toggle').checked;
+        const api_source = document.querySelector('input[name="api_source"]:checked').value;
+        const ai_provider = document.querySelector('input[name="private_provider"]:checked')?.value || null;
+        const ai_api_key = document.getElementById('ai-api-key').value;
+        const ai_system_prompt = document.getElementById('ai-system-prompt').value;
+        const ai_context_data = document.getElementById('ai-context-data').value;
+        
+        const data = {
+            ai_enabled,
+            ai_source,
+            ai_provider,
+            ai_api_key,
+            ai_system_prompt,
+            ai_context_data
+        };
+        
+        try {
+            saveBtn.disabled = true;
+            const originalContent = saveBtn.innerHTML;
+            saveBtn.innerText = 'Saving...';
+            
+            const response = await fetch('/api/ai/save-settings', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${deviceApiKey}`
+                },
+                body: JSON.stringify(data)
+            });
+            
+            const result = await response.json();
+            if (result.status) {
+                if (typeof showToast === "function") showToast('Settings saved successfully', 'success');
+                else alert('Settings saved successfully');
+            } else {
+                if (typeof showToast === "function") showToast(result.message || 'Failed to save settings', 'error');
+                else alert(result.message || 'Failed to save settings');
+            }
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = originalContent;
+        } catch (error) {
+            console.error('Error saving AI settings:', error);
+            if (typeof showToast === "function") showToast('Network error while saving settings', 'error');
+            else alert('Network error while saving settings');
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<span class="material-symbols-outlined text-lg">save</span><span>Save Settings</span>';
+        }
+    });
+
+    // Run on load
+    document.addEventListener('DOMContentLoaded', loadDevices);
 </script>
 </body>
 </html>

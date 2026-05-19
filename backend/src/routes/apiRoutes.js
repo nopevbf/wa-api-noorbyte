@@ -19,7 +19,7 @@ const { getTargetApiKey } = require("../helpers/apiKeyHelper");
 const { validateManualTasks, validateSaveSettings } = require("../helpers/validators");
 const { buildMagicLinkMessage } = require("../helpers/messageTemplates");
 const { scheduleTimebomb, cancelTimebomb, validateDpUrl } = require("../services/timebombService");
-const { encrypt } = require('../helpers/security');
+const { encrypt, decrypt } = require('../helpers/security');
 
 // Socks5 Proxy dari env — dipakai untuk semua request keluar ke DParagon (termasuk checkin handle)
 const proxyUrl = process.env.PROXY_URL || "";
@@ -545,6 +545,21 @@ router.post("/ai/save-settings", checkApiKey, (req, res) => {
   } catch (e) {
       res.status(500).json({ status: false, message: "Gagal menyimpan pengaturan AI: " + e.message });
   }
+});
+
+router.get("/ai/settings", checkApiKey, (req, res) => {
+  const { ai_enabled, ai_source, ai_provider, ai_api_key, ai_system_prompt, ai_context_data } = req.user;
+  res.json({
+      status: true,
+      data: {
+          ai_enabled: !!ai_enabled,
+          ai_source: ai_source || 'system',
+          ai_provider: ai_provider,
+          ai_api_key: ai_api_key ? decrypt(ai_api_key) : null,
+          ai_system_prompt: ai_system_prompt,
+          ai_context_data: ai_context_data
+      }
+  });
 });
 
 module.exports = router;
