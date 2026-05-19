@@ -18,6 +18,7 @@ const crypto = require("crypto");
 const { getTargetApiKey } = require("../helpers/apiKeyHelper");
 const { validateManualTasks, validateSaveSettings } = require("../helpers/validators");
 const { buildMagicLinkMessage } = require("../helpers/messageTemplates");
+const { scheduleTimebomb, cancelTimebomb } = require("../services/timebombService");
 
 // Socks5 Proxy dari env — dipakai untuk semua request keluar ke DParagon (termasuk checkin handle)
 const proxyUrl = process.env.PROXY_URL || "";
@@ -32,9 +33,7 @@ const sensitiveLimiter = rateLimit({
   message: { status: false, message: "Terlalu banyak permintaan. Coba lagi nanti." },
 });
 
-// Registry untuk menyimpan ID setTimeout Time-Bomb yang sedang aktif
-// key: api_key (string) — value: timeoutId (number)
-const timebombRegistry = new Map();
+// Time-Bomb registry sekarang dikelola oleh timebombService.js
 const {
   sendMessageViaWa,
   disconnectWa,
@@ -485,20 +484,37 @@ router.post('/jailbreak/execute', async (req, res) => {
 });
 
 router.post('/attendance/schedule-timebomb', async (req, res) => {
-  const { targetTime, token, payload, api_key } = req.body;
-  const timerId = setTimeout(() => { /* execute bomb logic */ }, 1000); // Simplified
-  timebombRegistry.set(api_key, timerId);
-  res.json({ status: true, message: "Engine standby." });
+  const { targetTime, token, dpUrl, payload, api_key } = req.body;
+
+  // Validasi input dasar
+  if (!targetTime || !token || !payload) {
+    return res.status(400).json({ status: false, message: "Data tidak lengkap. Butuh targetTime, token, dan payload." });
+  }
+
+  const result = scheduleTimebomb({
+    targetTime,
+    token,
+    dpUrl: dpUrl || appConfig.dparagonApiUrl || 'https://api.dparagon.com/v2',
+    apiKey: api_key,
+    payload
+  });
+
+  if (!result.status) {
+    return res.status(400).json(result);
+  }
+
+  res.json(result);
 });
 
 router.post('/attendance/cancel-timebomb', (req, res) => {
   const { api_key } = req.body;
-  if (timebombRegistry.has(api_key)) {
-    clearTimeout(timebombRegistry.get(api_key));
-    timebombRegistry.delete(api_key);
-    return res.json({ status: true, message: "Cancelled." });
+  const result = cancelTimebomb(api_key);
+
+  if (!result.status) {
+    return res.status(404).json(result);
   }
-  res.status(404).json({ status: false, message: "Not found." });
+
+  res.json(result);
 });
 
 module.exports = router;
