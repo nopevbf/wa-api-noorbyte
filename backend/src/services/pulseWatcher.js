@@ -54,9 +54,21 @@ async function handleIncomingPulseMessage(apiKey, msg) {
     logWatcher(`🚀 Memulai eksekusi otomatis untuk ${links.length} link...`, 'success');
 
     try {
-        // Execute LCR in background
-        // Note: For Auto-mode, we usually use stealth/phantom mode by default
-        await executeLCR(identity, payload, { stealthMode: true });
+        // Create an EventEmitter to bridge LCR Engine logs back to the watcher
+        const EventEmitter = require('events');
+        const emitter = new EventEmitter();
+        
+        emitter.on('pulse_log', (log) => {
+            // Forward engine logs up
+            logWatcher(`[ENGINE] ${log.message}`, log.type);
+        });
+        
+        emitter.on('pulse_progress', (prog) => {
+            if (global.io) global.io.emit('pulse_progress', prog);
+        });
+
+        // Execute LCR in background with event emitter injected
+        await executeLCR(identity, payload, { stealthMode: true, eventEmitter: emitter });
         
         logWatcher(`✅ Eksekusi otomatis selesai.`, 'success');
     } catch (err) {

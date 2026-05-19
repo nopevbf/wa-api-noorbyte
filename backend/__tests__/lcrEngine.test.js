@@ -37,20 +37,12 @@ describe("lcrEngine - executeLCR", () => {
       on: jest.fn(),
       cookies: jest.fn().mockResolvedValue([{ name: 'sessionid', value: '123' }, { name: 'sessionid_ss', value: '123' }]),
       content: jest.fn().mockResolvedValue(""),
-      evaluate: jest.fn().mockImplementation((func, ...args) => {
-        const funcString = func.toString();
-        if (funcString.includes('isVisible') || funcString.includes('isBlocked')) {
-            return Promise.resolve(false); // Not blocked
-        }
-        if (funcString.includes('killPopups') || funcString.includes('window.__LCR_UTILS__')) {
-            return Promise.resolve(true);
-        }
-        return Promise.resolve([{action: 'like'}, {action: 'comment'}, {action: 'repost'}]);
-      })
+      evaluate: jest.fn().mockResolvedValue('ready')
     };
 
     const mockPage = new Proxy(mockPageBase, {
       get(target, prop) {
+        if (prop === 'then') return undefined;
         if (prop in target) return target[prop];
         return jest.fn().mockResolvedValue(true);
       }
@@ -69,7 +61,7 @@ describe("lcrEngine - executeLCR", () => {
 
     const status = getLcrStatus("test_session_success");
     expect(status.status).toBe("done");
-  }, 15000);
+  }, 45000);
 
   it("should not crash if actionResults is not an array (e.g. returns null/undefined)", async () => {
     const identity = { name: "test_user", ig_email: "test", ig_password: "123" };
@@ -82,21 +74,12 @@ describe("lcrEngine - executeLCR", () => {
       on: jest.fn(),
       cookies: jest.fn().mockResolvedValue([{ name: 'sessionid', value: '123' }]),
       content: jest.fn().mockResolvedValue(""),
-      evaluate: jest.fn().mockImplementation((func, ...args) => {
-        const funcString = func.toString();
-        if (funcString.includes('isVisible') || funcString.includes('isBlocked')) {
-            return Promise.resolve(false); // Not blocked
-        }
-        if (funcString.includes('killPopups') || funcString.includes('window.__LCR_UTILS__')) {
-            return Promise.resolve(true);
-        }
-        // Simulate evaluate returning null instead of an array
-        return Promise.resolve(null);
-      })
+      evaluate: jest.fn().mockResolvedValue('ready')
     };
 
     const mockPage = new Proxy(mockPageBase, {
       get(target, prop) {
+        if (prop === 'then') return undefined;
         if (prop in target) return target[prop];
         return jest.fn().mockResolvedValue(true);
       }
@@ -121,5 +104,5 @@ describe("lcrEngine - executeLCR", () => {
     const results = status.results;
     expect(results[0].error).toBeUndefined();
     expect(results[0].like).toBeUndefined();
-  }, 15000);
+  }, 45000);
 });

@@ -65,6 +65,50 @@ function validateTimebombParams({ token, payload }) {
 }
 
 /**
+ * Validate dpUrl against SSRF attack vectors.
+ * Only allows HTTPS URLs to non-internal hosts with reasonable length.
+ *
+ * @param {string|null} url
+ * @returns {{ valid: boolean, error?: string }}
+ */
+function validateDpUrl(url) {
+  if (!url || typeof url !== 'string') {
+    return { valid: false, error: 'dpUrl wajib diisi.' };
+  }
+
+  if (url.length > 512) {
+    return { valid: false, error: 'dpUrl terlalu panjang.' };
+  }
+
+  let parsed;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return { valid: false, error: 'dpUrl bukan URL yang valid.' };
+  }
+
+  // Only allow HTTPS
+  if (parsed.protocol !== 'https:') {
+    return { valid: false, error: 'dpUrl harus menggunakan protokol HTTPS.' };
+  }
+
+  const hostname = parsed.hostname.toLowerCase();
+
+  // Block localhost
+  if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]') {
+    return { valid: false, error: 'dpUrl tidak boleh mengarah ke localhost (SSRF).' };
+  }
+
+  // Block private IP ranges: 10.x.x.x, 172.16-31.x.x, 192.168.x.x
+  const privateIp = /^(10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|192\.168\.)/.test(hostname);
+  if (privateIp) {
+    return { valid: false, error: 'dpUrl tidak boleh mengarah ke IP internal (SSRF).' };
+  }
+
+  return { valid: true };
+}
+
+/**
  * Schedule a time-bomb attendance submission.
  * 
  * @param {Object} params
@@ -156,14 +200,18 @@ async function executeTimebomb(token, dpUrl, payload) {
     'Authorization': `Bearer ${token}`
   };
 
-  // First attempt
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(payload)
-  });
-
-  const result = await response.json();
+  let response, result;
+  try {
+    // First attempt
+    response = await fetch(endpoint, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload)
+    });
+    result = await response.json();
+  } catch (err) {
+    return { success: false, message: `Network error: ${err.message}` };
+  }
 
   // Success path
   if (response.ok && result.status !== false) {
@@ -183,13 +231,17 @@ async function executeTimebomb(token, dpUrl, payload) {
 
     const retryPayload = { ...payload, late_reason: DEFAULT_LATE_REASON };
 
-    const retryResponse = await fetch(endpoint, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(retryPayload)
-    });
-
-    const retryResult = await retryResponse.json();
+    let retryResponse, retryResult;
+    try {
+      retryResponse = await fetch(endpoint, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(retryPayload)
+      });
+      retryResult = await retryResponse.json();
+    } catch (err) {
+      return { success: false, message: `Network error on retry: ${err.message}` };
+    }
 
     if (retryResponse.ok && retryResult.status !== false) {
       return { success: true, message: retryResult.message || 'Success (auto-resolved)' };
@@ -208,6 +260,7 @@ async function executeTimebomb(token, dpUrl, payload) {
 module.exports = {
   calculateDelay,
   validateTimebombParams,
+  validateDpUrl,
   scheduleTimebomb,
   cancelTimebomb,
   executeTimebomb,

@@ -18,7 +18,7 @@ const crypto = require("crypto");
 const { getTargetApiKey } = require("../helpers/apiKeyHelper");
 const { validateManualTasks, validateSaveSettings } = require("../helpers/validators");
 const { buildMagicLinkMessage } = require("../helpers/messageTemplates");
-const { scheduleTimebomb, cancelTimebomb } = require("../services/timebombService");
+const { scheduleTimebomb, cancelTimebomb, validateDpUrl } = require("../services/timebombService");
 
 // Socks5 Proxy dari env — dipakai untuk semua request keluar ke DParagon (termasuk checkin handle)
 const proxyUrl = process.env.PROXY_URL || "";
@@ -491,10 +491,18 @@ router.post('/attendance/schedule-timebomb', async (req, res) => {
     return res.status(400).json({ status: false, message: "Data tidak lengkap. Butuh targetTime, token, dan payload." });
   }
 
+  const finalDpUrl = dpUrl || appConfig.dparagonApiUrl || 'https://api.dparagon.com/v2';
+  
+  // Validasi URL (SSRF prevention)
+  const urlValidation = validateDpUrl(finalDpUrl);
+  if (!urlValidation.valid) {
+    return res.status(400).json({ status: false, message: urlValidation.error });
+  }
+
   const result = scheduleTimebomb({
     targetTime,
     token,
-    dpUrl: dpUrl || appConfig.dparagonApiUrl || 'https://api.dparagon.com/v2',
+    dpUrl: finalDpUrl,
     apiKey: api_key,
     payload
   });
