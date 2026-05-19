@@ -35,7 +35,7 @@ const frontendPath = path.join(__dirname, "../frontend/public");
 app.use(express.static(frontendPath));
 
 // ROUTE UNTUK HALAMAN UI
-const uiPages = ["login", "dashboard", "devices", "groups", "tester", "automation", "verify", "jailbreak", "pulse"];
+const uiPages = ["login", "dashboard", "devices", "groups", "tester", "automation", "verify", "jailbreak", "pulse", "auto-reply"];
 uiPages.forEach(page => {
     app.get(`/${page}`, (req, res) => res.sendFile(path.join(frontendPath, `${page}.html`)));
 });

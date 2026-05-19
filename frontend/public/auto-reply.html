@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Auto Reply - AI | NoorByteAPI</title>
+    
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    
+    <script id="tailwind-config">
+        tailwind.config = { 
+            darkMode: "class", 
+            theme: { 
+                extend: { 
+                    colors: { 
+                        primary: "#6366f1", 
+                        "background-light": "#f5f3ff", 
+                        "background-dark": "#0f172a",
+                        surface: "#ffffff",
+                        outline: "#e2e8f0"
+                    }, 
+                    fontFamily: { 
+                        display: ["Plus Jakarta Sans", "Inter", "sans-serif"],
+                        body: ["Plus Jakarta Sans", "Inter", "sans-serif"]
+                    } 
+                } 
+            } 
+        }
+    </script>
+    <style> 
+        body { font-family: 'Plus Jakarta Sans', sans-serif; } 
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        .toggle-checkbox:checked { right: 0; border-color: #6366f1; }
+        .toggle-checkbox:checked + .toggle-label { background-color: #6366f1; }
+        .toggle-checkbox:checked + .toggle-label:after { transform: translateX(100%); border-color: white; }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100">
+<div class="flex h-screen overflow-hidden">
+    
+    <div id="sidebar-container" class="z-50 shrink-0"></div>
+
+    <main class="flex-1 overflow-y-auto relative scrollbar-hide">
+        <header class="h-16 border-b border-slate-200/60 dark:border-slate-800/60 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md sticky top-0 z-10 flex items-center justify-between px-4 sm:px-8">
+            <div class="flex items-center gap-3">
+                <button id="toggleSidebarBtn" class="lg:hidden p-2 -ml-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-colors">
+                    <span class="material-symbols-outlined">menu</span>
+                </button>
+                <h2 id="navbar-page-name" class="text-lg font-bold tracking-tight hidden sm:block">Auto Reply - AI</h2>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 dark:text-emerald-400 px-3 py-1 rounded-full border border-emerald-100 dark:border-emerald-800/30 shadow-sm">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> System Ready
+                </div>
+                <div class="h-8 w-[1px] bg-slate-200/60 dark:bg-slate-800/60 mx-2"></div>
+                <div class="flex items-center gap-3">
+                    <div class="text-right hidden sm:block">
+                        <p id="navbar-user-name" class="text-xs font-extrabold text-slate-900 dark:text-white">Admin User</p>
+                        <p id="navbar-user-role" class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Master Access</p>
+                    </div>
+                    <div id="navbar-user-avatar" class="size-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center overflow-hidden font-bold text-primary text-xs shadow-sm shadow-primary/5">
+                        JD
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="p-4 sm:p-8 space-y-8 w-full">
+            <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+                <div>
+                    <h3 class="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">Auto Reply - AI</h3>
+                    <p class="text-slate-500 text-sm font-medium mt-1">Configure intelligent automated responses for connected channels.</p>
+                </div>
+            </div>
+
+            <!-- Bento Grid Layout -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                <!-- Left Column (Config) -->
+                <div class="lg:col-span-7 flex flex-col gap-8">
+                    <!-- Monitoring Configuration -->
+                    <section class="bg-surface dark:bg-slate-900/60 rounded-3xl border border-outline dark:border-slate-800 shadow-sm overflow-hidden flex flex-col backdrop-blur-sm">
+                        <div class="px-6 py-4 border-b border-outline dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 flex justify-between items-center">
+                            <div class="flex items-center gap-2">
+                                <span class="material-symbols-outlined text-primary text-[20px]">radar</span>
+                                <h4 class="text-[11px] font-bold uppercase tracking-widest text-slate-900 dark:text-white">Monitoring Configuration</h4>
+                            </div>
+                            <!-- Status Pill -->
+                            <div class="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-900/20 px-2.5 py-1 rounded-full border border-emerald-200 dark:border-emerald-800/50">
+                                <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                                <span class="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wide">Ready</span>
+                            </div>
+                        </div>
+                        <div class="p-8 flex flex-col gap-6">
+                            <!-- Target Input -->
+                            <div class="flex flex-col gap-2">
+                                <label class="text-[11px] font-bold uppercase tracking-widest text-slate-500">Monitor Target</label>
+                                <div class="relative">
+                                    <input type="text" class="w-full h-12 bg-slate-50 dark:bg-slate-800/50 border border-outline dark:border-slate-700 rounded-xl text-sm font-bold focus:ring-4 focus:ring-primary/10 focus:border-primary px-4 outline-none transition-all" placeholder="Enter Group ID or Phone Number...">
+                                    <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[20px]">radar</span>
+                                </div>
+                            </div>
+                            <!-- Listening Mode Toggle -->
+                            <div class="flex items-center justify-between p-5 rounded-2xl bg-slate-50/50 dark:bg-slate-800/30 border border-outline dark:border-slate-700">
+                                <div>
+                                    <h5 class="text-sm font-bold text-slate-900 dark:text-white mb-0.5">AI Listening Mode</h5>
+                                    <p class="text-[12px] text-slate-500 font-medium">Process incoming messages without replying immediately.</p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input checked="" type="checkbox" value="" class="sr-only peer">
+                                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 dark:peer-focus:ring-primary/10 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
+                                </label>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- AI Logic & Settings -->
+                    <section class="bg-surface dark:bg-slate-900/60 rounded-3xl border border-outline dark:border-slate-800 shadow-sm overflow-hidden flex flex-col flex-1 backdrop-blur-sm">
+                        <div class="px-6 py-4 border-b border-outline dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 flex justify-between items-center">
+                            <div class="flex items-center gap-2">
+                                <span class="material-symbols-outlined text-primary text-[20px]">psychology</span>
+                                <h4 class="text-[11px] font-bold uppercase tracking-widest text-slate-900 dark:text-white">AI Logic & Settings</h4>
+                            </div>
+                            <!-- Mode Switcher -->
+                            <div class="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-outline dark:border-slate-700">
+                                <button class="px-4 py-1.5 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm text-xs font-bold transition-all" id="btn-simple">Simple</button>
+                                <button class="px-4 py-1.5 rounded-lg text-slate-500 dark:text-slate-400 text-xs font-bold hover:text-slate-900 dark:hover:text-white transition-all" id="btn-json">JSON</button>
+                            </div>
+                        </div>
+                        <div class="p-8 flex flex-col gap-6 flex-1">
+                            <!-- Simple Mode View -->
+                            <div class="flex flex-col gap-6 h-full" id="view-simple">
+                                <div class="flex flex-col gap-2 flex-1">
+                                    <label class="text-[11px] font-bold uppercase tracking-widest text-slate-500">System Prompt (Kepribadian)</label>
+                                    <textarea class="w-full flex-1 bg-slate-50 dark:bg-slate-800/50 border border-outline dark:border-slate-700 rounded-2xl p-4 text-sm font-bold focus:ring-4 focus:ring-primary/10 focus:border-primary text-slate-900 dark:text-white resize-none min-h-[120px] outline-none transition-all shadow-inner" placeholder="Contoh: Anda adalah asisten pendukung yang ramah dan ringkas untuk NoorByte. Selalu gunakan nada profesional..."></textarea>
+                                </div>
+                                <div class="flex flex-col gap-2 flex-1">
+                                    <label class="text-[11px] font-bold uppercase tracking-widest text-slate-500">Data Konteks (Basis Pengetahuan)</label>
+                                    <textarea class="w-full flex-1 bg-slate-50 dark:bg-slate-800/50 border border-outline dark:border-slate-700 rounded-2xl p-4 text-sm font-bold focus:ring-4 focus:ring-primary/10 focus:border-primary text-slate-900 dark:text-white resize-none min-h-[120px] outline-none transition-all shadow-inner" placeholder="Tempelkan tautan FAQ atau data terstruktur di sini sebagai referensi AI..."></textarea>
+                                </div>
+                            </div>
+                            <!-- JSON Mode View (Hidden by default) -->
+                            <div class="hidden flex-col gap-2 h-full" id="view-json">
+                                <label class="text-[11px] font-bold uppercase tracking-widest text-slate-500">Configuration JSON</label>
+                                <div class="relative flex-1 bg-[#0f172a] rounded-2xl border border-outline dark:border-slate-800 overflow-hidden min-h-[260px] flex flex-col shadow-inner">
+                                    <div class="bg-slate-800/50 px-4 py-2 border-b border-slate-700/50 flex justify-between items-center shrink-0">
+                                        <span class="text-[10px] text-slate-400 font-mono uppercase tracking-widest font-bold">config.json</span>
+                                        <button class="text-slate-400 hover:text-white transition-colors"><span class="material-symbols-outlined text-sm">content_copy</span></button>
+                                    </div>
+                                    <textarea class="w-full flex-1 bg-transparent p-6 text-[13px] text-emerald-400 font-mono focus:outline-none resize-none scrollbar-hide" spellcheck="false">{
+  "model": "gpt-4-turbo",
+  "temperature": 0.3,
+  "max_tokens": 150,
+  "system_prompt": "You are a Level 1 Support Bot.",
+  "triggers": [
+    {
+      "keyword": "billing",
+      "action": "escalate"
+    },
+    {
+      "intent": "greeting",
+      "action": "reply_standard"
+    }
+  ]
+}</textarea>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="px-8 pb-8 flex justify-end">
+                            <button class="px-10 py-3 rounded-xl bg-primary text-white text-sm font-black shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all active:scale-[0.98] flex items-center gap-2">
+                                <span class="material-symbols-outlined text-lg">save</span>
+                                <span>Save Settings</span>
+                            </button>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- Right Column (Real-time Log) -->
+                <div class="lg:col-span-5 flex flex-col">
+                    <section class="bg-surface dark:bg-slate-900/60 rounded-3xl border border-outline dark:border-slate-800 shadow-sm flex flex-col h-full overflow-hidden backdrop-blur-sm">
+                        <div class="px-6 py-4 border-b border-outline dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 flex justify-between items-center shrink-0">
+                            <div class="flex items-center gap-2">
+                                <span class="material-symbols-outlined text-primary text-[20px]">terminal</span>
+                                <h4 class="text-[11px] font-bold uppercase tracking-widest text-slate-900 dark:text-white">Real-time Activity</h4>
+                            </div>
+                            <span class="flex h-2 w-2 relative">
+                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                            </span>
+                        </div>
+                        <!-- Terminal Log Area -->
+                        <div class="flex-1 bg-[#0f172a] p-6 overflow-y-auto font-mono text-[12px] flex flex-col gap-6 scrollbar-hide shadow-inner">
+                            <!-- Log Entry 1: Incoming -->
+                            <div class="flex flex-col gap-2">
+                                <div class="flex items-center gap-3 text-slate-500 text-[10px] font-bold">
+                                    <span class="">10:42:01 AM</span>
+                                    <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 uppercase tracking-widest">Incoming</span>
+                                    <span class="text-slate-400">+1 555-0199</span>
+                                </div>
+                                <div class="text-slate-300 pl-4 border-l-2 border-slate-700 italic">
+                                    "How do I reset my API key? I lost access."
+                                </div>
+                            </div>
+                            <!-- Log Entry 2: Processing -->
+                            <div class="flex flex-col gap-2">
+                                <div class="flex items-center gap-3 text-slate-500 text-[10px] font-bold">
+                                    <span class="">10:42:02 AM</span>
+                                    <span class="px-2 py-0.5 rounded bg-blue-900/30 text-blue-400 border border-blue-800/30 uppercase tracking-widest">Processing</span>
+                                </div>
+                                <div class="text-blue-300/70 pl-4 border-l-2 border-blue-900/30 text-[11px]">
+                                    [Intent detected: api_key_reset (conf: 0.94)]<br>
+                                    [Fetching policy: doc_id_442]<br>
+                                    [Generating draft...]
+                                </div>
+                            </div>
+                            <!-- Log Entry 3: Outgoing -->
+                            <div class="flex flex-col gap-2">
+                                <div class="flex items-center gap-3 text-slate-500 text-[10px] font-bold">
+                                    <span class="">10:42:04 AM</span>
+                                    <span class="px-2 py-0.5 rounded bg-emerald-900/30 text-emerald-400 border border-emerald-800/30 uppercase tracking-widest">Outgoing</span>
+                                    <span class="text-slate-400">Auto-Reply</span>
+                                </div>
+                                <div class="text-emerald-400/90 pl-4 border-l-2 border-emerald-900/30">
+                                    "Hello! To reset your API key, log into the Connect Blue dashboard, navigate to 'API Keys' in the sidebar, and click 'Rotate Key'..."
+                                </div>
+                            </div>
+                            <!-- Empty State / Cursor -->
+                            <div class="mt-4 flex items-center text-slate-600 gap-2 font-bold uppercase tracking-widest text-[10px]">
+                                <span class="">Listening for events...</span>
+                                <span class="w-1.5 h-3.5 bg-primary animate-pulse"></span>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script src="/js/sidebar.js"></script>
+<script>
+    // Simple View Toggling Logic
+    const btnSimple = document.getElementById('btn-simple');
+    const btnJson = document.getElementById('btn-json');
+    const viewSimple = document.getElementById('view-simple');
+    const viewJson = document.getElementById('view-json');
+
+    function switchView(mode) {
+        if (mode === 'simple') {
+            btnSimple.className = 'px-4 py-1.5 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm text-xs font-bold transition-all';
+            btnJson.className = 'px-4 py-1.5 rounded-lg text-slate-500 dark:text-slate-400 text-xs font-bold hover:text-slate-900 dark:hover:text-white transition-all';
+            viewSimple.classList.remove('hidden');
+            viewSimple.classList.add('flex');
+            viewJson.classList.add('hidden');
+            viewJson.classList.remove('flex');
+        } else {
+            btnJson.className = 'px-4 py-1.5 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm text-xs font-bold transition-all';
+            btnSimple.className = 'px-4 py-1.5 rounded-lg text-slate-500 dark:text-slate-400 text-xs font-bold hover:text-slate-900 dark:hover:text-white transition-all';
+            viewJson.classList.remove('hidden');
+            viewJson.classList.add('flex');
+            viewSimple.classList.add('hidden');
+            viewSimple.classList.remove('flex');
+        }
+    }
+
+    btnSimple.addEventListener('click', () => switchView('simple'));
+    btnJson.addEventListener('click', () => switchView('json'));
+</script>
+</body>
+</html>
