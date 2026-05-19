@@ -1,4 +1,4 @@
-'use strict';
+﻿'use strict';
 
 // Guard against double-injection
 if (window.__AUTO_LCR_IG__) {
@@ -8,12 +8,12 @@ if (window.__AUTO_LCR_IG__) {
 
   const SELECTORS = {
     // height="24" = post action bar; height="16" = comment like — this is the diff
-    likeSvg:        'svg[aria-label="Like"][height="24"], svg[aria-label="Suka"][height="24"]',
-    unlikeSvg:      'svg[aria-label="Unlike"][height="24"], svg[aria-label="Tidak Suka"][height="24"]',
+    likeSvg: 'svg[aria-label="Like"][height="24"], svg[aria-label="Suka"][height="24"]',
+    unlikeSvg: 'svg[aria-label="Unlike"][height="24"], svg[aria-label="Tidak Suka"][height="24"]',
 
     // Comment icon SVG
-    commentSvg:     'svg[aria-label="Comment"], svg[aria-label="Komentar"]',
-    commentInput:   'textarea[aria-label="Add a comment\u2026"], textarea[placeholder*="comment" i], textarea[placeholder*="komentar" i]',
+    commentSvg: 'svg[aria-label="Comment"], svg[aria-label="Komentar"]',
+    commentInput: 'textarea[aria-label="Add a comment\u2026"], textarea[placeholder*="comment" i], textarea[placeholder*="komentar" i]',
 
     // Repost button — height="24" excludes the h22 corner badge;
     // :not(:has(circle)) excludes the purple circular floating badge (has <circle> inside SVG)
@@ -45,11 +45,11 @@ if (window.__AUTO_LCR_IG__) {
     while (fiber) {
       const props = fiber.memoizedProps || fiber.pendingProps;
       if (props && typeof props.onClick === 'function') {
-        props.onClick({ 
-            type: 'click', target: el, currentTarget: el, 
-            bubbles: true, cancelable: true, 
-            preventDefault: () => {}, stopPropagation: () => {}, 
-            nativeEvent: new MouseEvent('click') 
+        props.onClick({
+          type: 'click', target: el, currentTarget: el,
+          bubbles: true, cancelable: true,
+          preventDefault: () => { }, stopPropagation: () => { },
+          nativeEvent: new MouseEvent('click')
         });
         return true;
       }
@@ -69,7 +69,7 @@ if (window.__AUTO_LCR_IG__) {
   }
 
   function sendLog(message, type = 'info') {
-    chrome.runtime.sendMessage({ type: 'LOG', message, logType: type }).catch(()=>{});
+    chrome.runtime.sendMessage({ type: 'LOG', message, logType: type }).catch(() => { });
   }
 
   async function likePost() {
@@ -91,32 +91,32 @@ if (window.__AUTO_LCR_IG__) {
     let input = document.querySelector(SELECTORS.commentInput);
     if (!input) {
       const trigger = findClickable(SELECTORS.commentSvg);
-      if (trigger) { 
-          sendLog('💬 Membuka panel komentar...', 'info'); 
-          triggerClick(trigger); 
-          await sleep(1500); 
+      if (trigger) {
+        sendLog('💬 Membuka panel komentar...', 'info');
+        triggerClick(trigger);
+        await sleep(1500);
       }
     }
     input = await waitForEl(SELECTORS.commentInput);
     sendLog(`💬 Mengetik komentar...`, 'info');
-    
+
     input.focus();
     document.execCommand('selectAll', false, null);
     document.execCommand('delete', false, null);
     document.execCommand('insertText', false, text);
     input.dispatchEvent(new Event('input', { bubbles: true }));
     input.dispatchEvent(new Event('change', { bubbles: true }));
-    
+
     await sleep(1000);
 
     const form = input.closest('form');
     const findSubmit = () => [...document.querySelectorAll('[role="button"], button')].find(
-        el => (el.textContent.trim() === 'Post' || el.textContent.trim() === 'Bagikan') && (!form || el.closest('form') === form)
+      el => (el.textContent.trim() === 'Post' || el.textContent.trim() === 'Bagikan') && (!form || el.closest('form') === form)
     );
-    
+
     const submitBtn = findSubmit();
     if (submitBtn) {
-      triggerClick(submitBtn); 
+      triggerClick(submitBtn);
       await sleep(2000);
       sendLog('✅ Komentar terkirim!', 'success');
       return { action: 'comment', skipped: false };
@@ -128,8 +128,8 @@ if (window.__AUTO_LCR_IG__) {
     const scope = document.querySelector('article') || document;
     const svg = scope.querySelector(SELECTORS.repostSvg);
     if (!svg) {
-        sendLog('🔁 Tombol Repost tidak ditemukan.', 'warning');
-        return { action: 'repost', error: 'Tombol repost tidak ada' };
+      sendLog('🔁 Tombol Repost tidak ditemukan.', 'warning');
+      return { action: 'repost', error: 'Tombol repost tidak ada' };
     }
 
     const pathD = svg.querySelector('path')?.getAttribute('d') ?? '';
@@ -140,7 +140,7 @@ if (window.__AUTO_LCR_IG__) {
 
     sendLog('🔁 Melakukan Repost...', 'info');
     const btn = findClickable(SELECTORS.repostSvg);
-    triggerClick(btn || svg); 
+    triggerClick(btn || svg);
     await sleep(1500);
     sendLog('✅ Repost sukses!', 'success');
     return { action: 'repost', skipped: false };
@@ -155,24 +155,24 @@ if (window.__AUTO_LCR_IG__) {
       sendResponse({ received: true });
       return true;
     }
-    
+
     isRunning = true;
     sendResponse({ received: true });
 
     (async () => {
       try {
-        sendLog('🚀 Memulai rangkaian aksi Instagram Local...', 'info');
+        sendLog('🚀 Memulai misi Pulse LCR: Instagram...', 'info');
         if (document.querySelector('input[name="username"], [data-testid="royal_login_button"]')) {
           throw new Error('Belum login ke Instagram!');
         }
 
-        await waitForEl(SELECTORS.likeSvg, 15000);
+        sendLog('? Menunggu konten Instagram termuat...', 'info'); await waitForEl('article, [role=\"\"main\"\"] img, [role=\"\"main\"\"] video', 20000); await sleep(1000); await waitForEl(SELECTORS.likeSvg, 10000);
         sendLog('📌 Postingan siap dieksekusi.', 'success');
 
         const results = [];
         const randomDelay = async () => {
-          const ms = 5000 + Math.random() * 3000; 
-          sendLog(`⏳ Jeda aman (${(ms/1000).toFixed(1)}s)...`, 'info');
+          const ms = 3000 + Math.random() * 2000;
+          sendLog(`⏳ Jeda aman (${(ms / 1000).toFixed(1)}s)...`, 'info');
           await sleep(ms);
         };
 
@@ -194,7 +194,7 @@ if (window.__AUTO_LCR_IG__) {
         sendLog('📸 Menyiapkan screenshot...', 'info');
         window.scrollTo({ top: 0, behavior: 'smooth' });
         await sleep(2000);
-        
+
         chrome.runtime.sendMessage({ type: 'ACTIONS_DONE', results });
       } catch (err) {
         sendLog(`❌ Error: ${err.message}`, 'error');
@@ -204,3 +204,4 @@ if (window.__AUTO_LCR_IG__) {
     return true;
   });
 }
+

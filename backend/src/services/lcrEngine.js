@@ -7,6 +7,7 @@ const puppeteer = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const path = require('path');
 const fs = require('fs');
+const { normalizeUrl, detectPlatform } = require('../helpers/lcrUtils');
 
 // Aktifkan mode stealth
 puppeteer.use(StealthPlugin());
@@ -27,11 +28,20 @@ function getLcrStatus(sessionId = 'default') {
 }
 
 // ==========================================
-// HELPER: LOG REAL-TIME VIA SOCKET.IO
+// HELPER: LOG REAL-TIME VIA SOCKET.IOATAU EMITTER
 // ==========================================
 function sendPulseLog(message, type = 'info', sessionId = 'default') {
     console.log(`[PULSE][${sessionId}] ${message}`);
-    if (global.io) {
+    const session = activeSessions.get(sessionId);
+    
+    if (session && session.emitter) {
+        session.emitter.emit('pulse_log', {
+            message,
+            type,
+            sessionId,
+            timestamp: new Date().toLocaleTimeString('id-ID', { hour12: false })
+        });
+    } else if (global.io) {
         global.io.emit('pulse_log', {
             message,
             type,
@@ -155,52 +165,71 @@ async function injectLcrUtilities(page) {
     });
 }
 
-// ==========================================
-// DETECT PLATFORM DARI URL
-// ==========================================
-function detectPlatform(url) {
-    if (/instagram\.com/i.test(url)) return 'instagram';
-    if (/tiktok\.com/i.test(url)) return 'tiktok';
-    return 'unknown';
-}
+// normalizeUrl dan detectPlatform diimport dari '../helpers/lcrUtils'
 
 // ==========================================
 // GATEKEEPER: Penjaga Halaman Postingan (X-Ray Vision)
 // ==========================================
 async function waitForPostReady(page, platform, sessionId = 'default') {
+    const session = activeSessions.get(sessionId);
     for (let w = 0; w < 60; w++) { // Maksimal 5 Menit
-        const isBlocked = await page.evaluate((plat) => {
+        if (session && session.abortSignal && session.abortSignal.aborted) {
+            sendPulseLog('⚠️ Abort signal terdeteksi di Gatekeeper, membatalkan...', 'warning', sessionId);
+            return false;
+        }
+
+        const loadStatus = await page.evaluate((plat) => {
             const isVisible = (el) => el && el.offsetWidth > 0 && el.offsetHeight > 0;
+            
+            // 1. Cek Login/Challenge Wall
             if (plat === 'instagram') {
                 const loginInput = document.querySelector('input[name="username"]');
                 const loginModalBtn = document.querySelector('[data-testid="royal_login_button"], a[href*="/accounts/login/"]');
                 const isChallenge = window.location.href.includes('challenge') || window.location.href.includes('checkpoint');
-                return isVisible(loginInput) || isVisible(loginModalBtn) || isChallenge;
+                if (isVisible(loginInput) || isVisible(loginModalBtn) || isChallenge) return 'blocked';
+                
+                // 2. Cek apakah konten post sudah muncul (Image/Video atau Article)
+                const postContent = document.querySelector('article, [role="main"] img, [role="main"] video');
+                if (!postContent) return 'loading';
             } else if (plat === 'tiktok') {
                 const loginModal = document.querySelector('[data-e2e="login-modal"]');
                 const loginForm = document.querySelector('form[action*="login"]');
                 const isCaptcha = window.location.href.includes('captcha') || window.location.href.includes('verification');
-                return isVisible(loginModal) || isVisible(loginForm) || isCaptcha;
+                if (isVisible(loginModal) || isVisible(loginForm) || isCaptcha) return 'blocked';
+
+                // 2. Cek apakah video sudah muncul
+                const video = document.querySelector('video');
+                const commentArea = document.querySelector('[data-e2e="comment-list"]');
+                if (!video && !commentArea) return 'loading';
             }
-            return false;
+            return 'ready';
         }, platform);
 
-        if (!isBlocked) {
-            if (w > 0) sendPulseLog(`✅ Halangan teratasi oleh Master! Melanjutkan eksekusi detik ini juga...`, 'success', sessionId);
-            else sendPulseLog(`✅ Jalur aman (Tidak ada Login Wall). Langsung eksekusi!`, 'success', sessionId);
+        if (loadStatus === 'ready') {
+            if (w > 0) sendPulseLog(`✅ Halangan teratasi dan konten termuat! Melanjutkan...`, 'success', sessionId);
+            else sendPulseLog(`✅ Konten siap. Langsung eksekusi!`, 'success', sessionId);
             return true;
         }
 
-        // AUTO-ESC attempt for non-critical walls
-        if (w % 2 === 0) {
-            await page.keyboard.press('Escape');
-            await page.evaluate(() => window.__LCR_UTILS__?.killPopups?.()).catch(() => { });
-            await sleep(1000);
+        if (loadStatus === 'blocked') {
+            // AUTO-ESC attempt for non-critical walls
+            if (w % 2 === 0) {
+                await page.keyboard.press('Escape');
+                await page.evaluate(() => window.__LCR_UTILS__?.killPopups?.()).catch(() => { });
+                await sleep(1000);
+            }
+
+            if (w === 0) sendPulseLog(`🚨 [GATEKEEPER] Tembok Login menghalangi Postingan! Silakan login di browser...`, 'warning', sessionId);
+            else if (w % 6 === 0) sendPulseLog(`⏳ [GATEKEEPER] Menunggu Bos login... (Sisa waktu: ${(5 - (w / 12)).toFixed(1)} menit)`, 'warning', sessionId);
+        } else {
+            // Status: loading
+            if (w % 6 === 0 && w > 0) sendPulseLog(`⏳ Menunggu konten ${platform} termuat sepenuhnya...`, 'info', sessionId);
         }
 
-        if (w === 0) sendPulseLog(`🚨 [GATEKEEPER] Tembok Login menghalangi Postingan! Silakan login di browser...`, 'warning', sessionId);
-        else if (w % 6 === 0) sendPulseLog(`⏳ [GATEKEEPER] Menunggu Bos login... (Sisa waktu: ${(5 - (w / 12)).toFixed(1)} menit)`, 'warning', sessionId);
-
+        if (session && session.abortSignal && session.abortSignal.aborted) {
+            sendPulseLog('⚠️ Abort signal terdeteksi saat sleep, membatalkan...', 'warning', sessionId);
+            return false;
+        }
         await sleep(5000);
     }
     return false;
@@ -298,7 +327,12 @@ async function instagramLogin(page, username, password, sessionId = 'default') {
 
     sendPulseLog(`🚨 [HOLD] Sistem menahan progress! Silakan isi kredensial / 2FA di browser. (Waktu: 5 Menit)`, 'warning', sessionId);
     let isSafe = false;
+    const session = activeSessions.get(sessionId);
     for (let w = 0; w < 60; w++) {
+        if (session && session.abortSignal && session.abortSignal.aborted) {
+            sendPulseLog('⚠️ Abort signal terdeteksi di Login IG, membatalkan...', 'warning', sessionId);
+            return false;
+        }
         await sleep(5000);
         await page.evaluate(() => window.__LCR_UTILS__?.killPopups?.()).catch(() => { });
         const currentCookies = await page.cookies();
@@ -389,7 +423,12 @@ async function tiktokLogin(page, username, password, sessionId = 'default', sess
 
     sendPulseLog(`🚨 [HOLD] Sistem menahan progress! Silakan selesaikan login / Captcha di browser. (Waktu: 5 Menit)`, 'warning', sessionId);
     let isSafe = false;
+    const session = activeSessions.get(sessionId);
     for (let w = 0; w < 60; w++) {
+        if (session && session.abortSignal && session.abortSignal.aborted) {
+            sendPulseLog('⚠️ Abort signal terdeteksi di Login TikTok, membatalkan...', 'warning', sessionId);
+            return false;
+        }
         await sleep(5000);
         await page.evaluate(() => window.__LCR_UTILS__?.killPopups?.()).catch(() => { });
 
@@ -451,7 +490,8 @@ async function instagramActions(page, commentText) {
             }
         } catch (e) { results.push({ action: 'like', error: e.message }); }
 
-        await utils.sleep(2000);
+        const randomDelay = (min, max) => utils.sleep(min + Math.random() * (max - min));
+        await randomDelay(3000, 5000);
 
         // 2. COMMENT
         try {
@@ -475,7 +515,13 @@ async function instagramActions(page, commentText) {
                         el => /^(Post|Kirim|Bagikan)$/i.test(el.textContent.trim()) && (!form || el.closest('form') === form)
                     );
                     
-                    const postBtn = findSubmit();
+                    let postBtn = findSubmit();
+                    if (!postBtn) {
+                        // Wait a bit if not immediately found (SPA behavior)
+                        await utils.sleep(1000);
+                        postBtn = findSubmit();
+                    }
+
                     if (postBtn) {
                         utils.triggerClick(postBtn);
                         await utils.sleep(3000);
@@ -528,6 +574,10 @@ async function instagramActions(page, commentText) {
             }
         } catch (e) { results.push({ action: 'repost', error: e.message }); }
 
+        // Scroll back to top so screenshot captures the post from the beginning
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        await utils.sleep(1500);
+
         return results;
     }, commentText);
 }
@@ -574,21 +624,21 @@ async function tiktokActions(page, commentText) {
 
         const randomDelay = (min, max) => utils.sleep(min + Math.random() * (max - min));
 
+        const checkLiked = () => {
+            if (document.querySelector(SELS.likeBtnActive)) return true;
+            const activeIcon = document.querySelector('[data-e2e="like-active-icon"]');
+            if (activeIcon) return true;
+            const icon = document.querySelector('[data-e2e="like-icon"]');
+            if (!icon) return false;
+            const btn = icon.closest('button');
+            return (btn && btn.getAttribute('aria-pressed') === 'true') || 
+                   /255,\s*43,\s*85|254,\s*44,\s*85|255,\s*59,\s*92|255,\s*76,\s*58/.test(window.getComputedStyle(icon).fill || '');
+        };
+
         await utils.killPopups();
 
         // 1. LIKE
         try {
-            const checkLiked = () => {
-                if (document.querySelector(SELS.likeBtnActive)) return true;
-                const activeIcon = document.querySelector('[data-e2e="like-active-icon"]');
-                if (activeIcon) return true;
-                const icon = document.querySelector('[data-e2e="like-icon"]');
-                if (!icon) return false;
-                const btn = icon.closest('button');
-                return (btn && btn.getAttribute('aria-pressed') === 'true') || 
-                       /255,\s*43,\s*85|254,\s*44,\s*85|255,\s*59,\s*92|255,\s*76,\s*58/.test(window.getComputedStyle(icon).fill || '');
-            };
-
             if (checkLiked()) {
                 results.push({ action: 'like', skipped: true });
             } else {
@@ -603,7 +653,7 @@ async function tiktokActions(page, commentText) {
             }
         } catch (e) { results.push({ action: 'like', error: e.message }); }
 
-        await randomDelay(2000, 4000);
+        await randomDelay(3000, 5000);
 
         // 2. COMMENT
         try {
@@ -641,7 +691,7 @@ async function tiktokActions(page, commentText) {
             }
         } catch (e) { results.push({ action: 'comment', error: e.message }); }
 
-        await randomDelay(2000, 4000);
+        await randomDelay(3000, 5000);
 
         // 3. REPOST
         try {
@@ -668,6 +718,23 @@ async function tiktokActions(page, commentText) {
             }
         } catch (e) { results.push({ action: 'repost', error: e.message }); }
 
+        // 4. FINAL VALIDATION (RE-LIKE IF FAILED) BEFORE SCREENSHOT
+        try {
+            if (!checkLiked()) {
+                const selector = '[data-e2e="like-icon"]';
+                if (window.puppeteerClickLcr) await window.puppeteerClickLcr(selector);
+                else {
+                    const btn = document.querySelector(SELS.likeBtn);
+                    if (btn) utils.triggerClick(btn);
+                }
+                await utils.sleep(2000);
+            }
+        } catch (e) { }
+
+        // Scroll back to top so screenshot captures the post from the beginning
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        await utils.sleep(1500);
+
         return results;
     }, commentText);
 }
@@ -683,7 +750,13 @@ async function executeLCR(identity, payload, options = {}) {
         return { status: false, message: 'Session already running.' };
     }
 
-    const sessionState = { status: 'running', results: [], error: null };
+    const sessionState = { 
+        status: 'running', 
+        results: [], 
+        error: null,
+        emitter: options.eventEmitter || null,
+        abortSignal: options.abortSignal || null
+    };
     activeSessions.set(sessionId, sessionState);
 
     const links = (payload.links || '').split('\n').map(l => l.trim()).filter(l => l.length > 0);
@@ -739,7 +812,13 @@ async function executeLCR(identity, payload, options = {}) {
         let loginDone = {};
 
         for (let i = 0; i < links.length; i++) {
-            const url = links[i];
+            if (sessionState.abortSignal && sessionState.abortSignal.aborted) {
+                sendPulseLog('❌ Eksekusi Dibatalkan oleh AbortSignal.', 'warning', sessionId);
+                sessionState.status = 'aborted';
+                break;
+            }
+
+            let url = normalizeUrl(links[i]);
             const comment = comments[i] || comments[0] || '';
             const platform = detectPlatform(url);
 
@@ -787,19 +866,55 @@ async function executeLCR(identity, payload, options = {}) {
                     comment: actionResults.find(r => r.action === 'comment'),
                     repost: actionResults.find(r => r.action === 'repost')
                 };
+
+                // 📸 SCREENSHOT LOGIC (Ported from service_worker.js)
+                try {
+                    const screenshotDir = path.join(process.cwd(), 'screenshots');
+                    if (!fs.existsSync(screenshotDir)) fs.mkdirSync(screenshotDir, { recursive: true });
+
+                    const timestamp = Date.now();
+                    const hostname = new URL(url).hostname.replace('www.', '');
+                    const filename = `auto-lcr-${hostname}-${timestamp}.png`;
+                    const screenshotPath = path.join(screenshotDir, filename);
+
+                    await page.screenshot({ path: screenshotPath, fullPage: false });
+                    sendPulseLog(`📸 Screenshot tersimpan: ${filename}`, 'success', sessionId);
+                    finalResult.screenshot = filename;
+                } catch (ssErr) {
+                    sendPulseLog(`⚠️ Gagal mengambil screenshot: ${ssErr.message}`, 'warning', sessionId);
+                }
+
                 sessionState.results.push(finalResult);
-                if (global.io) global.io.emit('pulse_progress', { sessionId, current: i + 1, total: links.length, result: finalResult });
+                
+                if (sessionState.emitter) {
+                    sessionState.emitter.emit('pulse_progress', { sessionId, current: i + 1, total: links.length, result: finalResult });
+                } else if (global.io) {
+                    global.io.emit('pulse_progress', { sessionId, current: i + 1, total: links.length, result: finalResult });
+                }
 
             } catch (e) {
                 sendPulseLog(`❌ Error: ${e.message}`, 'error', sessionId);
                 sessionState.results.push({ url, platform, error: e.message });
             }
 
-            if (i < links.length - 1) await randomDelay(5000, 10000);
+            if (i < links.length - 1) {
+                sendPulseLog(`⏳ Menunggu 30 detik sebelum link berikutnya (Cooling down)...`, 'info', sessionId);
+                for (let s = 0; s < 30; s++) {
+                    if (sessionState.abortSignal && sessionState.abortSignal.aborted) {
+                        sendPulseLog('❌ Eksekusi Dibatalkan oleh AbortSignal saat cooling down.', 'warning', sessionId);
+                        sessionState.status = 'aborted';
+                        break;
+                    }
+                    await sleep(1000);
+                }
+                if (sessionState.status === 'aborted') break;
+            }
         }
 
-        sessionState.status = 'done';
-        sendPulseLog('✅ Misi Selesai!', 'success', sessionId);
+        if (sessionState.status !== 'aborted') {
+            sessionState.status = 'done';
+            sendPulseLog('✅ Misi Selesai!', 'success', sessionId);
+        }
 
     } catch (err) {
         sendPulseLog(`💥 FATAL: ${err.message}`, 'error', sessionId);
@@ -824,7 +939,8 @@ async function executeLCR(identity, payload, options = {}) {
         }
     }
 
-    return { status: true, results: sessionState.results };
+    const isSuccess = sessionState.status === 'done';
+    return { status: isSuccess, state: sessionState.status, results: sessionState.results };
 }
 
 module.exports = { executeLCR, getLcrStatus };

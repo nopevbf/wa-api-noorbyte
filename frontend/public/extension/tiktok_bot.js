@@ -1,4 +1,4 @@
-'use strict';
+﻿'use strict';
 
 // Guard against double-injection
 if (window.__AUTO_LCR_TT__) {
@@ -7,13 +7,13 @@ if (window.__AUTO_LCR_TT__) {
   window.__AUTO_LCR_TT__ = true;
 
   const SELECTORS = {
-    likeBtn:        'button:has([data-e2e="like-icon"])',
-    likeBtnActive:  'button[aria-pressed="true"]:has([data-e2e="like-icon"]), button:has([data-e2e="like-icon"][style*="fill: rgb(255, 43, 85)"]), button:has([data-e2e="like-icon"][style*="fill: rgb(254, 44, 85)"])',
-    commentBtn:     'button:has([data-e2e="comment-icon"])',
-    commentInput:   '[data-e2e="comment-text"] [contenteditable="true"]',
-    commentPost:    'button[data-e2e="comment-post"]',
-    shareBtn:       'button[aria-label*="Share video"]',
-    repostOption:   '[data-e2e="share-repost"]',
+    likeBtn: 'button:has([data-e2e="like-icon"])',
+    likeBtnActive: 'button[aria-pressed="true"]:has([data-e2e="like-icon"]), button:has([data-e2e="like-icon"][style*="fill: rgb(255, 43, 85)"]), button:has([data-e2e="like-icon"][style*="fill: rgb(254, 44, 85)"])',
+    commentBtn: 'button:has([data-e2e="comment-icon"])',
+    commentInput: '[data-e2e="comment-text"] [contenteditable="true"]',
+    commentPost: 'button[data-e2e="comment-post"]',
+    shareBtn: 'button[aria-label*="Share video"]',
+    repostOption: '[data-e2e="share-repost"]',
     loginIndicator: 'form[action*="login"], [data-e2e="login-modal"]',
   };
 
@@ -46,7 +46,7 @@ if (window.__AUTO_LCR_TT__) {
     while (fiber) {
       const props = fiber.memoizedProps || fiber.pendingProps;
       if (props && typeof props.onClick === 'function') {
-        props.onClick({ type: 'click', target: el, currentTarget: el, bubbles: true, cancelable: true, preventDefault: () => {}, stopPropagation: () => {}, nativeEvent: new MouseEvent('click') });
+        props.onClick({ type: 'click', target: el, currentTarget: el, bubbles: true, cancelable: true, preventDefault: () => { }, stopPropagation: () => { }, nativeEvent: new MouseEvent('click') });
         return true;
       }
       fiber = fiber.return;
@@ -65,7 +65,7 @@ if (window.__AUTO_LCR_TT__) {
   }
 
   function sendLog(message, type = 'info') {
-    chrome.runtime.sendMessage({ type: 'LOG', message, logType: type }).catch(()=>{});
+    chrome.runtime.sendMessage({ type: 'LOG', message, logType: type }).catch(() => { });
   }
 
   async function likePost() {
@@ -128,13 +128,13 @@ if (window.__AUTO_LCR_TT__) {
       sendResponse({ received: true });
       return true;
     }
-    
+
     isRunning = true;
     sendResponse({ received: true });
 
     (async () => {
       try {
-        sendLog('🚀 Memulai rangkaian aksi TikTok Local...', 'info');
+        sendLog('🚀 Memulai misi Pulse LCR: TikTok...', 'info');
         if (document.querySelector(SELECTORS.loginIndicator)) {
           throw new Error('Belum login ke TikTok!');
         }
@@ -144,8 +144,8 @@ if (window.__AUTO_LCR_TT__) {
 
         const results = [];
         const randomDelay = async () => {
-          const ms = 7000 + Math.random() * 4000; // Minimal 7 detik
-          sendLog(`⏳ Jeda aman (${(ms/1000).toFixed(1)}s)...`, 'info');
+          const ms = 3000 + Math.random() * 2000; // Minimal 7 detik
+          sendLog(`⏳ Jeda aman (${(ms / 1000).toFixed(1)}s)...`, 'info');
           await sleep(ms);
         };
 
@@ -165,9 +165,23 @@ if (window.__AUTO_LCR_TT__) {
         await randomDelay();
 
         sendLog('📸 Menyiapkan screenshot...', 'info');
+        const checkLiked = () => {
+          if (document.querySelector(SELECTORS.likeBtnActive)) return true;
+          const activeIcon = document.querySelector('[data-e2e=\"\"like-active-icon\"\"]');
+          if (activeIcon) return true;
+          const icon = document.querySelector('[data-e2e=\"\"like-icon\"\"]');
+          if (!icon) return false;
+          const btn = icon.closest('button');
+          return (btn && btn.getAttribute('aria-pressed') === 'true') ||
+            /255,\s*43,\s*85|254,\s*44,\s*85|255,\s*59,\s*92|255,\s*76,\s*58/.test(window.getComputedStyle(icon).fill || '');
+        };
+        if (!checkLiked()) {
+          const btn = document.querySelector(SELECTORS.likeBtn);
+          if (btn) { sendLog('❤️ Validasi: Melakukan Like ulang...', 'info'); triggerClick(btn); await sleep(2000); }
+        }
         window.scrollTo({ top: 0, behavior: 'smooth' });
         await sleep(2000);
-        
+
         chrome.runtime.sendMessage({ type: 'ACTIONS_DONE', results });
       } catch (err) {
         sendLog(`❌ Error: ${err.message}`, 'error');
@@ -177,3 +191,4 @@ if (window.__AUTO_LCR_TT__) {
     return true;
   });
 }
+
