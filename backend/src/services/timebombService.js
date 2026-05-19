@@ -142,11 +142,31 @@ function scheduleTimebomb({ targetTime, token, dpUrl, apiKey, payload }) {
       const result = await executeTimebomb(token, dpUrl, payload);
       if (result.success) {
         console.log(`[TIMEBOMB] ✅ Presence submitted successfully for key=${timerKey}`);
+        // Emit socket event to notify frontend if possible
+        if (global.io && apiKey) {
+          global.io.emit(`timebomb-success-${apiKey}`, {
+            timerKey,
+            message: result.message || '✅ Presence submitted successfully'
+          });
+        }
       } else {
         console.error(`[TIMEBOMB] ❌ Presence rejected for key=${timerKey}: ${result.message}`);
+        // Emit socket event to notify frontend if possible
+        if (global.io && apiKey) {
+          global.io.emit(`timebomb-error-${apiKey}`, {
+            timerKey,
+            message: result.message || '❌ Presence rejected'
+          });
+        }
       }
     } catch (err) {
       console.error(`[TIMEBOMB] ❌ Execution failed for key=${timerKey}:`, err.message);
+      if (global.io && apiKey) {
+        global.io.emit(`timebomb-error-${apiKey}`, {
+          timerKey,
+          message: err.message || '❌ Execution failed'
+        });
+      }
     } finally {
       timebombRegistry.delete(timerKey);
     }

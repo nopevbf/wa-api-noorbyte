@@ -60,6 +60,60 @@ document.addEventListener('DOMContentLoaded', async () => {
     let defaultDparagonApiUrl = "";
 
     // ===================================
+    // SOCKET.IO: LISTEN FOR TIMEBOMB SUCCESS
+    // ===================================
+    const socket = io();
+    const myApiKey = localStorage.getItem('noorbyte_session');
+    if (myApiKey) {
+        socket.on(`timebomb-success-${myApiKey}`, (data) => {
+            console.log("[SOCKET] Time-Bomb success received:", data);
+            
+            // 1. Tampilkan Alert Sukses
+            showSystemAlert('TIME-BOMB SUCCESS', data.message, 'success');
+            
+            // 2. Reset Tombol Capture (jika sedang mode standby)
+            const btnCapture = document.getElementById('btnCapture');
+            if (btnCapture) {
+                btnCapture.innerHTML = `<span class="material-symbols-outlined text-xl md:text-2xl">photo_camera</span> Ambil & Kirim`;
+                btnCapture.className = "w-full bg-red-600 hover:bg-red-700 text-white py-3.5 md:py-4 rounded-xl font-black text-sm md:text-lg uppercase tracking-widest flex items-center justify-center gap-3 active:scale-95 transition-all shadow-lg";
+                btnCapture.disabled = false;
+            }
+            
+            // 3. Sembunyikan tombol cancel & munculkan tombol retake
+            const cancelBtn = document.getElementById('btnCancelTimebomb');
+            if (cancelBtn) cancelBtn.classList.add('hidden');
+            const retakeBtn = document.getElementById('btnRetake');
+            if (retakeBtn) retakeBtn.classList.remove('hidden');
+            
+            // 4. RELOAD DATA RIWAYAT (WIDGET)
+            loadRecentAttendanceWidget(true);
+        });
+
+        socket.on(`timebomb-error-${myApiKey}`, (data) => {
+            console.error("[SOCKET] Time-Bomb error received:", data);
+            
+            // 1. Tampilkan Alert Error
+            showSystemAlert('TIME-BOMB FAILED', data.message, 'error');
+            
+            // 2. Reset Tombol Capture ke mode semula agar bisa coba lagi
+            const btnCapture = document.getElementById('btnCapture');
+            if (btnCapture) {
+                btnCapture.innerHTML = `<span class="material-symbols-outlined text-xl md:text-2xl">photo_camera</span> Ambil & Kirim`;
+                btnCapture.className = "w-full bg-red-600 hover:bg-red-700 text-white py-3.5 md:py-4 rounded-xl font-black text-sm md:text-lg uppercase tracking-widest flex items-center justify-center gap-3 active:scale-95 transition-all shadow-lg";
+                btnCapture.disabled = false;
+            }
+
+            // 3. Sembunyikan tombol cancel & munculkan tombol retake
+            const cancelBtn = document.getElementById('btnCancelTimebomb');
+            if (cancelBtn) cancelBtn.classList.add('hidden');
+            const retakeBtn = document.getElementById('btnRetake');
+            if (retakeBtn) retakeBtn.classList.remove('hidden');
+
+            localStorage.removeItem('active_timebomb_key');
+        });
+    }
+
+    // ===================================
     // 0. CEK SESSION (STRICT GUARD)
     // ===================================
     if (typeof isJailbreakSessionValid === 'function' && isJailbreakSessionValid()) {
