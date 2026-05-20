@@ -527,18 +527,20 @@ router.post('/attendance/cancel-timebomb', (req, res) => {
 });
 
 router.post("/ai/save-settings", checkApiKey, (req, res) => {
-  const { ai_enabled, ai_source, ai_provider, ai_api_key, ai_system_prompt, ai_context_data } = req.body;
+  const { ai_enabled, ai_source, ai_provider, ai_api_key, ai_system_prompt, ai_context_data, ai_target } = req.body;
   const apiKey = req.user.api_key;
   try {
       db.prepare(`
           UPDATE users SET 
           ai_enabled = ?, ai_source = ?, ai_provider = ?, 
-          ai_api_key = ?, ai_system_prompt = ?, ai_context_data = ?
+          ai_api_key = ?, ai_system_prompt = ?, ai_context_data = ?,
+          ai_target = ?
           WHERE api_key = ?
       `).run(
           ai_enabled ? 1 : 0, ai_source, ai_provider,
           ai_api_key ? encrypt(ai_api_key) : null,
           ai_system_prompt, ai_context_data,
+          ai_target,
           apiKey
       );
       res.json({ status: true, message: "Pengaturan AI berhasil disimpan." });
@@ -548,7 +550,7 @@ router.post("/ai/save-settings", checkApiKey, (req, res) => {
 });
 
 router.get("/ai/settings", checkApiKey, (req, res) => {
-  const { ai_enabled, ai_source, ai_provider, ai_api_key, ai_system_prompt, ai_context_data } = req.user;
+  const { ai_enabled, ai_source, ai_provider, ai_api_key, ai_system_prompt, ai_context_data, ai_target } = req.user;
   res.json({
       status: true,
       data: {
@@ -557,7 +559,8 @@ router.get("/ai/settings", checkApiKey, (req, res) => {
           ai_provider: ai_provider,
           ai_api_key: ai_api_key ? decrypt(ai_api_key) : null,
           ai_system_prompt: ai_system_prompt,
-          ai_context_data: ai_context_data
+          ai_context_data: ai_context_data,
+          ai_target: ai_target
       }
   });
 });

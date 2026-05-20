@@ -2,15 +2,18 @@ const axios = require('axios');
 const { decrypt } = require('../helpers/security');
 
 async function generateAiResponse(config, userMessage) {
-    const { source, provider, customKey, systemPrompt, contextData } = config;
+    const { source, provider: dbProvider, customKey, systemPrompt, contextData } = config;
+    
+    // Ambil API Key dan Provider dari ENV jika source adalah system
     const apiKey = source === 'system' ? process.env.AI_SYSTEM_API_KEY : decrypt(customKey);
+    const provider = source === 'system' ? (process.env.AI_SYSTEM_PROVIDER || dbProvider) : dbProvider;
     
     if (!apiKey) throw new Error('API Key tidak ditemukan.');
 
     const fullPrompt = `${systemPrompt || 'Anda adalah asisten AI.'}\n\nKonteks Tambahan:\n${contextData || '-'}\n\nUser: ${userMessage}`;
 
     if (provider === 'gemini') {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`;
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`;
         const response = await axios.post(url, {
             contents: [{ parts: [{ text: fullPrompt }] }]
         });

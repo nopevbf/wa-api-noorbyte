@@ -6,6 +6,7 @@ jest.mock('axios');
 describe('AI Engine', () => {
     beforeEach(() => {
         process.env.AI_SYSTEM_API_KEY = 'test_key';
+        delete process.env.AI_SYSTEM_PROVIDER;
         jest.clearAllMocks();
     });
 
@@ -38,6 +39,25 @@ describe('AI Engine', () => {
             expect.any(Object),
             expect.any(Object)
         );
+    });
+
+    test('should prioritize AI_SYSTEM_PROVIDER from env if source is system', async () => {
+        process.env.AI_SYSTEM_PROVIDER = 'openai';
+        axios.post.mockResolvedValue({
+            data: { choices: [{ message: { content: 'Env Provider Reply' } }] }
+        });
+
+        // Di DB diset gemini, tapi di env diset openai
+        const config = { source: 'system', provider: 'gemini' };
+        const reply = await generateAiResponse(config, 'Hello');
+
+        expect(reply).toBe('Env Provider Reply');
+        expect(axios.post).toHaveBeenCalledWith(
+            'https://api.openai.com/v1/chat/completions',
+            expect.any(Object),
+            expect.any(Object)
+        );
+        delete process.env.AI_SYSTEM_PROVIDER;
     });
 
     test('should throw error if API key is missing', async () => {

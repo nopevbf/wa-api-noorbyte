@@ -1,8 +1,7 @@
 const Database = require("better-sqlite3");
 const path = require("path");
 
-// Deteksi jika berjalan di Fly.io (menggunakan ENV), jika tidak, gunakan db lokal.
-const dbPath = process.env.DB_PATH || path.join(__dirname, "../../database.db");
+const dbPath = process.env.DB_PATH || (process.env.NODE_ENV === "test" ? path.join(__dirname, "../../database_test.db") : path.join(__dirname, "../../database.db"));
 const db = new Database(dbPath);
 
 db.exec(`
@@ -69,6 +68,7 @@ const migrations = [
   { table: 'users', column: 'ai_api_key', sql: "ALTER TABLE users ADD COLUMN ai_api_key TEXT" },
   { table: 'users', column: 'ai_system_prompt', sql: "ALTER TABLE users ADD COLUMN ai_system_prompt TEXT" },
   { table: 'users', column: 'ai_context_data', sql: "ALTER TABLE users ADD COLUMN ai_context_data TEXT" },
+  { table: 'users', column: 'ai_target', sql: "ALTER TABLE users ADD COLUMN ai_target TEXT" },
 ];
 
 migrations.forEach(({ table, column, sql }) => {

@@ -27,6 +27,13 @@ global.io = new Server(server, {
   cors: corsOptions,
 });
 
+global.io.on('connection', (socket) => {
+    console.log(`[SOCKET] Client connected: ${socket.id}`);
+    socket.on('disconnect', () => {
+        console.log(`[SOCKET] Client disconnected: ${socket.id}`);
+    });
+});
+
 // 3. API Routes
 app.use("/api", apiRoutes);
 

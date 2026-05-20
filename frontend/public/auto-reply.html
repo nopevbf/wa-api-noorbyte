@@ -109,10 +109,11 @@
                             <!-- Target Input -->
                             <div class="flex flex-col gap-2">
                                 <label class="text-[11px] font-bold uppercase tracking-widest text-slate-500">Monitor Target</label>
-                                <div class="relative">
-                                    <input type="text" class="w-full h-12 bg-slate-50 dark:bg-slate-800/50 border border-outline dark:border-slate-700 rounded-xl text-sm font-bold focus:ring-4 focus:ring-primary/10 focus:border-primary px-4 outline-none transition-all" placeholder="Enter Group ID or Phone Number...">
-                                    <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[20px]">radar</span>
+                                <div id="tag-container" class="flex flex-wrap gap-2 p-3 bg-slate-50 dark:bg-slate-800/50 border border-outline dark:border-slate-700 rounded-xl min-h-[48px] focus-within:ring-4 focus-within:ring-primary/10 focus-within:border-primary transition-all">
+                                    <input id="ai-target-input" type="text" class="flex-1 bg-transparent border-none p-0 text-sm font-bold focus:ring-0 outline-none min-w-[120px]" placeholder="Type and hit Enter or Comma...">
+                                    <input id="ai-target" type="hidden">
                                 </div>
+                                <p class="text-[10px] text-slate-400 font-medium">Input Group ID atau Nomor HP. Tekan Enter/Koma untuk menambah tag.</p>
                             </div>
                             <!-- Listening Mode Toggle -->
                             <div class="flex items-center justify-between p-5 rounded-2xl bg-slate-50/50 dark:bg-slate-800/30 border border-outline dark:border-slate-700">
@@ -268,46 +269,8 @@
                             </span>
                         </div>
                         <!-- Terminal Log Area -->
-                        <div class="flex-1 bg-[#0f172a] p-6 overflow-y-auto font-mono text-[12px] flex flex-col gap-6 scrollbar-hide shadow-inner">
-                            <!-- Log Entry 1: Incoming -->
-                            <div class="flex flex-col gap-2">
-                                <div class="flex items-center gap-3 text-slate-500 text-[10px] font-bold">
-                                    <span class="">10:42:01 AM</span>
-                                    <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 uppercase tracking-widest">Incoming</span>
-                                    <span class="text-slate-400">+1 555-0199</span>
-                                </div>
-                                <div class="text-slate-300 pl-4 border-l-2 border-slate-700 italic">
-                                    "How do I reset my API key? I lost access."
-                                </div>
-                            </div>
-                            <!-- Log Entry 2: Processing -->
-                            <div class="flex flex-col gap-2">
-                                <div class="flex items-center gap-3 text-slate-500 text-[10px] font-bold">
-                                    <span class="">10:42:02 AM</span>
-                                    <span class="px-2 py-0.5 rounded bg-blue-900/30 text-blue-400 border border-blue-800/30 uppercase tracking-widest">Processing</span>
-                                </div>
-                                <div class="text-blue-300/70 pl-4 border-l-2 border-blue-900/30 text-[11px]">
-                                    [Intent detected: api_key_reset (conf: 0.94)]<br>
-                                    [Fetching policy: doc_id_442]<br>
-                                    [Generating draft...]
-                                </div>
-                            </div>
-                            <!-- Log Entry 3: Outgoing -->
-                            <div class="flex flex-col gap-2">
-                                <div class="flex items-center gap-3 text-slate-500 text-[10px] font-bold">
-                                    <span class="">10:42:04 AM</span>
-                                    <span class="px-2 py-0.5 rounded bg-emerald-900/30 text-emerald-400 border border-emerald-800/30 uppercase tracking-widest">Outgoing</span>
-                                    <span class="text-slate-400">Auto-Reply</span>
-                                </div>
-                                <div class="text-emerald-400/90 pl-4 border-l-2 border-emerald-900/30">
-                                    "Hello! To reset your API key, log into the Connect Blue dashboard, navigate to 'API Keys' in the sidebar, and click 'Rotate Key'..."
-                                </div>
-                            </div>
-                            <!-- Empty State / Cursor -->
-                            <div class="mt-4 flex items-center text-slate-600 gap-2 font-bold uppercase tracking-widest text-[10px]">
-                                <span class="">Listening for events...</span>
-                                <span class="w-1.5 h-3.5 bg-primary animate-pulse"></span>
-                            </div>
+                        <div id="terminal-scroll-container" class="flex-1 bg-[#0f172a] p-6 overflow-y-auto font-mono text-[12px] flex flex-col gap-6 scrollbar-hide shadow-inner">
+                            <!-- Logs will be rendered here dynamically -->
                         </div>
                     </section>
                 </div>
@@ -316,218 +279,357 @@
     </main>
 </div>
 
+<script src="/socket.io/socket.io.js"></script>
 <script src="/js/sidebar.js"></script>
 <script>
-    // Simple View Toggling Logic
-    const btnSimple = document.getElementById('btn-simple');
-    const btnJson = document.getElementById('btn-json');
-    const viewSimple = document.getElementById('view-simple');
-    const viewJson = document.getElementById('view-json');
+    (function() {
+        console.log('AI Auto Reply script initialized');
 
-    function switchView(mode) {
-        if (mode === 'simple') {
-            btnSimple.className = 'px-4 py-1.5 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm text-xs font-bold transition-all';
-            btnJson.className = 'px-4 py-1.5 rounded-lg text-slate-500 dark:text-slate-400 text-xs font-bold hover:text-slate-900 dark:hover:text-white transition-all';
-            viewSimple.classList.remove('hidden');
-            viewSimple.classList.add('flex');
-            viewJson.classList.add('hidden');
-            viewJson.classList.remove('flex');
-        } else {
-            btnJson.className = 'px-4 py-1.5 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm text-xs font-bold transition-all';
-            btnSimple.className = 'px-4 py-1.5 rounded-lg text-slate-500 dark:text-slate-400 text-xs font-bold hover:text-slate-900 dark:hover:text-white transition-all';
-            viewJson.classList.remove('hidden');
-            viewJson.classList.add('flex');
-            viewSimple.classList.add('hidden');
-            viewSimple.classList.remove('flex');
-        }
-    }
-
-    btnSimple.addEventListener('click', () => switchView('simple'));
-    btnJson.addEventListener('click', () => switchView('json'));
-
-    // API Provider Toggle Logic
-    const apiSourceRadios = document.querySelectorAll('input[name="api_source"]');
-    const privateApiOptions = document.getElementById('private-api-options');
-    const privateProviderRadios = document.querySelectorAll('input[name="private_provider"]');
-    const privateKeyContainer = document.getElementById('private-key-container');
-    const selectedProviderName = document.getElementById('selected-provider-name');
-
-    apiSourceRadios.forEach(radio => {
-        radio.addEventListener('change', (e) => {
-            if (e.target.value === 'private') {
-                privateApiOptions.classList.remove('hidden');
-            } else {
-                privateApiOptions.classList.add('hidden');
-                privateKeyContainer.classList.add('hidden');
-            }
-        });
-    });
-
-    privateProviderRadios.forEach(radio => {
-        radio.addEventListener('change', (e) => {
-            privateKeyContainer.classList.remove('hidden');
-            const provider = e.target.value.charAt(0).toUpperCase() + e.target.value.slice(1);
-            selectedProviderName.innerText = `(${provider})`;
-        });
-    });
-
-    // AI Listening Mode Toast Logic
-    const aiListeningToggle = document.getElementById('ai-listening-toggle');
-    if (aiListeningToggle) {
-        aiListeningToggle.addEventListener('change', (e) => {
-            const status = e.target.checked ? "Activated" : "Disabled";
-            const type = e.target.checked ? "success" : "warning";
-            const msg = `AI Listening Mode: ${status}`;
-            
-            if (typeof showToast === "function") {
-                showToast(msg, type);
-            }
-        });
-    }
-
-    // Load Devices Logic
-    async function loadDevices() {
-        const deviceSelect = document.getElementById('device-select');
-        const isAdmin = localStorage.getItem('connectApi_loggedIn') === 'true';
-        const guestApiKey = localStorage.getItem('noorbyte_session');
-        
-        const query = isAdmin 
-            ? `?role=admin&api_key=${guestApiKey || ''}` 
-            : (guestApiKey ? `?api_key=${guestApiKey}` : '');
-            
-        try {
-            const response = await fetch(`/api/get-devices${query}`);
-            const result = await response.json();
-
-            if (result.status && result.data.length > 0) {
-                // Clear existing dynamic options (keep first one)
-                while (deviceSelect.options.length > 1) {
-                    deviceSelect.remove(1);
-                }
-                
-                result.data.forEach(device => {
-                    const option = document.createElement('option');
-                    option.value = device.api_key;
-                    option.textContent = `${device.phone || 'No Phone'} (${device.username})`;
-                    deviceSelect.appendChild(option);
-                });
-            } else {
-                console.log('No devices found or error loading devices');
-            }
-        } catch (error) {
-            console.error('Error fetching devices:', error);
-        }
-    }
-
-    // Load settings when device changes
-    const deviceSelect = document.getElementById('device-select');
-    deviceSelect.addEventListener('change', async (e) => {
-        const deviceApiKey = e.target.value;
-        if (!deviceApiKey) return;
-        
-        try {
-            const response = await fetch(`/api/ai/settings`, {
-                headers: {
-                    'Authorization': `Bearer ${deviceApiKey}`
-                }
-            });
-            const result = await response.json();
-            
-            if (result.status && result.data) {
-                const settings = result.data;
-                
-                // Populate UI
-                document.getElementById('ai-listening-toggle').checked = !!settings.ai_enabled;
-                
-                // API Source
-                const sourceRadio = document.querySelector(`input[name="api_source"][value="${settings.ai_source || 'system'}"]`);
-                if (sourceRadio) {
-                    sourceRadio.checked = true;
-                    sourceRadio.dispatchEvent(new Event('change'));
-                }
-                
-                // Private Provider
-                if (settings.ai_provider) {
-                    const providerRadio = document.querySelector(`input[name="private_provider"][value="${settings.ai_provider}"]`);
-                    if (providerRadio) {
-                        providerRadio.checked = true;
-                        providerRadio.dispatchEvent(new Event('change'));
-                    }
-                }
-                
-                // API Key
-                document.getElementById('ai-api-key').value = settings.ai_api_key || '';
-                
-                // Prompts
-                document.getElementById('ai-system-prompt').value = settings.ai_system_prompt || '';
-                document.getElementById('ai-context-data').value = settings.ai_context_data || '';
-            }
-        } catch (error) {
-            console.error('Error loading AI settings:', error);
-        }
-    });
-
-    // Save settings
-    const saveBtn = document.getElementById('save-settings-btn');
-    saveBtn.addEventListener('click', async () => {
-        const deviceApiKey = deviceSelect.value;
-        if (!deviceApiKey) {
-            if (typeof showToast === "function") showToast('Pilih perangkat terlebih dahulu', 'error');
-            else alert('Pilih perangkat terlebih dahulu');
-            return;
-        }
-        
-        const ai_enabled = document.getElementById('ai-listening-toggle').checked;
-        const api_source = document.querySelector('input[name="api_source"]:checked').value;
-        const ai_provider = document.querySelector('input[name="private_provider"]:checked')?.value || null;
-        const ai_api_key = document.getElementById('ai-api-key').value;
-        const ai_system_prompt = document.getElementById('ai-system-prompt').value;
-        const ai_context_data = document.getElementById('ai-context-data').value;
-        
-        const data = {
-            ai_enabled,
-            ai_source,
-            ai_provider,
-            ai_api_key,
-            ai_system_prompt,
-            ai_context_data
+        // Global state to ensure elements are found once
+        const DOM = {
+            btnSimple: document.getElementById('btn-simple'),
+            btnJson: document.getElementById('btn-json'),
+            viewSimple: document.getElementById('view-simple'),
+            viewJson: document.getElementById('view-json'),
+            apiSourceRadios: document.querySelectorAll('input[name="api_source"]'),
+            privateApiOptions: document.getElementById('private-api-options'),
+            privateProviderRadios: document.querySelectorAll('input[name="private_provider"]'),
+            privateKeyContainer: document.getElementById('private-key-container'),
+            selectedProviderName: document.getElementById('selected-provider-name'),
+            aiListeningToggle: document.getElementById('ai-listening-toggle'),
+            deviceSelect: document.getElementById('device-select'),
+            aiTarget: document.getElementById('ai-target'),
+            aiTargetInput: document.getElementById('ai-target-input'),
+            tagContainer: document.getElementById('tag-container'),
+            saveBtn: document.getElementById('save-settings-btn'),
+            aiApiKey: document.getElementById('ai-api-key'),
+            aiSystemPrompt: document.getElementById('ai-system-prompt'),
+            aiContextData: document.getElementById('ai-context-data'),
+            terminalContainer: document.getElementById('terminal-scroll-container')
         };
-        
-        try {
-            saveBtn.disabled = true;
-            const originalContent = saveBtn.innerHTML;
-            saveBtn.innerText = 'Saving...';
-            
-            const response = await fetch('/api/ai/save-settings', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${deviceApiKey}`
-                },
-                body: JSON.stringify(data)
-            });
-            
-            const result = await response.json();
-            if (result.status) {
-                if (typeof showToast === "function") showToast('Settings saved successfully', 'success');
-                else alert('Settings saved successfully');
-            } else {
-                if (typeof showToast === "function") showToast(result.message || 'Failed to save settings', 'error');
-                else alert(result.message || 'Failed to save settings');
-            }
-            saveBtn.disabled = false;
-            saveBtn.innerHTML = originalContent;
-        } catch (error) {
-            console.error('Error saving AI settings:', error);
-            if (typeof showToast === "function") showToast('Network error while saving settings', 'error');
-            else alert('Network error while saving settings');
-            saveBtn.disabled = false;
-            saveBtn.innerHTML = '<span class="material-symbols-outlined text-lg">save</span><span>Save Settings</span>';
-        }
-    });
 
-    // Run on load
-    document.addEventListener('DOMContentLoaded', loadDevices);
+        // Log System
+        window.addLogEntry = function(data) {
+            if (!DOM.terminalContainer) return;
+
+            const entry = document.createElement('div');
+            entry.className = 'flex flex-col gap-2 animate-in fade-in slide-in-from-bottom-2 duration-300';
+            
+            let typeClass = 'bg-slate-800 text-slate-300 border-slate-700';
+            let typeLabel = (data.type || 'info').toUpperCase();
+            
+            if (data.type === 'processing') typeClass = 'bg-blue-900/30 text-blue-400 border-blue-800/30';
+            if (data.type === 'outgoing') typeClass = 'bg-emerald-900/30 text-emerald-400 border-emerald-800/30';
+            if (data.type === 'error') typeClass = 'bg-rose-900/30 text-rose-400 border-rose-800/30';
+
+            const senderHtml = data.sender ? `<span class="text-slate-400">${data.sender}</span>` : '';
+
+            entry.innerHTML = `
+                <div class="flex items-center gap-3 text-slate-500 text-[10px] font-bold">
+                    <span>${data.timestamp || new Date().toLocaleTimeString()}</span>
+                    <span class="px-2 py-0.5 rounded ${typeClass} border uppercase tracking-widest">${typeLabel}</span>
+                    ${senderHtml}
+                </div>
+                <div class="${data.type === 'outgoing' ? 'text-emerald-400/90' : (data.type === 'incoming' ? 'text-slate-300 italic' : 'text-blue-300/70')} pl-4 border-l-2 ${data.type === 'incoming' ? 'border-slate-700' : (data.type === 'outgoing' ? 'border-emerald-900/30' : 'border-blue-900/30')}">
+                    "${data.message || ''}"
+                </div>
+            `;
+
+            DOM.terminalContainer.appendChild(entry);
+            DOM.terminalContainer.scrollTop = DOM.terminalContainer.scrollHeight;
+
+            while (DOM.terminalContainer.children.length > 50) {
+                DOM.terminalContainer.removeChild(DOM.terminalContainer.firstChild);
+            }
+        };
+
+        // Socket.io Setup
+        const socket = io();
+
+        socket.on('connect', () => {
+            console.log(`[SOCKET] Connected to server. ID: ${socket.id}`);
+        });
+
+        socket.on('ai_activity_log', (data) => {
+            const selectedDevice = DOM.deviceSelect.value;
+            console.log(`[AI Log Debug] Received for ${data.apiKey}. Selected: ${selectedDevice}. Match: ${data.apiKey === selectedDevice}`);
+            if (data.apiKey === selectedDevice) {
+                if (typeof window.addLogEntry === 'function') {
+                    window.addLogEntry(data);
+                } else {
+                    console.log('[AI Log] Entry received but addLogEntry not defined:', data);
+                }
+            }
+        });
+
+        // Tag System Logic
+        let tags = [];
+
+        function renderTags() {
+            // Remove existing tag elements (but keep the input)
+            const tagEls = DOM.tagContainer.querySelectorAll('.tag-pill');
+            tagEls.forEach(el => el.remove());
+
+            tags.forEach((tag, index) => {
+                const pill = document.createElement('div');
+                pill.className = 'tag-pill flex items-center gap-1.5 px-3 py-1 bg-primary/10 border border-primary/20 rounded-full text-xs font-bold text-primary animate-in zoom-in-95 duration-200';
+                pill.innerHTML = `
+                    <span>${tag}</span>
+                    <button type="button" class="hover:text-primary/70 transition-colors" onclick="window.removeAiTag(${index})">
+                        <span class="material-symbols-outlined text-sm font-bold">close</span>
+                    </button>
+                `;
+                DOM.tagContainer.insertBefore(pill, DOM.aiTargetInput);
+            });
+
+            // Sync with hidden input
+            DOM.aiTarget.value = tags.join(', ');
+        }
+
+        window.removeAiTag = (index) => {
+            tags.splice(index, 1);
+            renderTags();
+        };
+
+        if (DOM.aiTargetInput) {
+            DOM.aiTargetInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ',') {
+                    e.preventDefault();
+                    const val = DOM.aiTargetInput.value.trim().replace(',', '');
+                    if (val && !tags.includes(val)) {
+                        tags.push(val);
+                        DOM.aiTargetInput.value = '';
+                        renderTags();
+                    }
+                } else if (e.key === 'Backspace' && DOM.aiTargetInput.value === '' && tags.length > 0) {
+                    tags.pop();
+                    renderTags();
+                }
+            });
+
+            // Focus input when container clicked
+            DOM.tagContainer.addEventListener('click', () => {
+                DOM.aiTargetInput.focus();
+            });
+        }
+
+        // Utility: Show feedback
+        function notify(msg, type = 'info') {
+            console.log(`[Notification] ${type.toUpperCase()}: ${msg}`);
+            if (typeof window.showToast === 'function') {
+                window.showToast(msg, type);
+            } else {
+                alert(msg);
+            }
+        }
+
+        // 1. View Toggling
+        function switchView(mode) {
+            if (mode === 'simple') {
+                DOM.btnSimple.className = 'px-4 py-1.5 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm text-xs font-bold transition-all';
+                DOM.btnJson.className = 'px-4 py-1.5 rounded-lg text-slate-500 dark:text-slate-400 text-xs font-bold hover:text-slate-900 dark:hover:text-white transition-all';
+                DOM.viewSimple.classList.remove('hidden');
+                DOM.viewSimple.classList.add('flex');
+                DOM.viewJson.classList.add('hidden');
+                DOM.viewJson.classList.remove('flex');
+            } else {
+                DOM.btnJson.className = 'px-4 py-1.5 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm text-xs font-bold transition-all';
+                DOM.btnSimple.className = 'px-4 py-1.5 rounded-lg text-slate-500 dark:text-slate-400 text-xs font-bold hover:text-slate-900 dark:hover:text-white transition-all';
+                DOM.viewJson.classList.remove('hidden');
+                DOM.viewJson.classList.add('flex');
+                DOM.viewSimple.classList.add('hidden');
+                DOM.viewSimple.classList.remove('flex');
+            }
+        }
+
+        if (DOM.btnSimple) DOM.btnSimple.addEventListener('click', () => switchView('simple'));
+        if (DOM.btnJson) DOM.btnJson.addEventListener('click', () => switchView('json'));
+
+        // 2. API Provider Toggle
+        DOM.apiSourceRadios.forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                if (e.target.value === 'private') {
+                    DOM.privateApiOptions.classList.remove('hidden');
+                } else {
+                    DOM.privateApiOptions.classList.add('hidden');
+                    DOM.privateKeyContainer.classList.add('hidden');
+                }
+            });
+        });
+
+        DOM.privateProviderRadios.forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                DOM.privateKeyContainer.classList.remove('hidden');
+                const provider = e.target.value.charAt(0).toUpperCase() + e.target.value.slice(1);
+                DOM.selectedProviderName.innerText = `(${provider})`;
+            });
+        });
+
+        // 3. AI Listening Mode Change
+        if (DOM.aiListeningToggle) {
+            DOM.aiListeningToggle.addEventListener('change', (e) => {
+                const status = e.target.checked ? "Aktif" : "Nonaktif";
+                notify(`AI Listening Mode: ${status}`, e.target.checked ? 'success' : 'warning');
+            });
+        }
+
+        // 4. Load Devices
+        async function loadDevices() {
+            console.log('Loading devices...');
+            const isAdmin = localStorage.getItem('connectApi_loggedIn') === 'true';
+            const guestApiKey = localStorage.getItem('noorbyte_session');
+            
+            const query = isAdmin 
+                ? `?role=admin&api_key=${guestApiKey || ''}` 
+                : (guestApiKey ? `?api_key=${guestApiKey}` : '');
+                
+            try {
+                const response = await fetch(`/api/get-devices${query}`);
+                const result = await response.json();
+
+                if (result.status && result.data.length > 0) {
+                    while (DOM.deviceSelect.options.length > 1) {
+                        DOM.deviceSelect.remove(1);
+                    }
+                    
+                    result.data.forEach(device => {
+                        const option = document.createElement('option');
+                        option.value = device.api_key;
+                        option.textContent = `${device.phone || 'No Phone'} (${device.username})`;
+                        DOM.deviceSelect.appendChild(option);
+                    });
+                    console.log(`Loaded ${result.data.length} devices`);
+                }
+            } catch (error) {
+                console.error('Error loading devices:', error);
+            }
+        }
+
+        // 5. Load settings when device changes
+        if (DOM.deviceSelect) {
+            DOM.deviceSelect.addEventListener('change', async (e) => {
+                // Clear logs on device change
+                if (DOM.terminalContainer) {
+                    DOM.terminalContainer.innerHTML = '';
+                }
+
+                const deviceApiKey = e.target.value;
+                if (!deviceApiKey) return;
+                
+                console.log(`Loading AI settings for device: ${deviceApiKey}`);
+                try {
+                    const response = await fetch(`/api/ai/settings`, {
+                        headers: { 'Authorization': `Bearer ${deviceApiKey}` }
+                    });
+                    const result = await response.json();
+                    
+                    if (result.status && result.data) {
+                        const settings = result.data;
+                        DOM.aiListeningToggle.checked = !!settings.ai_enabled;
+                        
+                        const sourceRadio = document.querySelector(`input[name="api_source"][value="${settings.ai_source || 'system'}"]`);
+                        if (sourceRadio) {
+                            sourceRadio.checked = true;
+                            sourceRadio.dispatchEvent(new Event('change'));
+                        }
+                        
+                        if (settings.ai_provider) {
+                            const providerRadio = document.querySelector(`input[name="private_provider"][value="${settings.ai_provider}"]`);
+                            if (providerRadio) {
+                                providerRadio.checked = true;
+                                providerRadio.dispatchEvent(new Event('change'));
+                            }
+                        }
+                        
+                        DOM.aiApiKey.value = settings.ai_api_key || '';
+                        DOM.aiSystemPrompt.value = settings.ai_system_prompt || '';
+                        DOM.aiContextData.value = settings.ai_context_data || '';
+                        
+                        // Handle Tags
+                        DOM.aiTarget.value = settings.ai_target || '';
+                        tags = settings.ai_target ? settings.ai_target.split(',').map(t => t.trim()).filter(t => t !== "") : [];
+                        renderTags();
+                        
+                        console.log('AI settings loaded successfully');
+                    }
+                } catch (error) {
+                    console.error('Error loading AI settings:', error);
+                }
+            });
+        }
+
+        // 6. Save settings
+        if (DOM.saveBtn) {
+            DOM.saveBtn.addEventListener('click', async () => {
+                console.log('Save Settings initiated');
+                const deviceApiKey = DOM.deviceSelect.value;
+                
+                if (!deviceApiKey) {
+                    notify('Pilih perangkat terlebih dahulu', 'error');
+                    return;
+                }
+                
+                const apiSourceEl = document.querySelector('input[name="api_source"]:checked');
+                const providerEl = document.querySelector('input[name="private_provider"]:checked');
+
+                const data = {
+                    ai_enabled: DOM.aiListeningToggle.checked,
+                    ai_source: apiSourceEl ? apiSourceEl.value : 'system',
+                    ai_provider: providerEl ? providerEl.value : null,
+                    ai_api_key: DOM.aiApiKey.value,
+                    ai_system_prompt: DOM.aiSystemPrompt.value,
+                    ai_context_data: DOM.aiContextData.value,
+                    ai_target: DOM.aiTarget.value
+                };
+                
+                try {
+                    DOM.saveBtn.disabled = true;
+                    const originalContent = DOM.saveBtn.innerHTML;
+                    DOM.saveBtn.innerHTML = `<span class="material-symbols-outlined text-lg animate-spin">sync</span><span>Menyimpan...</span>`;
+                    
+                    console.log('Requesting save-settings with data:', data);
+                    const response = await fetch('/api/ai/save-settings', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${deviceApiKey}`
+                        },
+                        body: JSON.stringify(data)
+                    });
+                    
+                    const result = await response.json();
+                    console.log('Save result:', result);
+
+                    if (result.status) {
+                        notify('Pengaturan AI berhasil disimpan!', 'success');
+                    } else {
+                        notify(result.message || 'Gagal menyimpan pengaturan', 'error');
+                    }
+                    
+                    DOM.saveBtn.disabled = false;
+                    DOM.saveBtn.innerHTML = originalContent;
+                } catch (error) {
+                    console.error('Save error:', error);
+                    notify('Kesalahan sistem: ' + error.message, 'error');
+                    DOM.saveBtn.disabled = false;
+                    DOM.saveBtn.innerHTML = `<span class="material-symbols-outlined text-lg">save</span><span>Save Settings</span>`;
+                }
+            });
+        }
+
+        // Global Error Monitor
+        window.addEventListener('error', function(event) {
+            console.error('JS runtime error:', event.error);
+            // alert('Terjadi kesalahan JavaScript: ' + event.message);
+        });
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', loadDevices);
+        // Fallback jika DOM sudah load
+        if (document.readyState === 'complete' || document.readyState === 'interactive') {
+            loadDevices();
+        }
+    })();
 </script>
 </body>
 </html>
