@@ -1,4 +1,29 @@
-const { validateManualTasks } = require('../src/helpers/validators');
+const { validateManualTasks, normalizePhoneNumber } = require('../src/helpers/validators');
+
+describe('normalizePhoneNumber', () => {
+  it('should normalize Indonesian number starting with 08 to 628', () => {
+    expect(normalizePhoneNumber('082298507500')).toBe('6282298507500');
+  });
+
+  it('should keep number starting with 62 as is', () => {
+    expect(normalizePhoneNumber('6282298507500')).toBe('6282298507500');
+  });
+
+  it('should clean non-numeric characters and normalize', () => {
+    expect(normalizePhoneNumber('+62 822-9850-7500')).toBe('6282298507500');
+    expect(normalizePhoneNumber('0822 9850 7500')).toBe('6282298507500');
+  });
+
+  it('should return empty string for null/undefined/empty input', () => {
+    expect(normalizePhoneNumber(null)).toBe('');
+    expect(normalizePhoneNumber(undefined)).toBe('');
+    expect(normalizePhoneNumber('')).toBe('');
+  });
+
+  it('should handle numbers without country code prefix by just cleaning them if not starting with 0', () => {
+    expect(normalizePhoneNumber('82298507500')).toBe('82298507500');
+  });
+});
 
 describe('validateManualTasks — field contract: { date, description }', () => {
 

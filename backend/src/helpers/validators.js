@@ -81,4 +81,28 @@ function validateSaveSettings(body) {
   return { valid: true };
 }
 
-module.exports = { validateManualTasks, validateSaveSettings, manualTaskSchema, saveSettingsSchema };
+/**
+ * Normalizes phone numbers to a standard Indonesian format (628...).
+ * - Converts input to string.
+ * - Removes all non-numeric characters.
+ * - Replaces a leading '0' with '62' (e.g., 0812 -> 62812).
+ * - Preserves existing '62' prefix.
+ *
+ * @param {string|number} phone - The phone number to normalize.
+ * @returns {string} Normalized numeric string or empty string if input is falsy.
+ */
+function normalizePhoneNumber(phone) {
+  if (!phone) return '';
+  
+  // Ensure we have a string and strip non-digits
+  let clean = String(phone).replace(/\D/g, '');
+  
+  // Replace leading '0' with '62' if present
+  if (clean.startsWith('0')) {
+    clean = '62' + clean.substring(1);
+  }
+  
+  return clean;
+}
+
+module.exports = { validateManualTasks, validateSaveSettings, normalizePhoneNumber, manualTaskSchema, saveSettingsSchema };
