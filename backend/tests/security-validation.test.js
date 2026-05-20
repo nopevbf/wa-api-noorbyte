@@ -2,7 +2,7 @@ const { validateEncryptionKey, DecryptionError } = require('../src/helpers/secur
 
 describe('Security Validation', () => {
   it('should throw error if ENCRYPTION_KEY is not 32 characters', () => {
-    expect(() => validateEncryptionKey('short')).toThrow('ENCRYPTION_KEY must be exactly 32 characters');
+    expect(() => validateEncryptionKey('short')).toThrow(/must be exactly 32 characters/);
   });
   
   it('should not throw if ENCRYPTION_KEY is 32 characters', () => {
@@ -18,6 +18,18 @@ describe('Security Validation', () => {
       expect(() => validateEncryptionKey()).toThrow(/must be exactly 32 characters/);
     } finally {
       // Restore original env
+      process.env.ENCRYPTION_KEY = originalEnv;
+    }
+  });
+
+  it('should throw key length error when decrypting with an invalid key length', () => {
+    const originalEnv = process.env.ENCRYPTION_KEY;
+    process.env.ENCRYPTION_KEY = 'short-key';
+    const { decrypt } = require('../src/helpers/security');
+    
+    try {
+      expect(() => decrypt('any:data')).toThrow(/must be exactly 32 characters/);
+    } finally {
       process.env.ENCRYPTION_KEY = originalEnv;
     }
   });

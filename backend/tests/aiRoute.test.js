@@ -1,22 +1,19 @@
+/**
+ * @jest-environment node
+ */
 const request = require('supertest');
 const express = require('express');
 const router = require('../src/routes/apiRoutes');
 const db = require('../src/config/database');
 const { encrypt } = require('../src/helpers/security');
 
-jest.mock('socks-proxy-agent', () => ({
-    SocksProxyAgent: jest.fn()
-}));
+// Ensure ENCRYPTION_KEY is set for tests
+if (!process.env.ENCRYPTION_KEY) {
+    process.env.ENCRYPTION_KEY = 'f3e1c9b2d5a8e7f6g5h4i3j2k1l0m9n8';
+}
 
 // We use the real database for integration testing
 // jest.mock('../src/config/database'); 
-
-jest.mock('../src/services/waEngine', () => ({
-    sendMessageViaWa: jest.fn(),
-    disconnectWa: jest.fn(),
-    connectToWhatsApp: jest.fn(),
-    fetchGroups: jest.fn(),
-}));
 
 const app = express();
 app.use(express.json());

@@ -1,16 +1,30 @@
 const crypto = require('crypto');
 const algorithm = 'aes-256-cbc';
 
+let cachedKey = null;
+let lastUsedRawKey = null;
+
 /**
  * Mendapatkan encryption key dari environment variable.
  * Melempar error jika key tidak valid (harus 32 karakter).
+ * Menggunakan caching untuk performa.
  */
 function getEncryptionKey() {
     const k = process.env.ENCRYPTION_KEY;
+    
+    // Jika key di env berubah (misal saat testing), reset cache
+    if (k !== lastUsedRawKey) {
+        cachedKey = null;
+        lastUsedRawKey = k;
+    }
+
+    if (cachedKey) return cachedKey;
+
     if (!k || k.length !== 32) {
         throw new Error(`ENCRYPTION_KEY must be exactly 32 characters (32 bytes). Current length: ${k ? k.length : 0}`);
     }
-    return Buffer.from(k, 'utf8');
+    cachedKey = Buffer.from(k, 'utf8');
+    return cachedKey;
 }
 
 // Helper untuk logging yang lebih terstruktur (bisa dikembangkan ke pino nanti)
@@ -20,6 +34,10 @@ const logger = {
     }
 };
 
+/**
+ * Validasi encryption key.
+ * @param {string} k - Key yang akan divalidasi (default dari ENV)
+ */
 function validateEncryptionKey(k = process.env.ENCRYPTION_KEY) {
     const keyToValidate = k || '';
     if (keyToValidate.length !== 32) {
@@ -51,6 +69,18 @@ function isMaliciousString(input) {
   return maliciousPattern.test(input);
 }
 
+/**
+ * Menyembunyikan data sensitif (seperti API Key) dari sebuah pesan/string.
+ * 
+ * Logic:
+ * 1. Melakukan escaping pada karakter khusus regex yang ada di 'secret' agar tidak salah diinterpretasikan.
+ * 2. Membuat dynamic RegExp dengan flag 'g' (global) untuk mencari semua kemunculan.
+ * 3. Mengganti semua kemunculan secret tersebut dengan '***'.
+ * 
+ * @param {string|object} message - Pesan yang akan di-mask (bisa string atau object/JSON)
+ * @param {string} secret - String sensitif (API Key, password, dll) yang ingin disembunyikan
+ * @returns {string} - Pesan yang sudah di-mask
+ */
 function maskSensitiveData(message, secret) {
     if (!message || !secret) return message;
     
@@ -72,8 +102,10 @@ function maskSensitiveData(message, secret) {
 
 function encrypt(text) {
     if (!text) return null;
+    
+    const key = getEncryptionKey(); // Panggil di luar try-catch agar error key length tidak dibungkus
+
     try {
-        const key = getEncryptionKey();
         const iv = crypto.randomBytes(16);
         const cipher = crypto.createCipheriv(algorithm, key, iv);
         let encrypted = cipher.update(text);
@@ -87,8 +119,10 @@ function encrypt(text) {
 
 function decrypt(text) {
     if (!text) return null;
+
+    const key = getEncryptionKey(); // Panggil di luar try-catch agar error key length tidak dibungkus
+
     try {
-        const key = getEncryptionKey();
         const textParts = text.split(':');
         if (textParts.length < 2) {
             throw new DecryptionError("Invalid encrypted text format (missing IV or data).");
