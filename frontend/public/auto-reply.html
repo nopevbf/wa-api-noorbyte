@@ -294,6 +294,8 @@
     (function() {
         console.log('AI Auto Reply script initialized');
 
+        let originalAiState = false;
+
         // Global state to ensure elements are found once
         const DOM = {
             btnSimple: document.getElementById('btn-simple'),
@@ -478,8 +480,12 @@
         // 3. AI Listening Mode Change
         if (DOM.aiListeningToggle) {
             DOM.aiListeningToggle.addEventListener('change', (e) => {
-                const status = e.target.checked ? "Aktif" : "Nonaktif";
-                notify(`AI Listening Mode: ${status}`, e.target.checked ? 'success' : 'warning');
+                const isChanged = e.target.checked !== originalAiState;
+                if (isChanged) {
+                    DOM.pendingSaveAlert.classList.remove('hidden');
+                } else {
+                    DOM.pendingSaveAlert.classList.add('hidden');
+                }
             });
         }
 
@@ -535,7 +541,9 @@
                     
                     if (result.status && result.data) {
                         const settings = result.data;
-                        DOM.aiListeningToggle.checked = !!settings.ai_enabled;
+                        originalAiState = !!settings.ai_enabled;
+                        DOM.aiListeningToggle.checked = originalAiState;
+                        DOM.pendingSaveAlert.classList.add('hidden');
                         
                         const sourceRadio = document.querySelector(`input[name="api_source"][value="${settings.ai_source || 'system'}"]`);
                         if (sourceRadio) {
@@ -611,6 +619,8 @@
                     console.log('Save result:', result);
 
                     if (result.status) {
+                        originalAiState = DOM.aiListeningToggle.checked;
+                        DOM.pendingSaveAlert.classList.add('hidden');
                         notify('Pengaturan AI berhasil disimpan!', 'success');
                     } else {
                         notify(result.message || 'Gagal menyimpan pengaturan', 'error');
