@@ -168,6 +168,12 @@ router.post("/connect-device", sensitiveLimiter, checkApiKey, async (req, res) =
 router.post("/delete-device", sensitiveLimiter, checkApiKey, async (req, res) => {
   const { api_key } = req.body;
   if (!api_key) return res.status(400).json({ status: false, message: "API Key wajib dikirim." });
+
+  // 🛡️ SAFETY LOCK: Jangan hapus data asli kalau lagi di mode TEST
+  if (process.env.NODE_ENV === 'test' && !api_key.startsWith('test')) {
+    return res.status(403).json({ status: false, message: "[SAFETY] 🛡️ Blokir penghapusan data asli di lingkungan pengujian." });
+  }
+
   try {
     await disconnectWa(api_key);
     db.prepare("DELETE FROM users WHERE api_key = ?").run(api_key);

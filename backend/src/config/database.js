@@ -12,7 +12,14 @@ db.exec(`
     api_key TEXT UNIQUE,
     webhook_url TEXT,
     status TEXT DEFAULT 'Disconnected',
-    role TEXT DEFAULT 'user'
+    role TEXT DEFAULT 'user',
+    ai_enabled INTEGER DEFAULT 0,
+    ai_source TEXT DEFAULT 'system',
+    ai_provider TEXT DEFAULT 'gemini',
+    ai_api_key TEXT,
+    ai_system_prompt TEXT,
+    ai_context_data TEXT,
+    ai_target TEXT
   );
 
   CREATE TABLE IF NOT EXISTS message_logs (

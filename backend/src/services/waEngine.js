@@ -21,6 +21,13 @@ const MAX_RECONNECT_ATTEMPTS = 3;
  * Dipanggil saat device sudah melewati batas reconnect.
  */
 async function purgeDevice(apiKey, sessionDir, io) {
+    // 🛡️ SAFETY LOCK: Jangan hapus data asli kalau lagi di mode TEST
+    // Kecuali kalau API Key nya memang diawali dengan 'test'
+    if (process.env.NODE_ENV === 'test' && !apiKey.startsWith('test')) {
+        console.warn(`[SAFETY] 🛡️ Blokir penghapusan data non-test key: ${apiKey} di lingkungan pengujian.`);
+        return;
+    }
+
     console.log(`\n[${apiKey}] 💀 ====================================`);
     console.log(`[${apiKey}] 💀 DEVICE DIHAPUS setelah ${MAX_RECONNECT_ATTEMPTS}x reconnect gagal!`);
     console.log(`[${apiKey}] 💀 ====================================\n`);
@@ -129,6 +136,7 @@ async function connectToWhatsApp(apiKey, io) {
                 }
             } else if (connection === 'open') {
                 reconnectAttempts.set(apiKey, 0);
+                console.log(`[${apiKey}] ✅ Mantap! Berhasil terhubung.`);
                 db.prepare('UPDATE users SET status = ? WHERE api_key = ?').run('Connected', apiKey);
                 if (io) io.emit(`status-${apiKey}`, { apiKey, status: 'Connected' });
             }
@@ -263,5 +271,6 @@ module.exports = {
     disconnectWa,
     connectToWhatsApp,
     fetchGroups,
-    logAiActivity
+    logAiActivity,
+    purgeDevice
 };
