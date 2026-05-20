@@ -21,6 +21,11 @@ const apiRoutes = require('../src/routes/apiRoutes');
 // Load environment variables exactly as the server does (two directories up from tests)
 dotenv.config({ path: path.join(__dirname, '../../.env') });
 
+// Ensure ADMIN_API_KEY is defined for tests
+if (!process.env.ADMIN_API_KEY) {
+  process.env.ADMIN_API_KEY = 'admin_master_key_123';
+}
+
 const app = express();
 app.use(express.json());
 app.use('/api', apiRoutes);

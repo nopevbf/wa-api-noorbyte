@@ -144,3 +144,27 @@ describe('validateSaveSettings', () => {
     expect(validateSaveSettings(null).valid).toBe(false);
   });
 });
+
+
+describe('AI Settings Validation', () => {
+  const { validateAiSettings } = require('../src/helpers/validators');
+
+  it('should fail if ai_system_prompt exceeds 10000 characters', () => {
+    const longPrompt = 'a'.repeat(10001);
+    const result = validateAiSettings({ ai_system_prompt: longPrompt });
+    expect(result.valid).toBe(false);
+    expect(result.error).toContain('ai_system_prompt');
+  });
+
+  it('should pass if ai_system_prompt is within 10000 characters', () => {
+    const okPrompt = 'a'.repeat(5000);
+    const result = validateAiSettings({ ai_system_prompt: okPrompt });
+    expect(result.valid).toBe(true);
+  });
+
+  it('should pass if ai_system_prompt is missing', () => {
+    const result = validateAiSettings({});
+    expect(result.valid).toBe(true);
+  });
+});
+

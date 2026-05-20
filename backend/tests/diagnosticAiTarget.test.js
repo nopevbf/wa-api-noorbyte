@@ -1,5 +1,6 @@
 const { connectToWhatsApp, logAiActivity } = require('../src/services/waEngine');
 const db = require('../src/config/database');
+const { processAiReply } = require('../src/services/aiProcessor');
 const { generateAiResponse } = require('../src/services/aiEngine');
 
 jest.mock('../src/config/database');

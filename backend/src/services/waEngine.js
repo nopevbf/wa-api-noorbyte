@@ -7,6 +7,7 @@ const path = require('path');
 const db = require('../config/database');
 const { handleIncomingPulseMessage } = require('./pulseWatcher');
 const { generateAiResponse } = require('./aiEngine');
+const { processAiReply } = require('./aiProcessor');
 const { normalizePhoneNumber } = require('../helpers/validators');
 
 const activeSessions = new Map();
@@ -149,61 +150,12 @@ async function connectToWhatsApp(apiKey, io) {
                 if (!msg.message || msg.key.fromMe) continue;
 
                 handleIncomingPulseMessage(apiKey, msg).catch(e => {});
-
-                const remoteJid = msg.key.remoteJid;
-                const participant = msg.key.participant || remoteJid;
-                const pushName = msg.pushName || participant.split('@')[0];
                 
-                let messageContent = msg.message;
-                if (messageContent?.ephemeralMessage) messageContent = messageContent.ephemeralMessage.message;
-                if (messageContent?.viewOnceMessage) messageContent = messageContent.viewOnceMessage.message;
-                if (messageContent?.viewOnceMessageV2) messageContent = messageContent.viewOnceMessageV2.message;
-                const text = messageContent?.conversation || messageContent?.extendedTextMessage?.text || messageContent?.imageMessage?.caption || messageContent?.videoMessage?.caption || '';
-
-                const user = db.prepare('SELECT ai_enabled, ai_source, ai_provider, ai_api_key, ai_system_prompt, ai_context_data, ai_target, webhook_url FROM users WHERE api_key = ?').get(apiKey);
-                
-                if (user && user.ai_enabled) {
-                    const targetSetting = user.ai_target ? user.ai_target.trim() : '';
-                    let isTargetMatch = !targetSetting;
-
-                    if (targetSetting) {
-                        const targets = targetSetting.split(',').map(t => normalizePhoneNumber(t.trim())).filter(t => t !== '');
-                        const myContacts = contactMappings.get(apiKey);
-
-                        // Pre-calculate sender info outside target loop
-                        const senderNumbers = normalizePhoneNumber(participant);
-                        const groupNumbers = normalizePhoneNumber(remoteJid);
-                        const contact = myContacts?.get(participant) || myContacts?.get(remoteJid);
-                        const contactIdClean = contact ? normalizePhoneNumber(contact.id) : '';
-                        const contactNotifyClean = contact?.notify ? normalizePhoneNumber(contact.notify) : '';
-
-                        isTargetMatch = targets.some(t => {
-                            if (remoteJid.includes(t) || participant.includes(t)) return true;
-                            if (senderNumbers === t || groupNumbers === t) return true;
-                            if (contactIdClean === t || contactNotifyClean === t) return true;
-                            return false;
-                        });
-                    }
-
-                    if (isTargetMatch && text) {
-                        logAiActivity(apiKey, 'incoming', pushName, text);
-                        const aiConfig = {
-                            source: user.ai_source,
-                            provider: user.ai_provider,
-                            customKey: user.ai_api_key,
-                            systemPrompt: user.ai_system_prompt,
-                            contextData: user.ai_context_data
-                        };
-                        try {
-                            logAiActivity(apiKey, 'processing', pushName, 'Thinking...');
-                            const aiReply = await generateAiResponse(aiConfig, text);
-                            await sendMessageViaWa(apiKey, remoteJid, aiReply, 'text');
-                            logAiActivity(apiKey, 'outgoing', pushName, aiReply);
-                        } catch (e) {
-                            logAiActivity(apiKey, 'error', pushName, e.message);
-                        }
-                    }
-                }
+                // Process with AI Auto-Reply
+                const myContacts = contactMappings.get(apiKey);
+                await processAiReply(apiKey, msg, myContacts).catch(e => {
+                    console.error(`[${apiKey}] ❌ AI Error:`, e.message);
+                });
             }
         });
 

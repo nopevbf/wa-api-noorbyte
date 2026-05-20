@@ -2,6 +2,24 @@ const crypto = require('crypto');
 const algorithm = 'aes-256-cbc';
 const key = Buffer.from(process.env.ENCRYPTION_KEY || '0123456789abcdef0123456789abcdef', 'utf8');
 
+function validateEncryptionKey(k = process.env.ENCRYPTION_KEY) {
+    const keyToValidate = k || '0123456789abcdef0123456789abcdef';
+    if (keyToValidate.length !== 32) {
+        throw new Error("ENCRYPTION_KEY must be exactly 32 characters (32 bytes). Current length: " + keyToValidate.length);
+    }
+}
+
+// Validasi saat startup
+try {
+    validateEncryptionKey();
+} catch (e) {
+    console.error("❌ FATAL: " + e.message);
+    // Di produksi, kita ingin app berhenti jika key tidak aman
+    if (process.env.NODE_ENV === 'production') {
+        process.exit(1);
+    }
+}
+
 const maliciousPattern = /[;<>&|`\\]/g;
 
 function isMaliciousString(input) {
@@ -33,5 +51,6 @@ module.exports = {
     isMaliciousString,
     maliciousPattern,
     encrypt, 
-    decrypt 
+    decrypt,
+    validateEncryptionKey
 };

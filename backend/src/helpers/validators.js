@@ -22,6 +22,14 @@ const saveSettingsSchema = z.object({
 }).strip();
 
 /**
+ * Schema for AI settings validation.
+ * Limits ai_system_prompt to 10,000 characters.
+ */
+const aiSettingsSchema = z.object({
+  ai_system_prompt: z.string().max(10000, 'ai_system_prompt maksimal 10000 karakter.').optional(),
+}).strip();
+
+/**
  * Validates the manual_tasks field from a request body.
  * - If undefined/null, returns { valid: true, data: [] }
  * - If not an array, returns { valid: false, error: '...' }
@@ -106,4 +114,32 @@ function normalizePhoneNumber(phone) {
   return clean;
 }
 
-module.exports = { validateManualTasks, validateSaveSettings, normalizePhoneNumber, manualTaskSchema, saveSettingsSchema };
+/**
+ * Validates AI settings payload.
+ *
+ * @param {Object} body
+ * @returns {{ valid: boolean, error?: string }}
+ */
+function validateAiSettings(body) {
+  if (!body || typeof body !== 'object') {
+    return { valid: false, error: 'Payload tidak valid.' };
+  }
+
+  const result = aiSettingsSchema.safeParse(body);
+
+  if (!result.success) {
+    const firstError = result.error.issues[0];
+    return { valid: false, error: firstError.message };
+  }
+
+  return { valid: true };
+}
+
+module.exports = { 
+  validateManualTasks, 
+  validateSaveSettings, 
+  normalizePhoneNumber, 
+  validateAiSettings,
+  manualTaskSchema, 
+  saveSettingsSchema 
+};

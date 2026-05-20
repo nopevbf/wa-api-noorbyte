@@ -16,7 +16,7 @@ const {
 const { SocksProxyAgent } = require("socks-proxy-agent");
 const crypto = require("crypto");
 const { getTargetApiKey } = require("../helpers/apiKeyHelper");
-const { validateManualTasks, validateSaveSettings } = require("../helpers/validators");
+const { validateManualTasks, validateSaveSettings, validateAiSettings } = require("../helpers/validators");
 const { buildMagicLinkMessage } = require("../helpers/messageTemplates");
 const { scheduleTimebomb, cancelTimebomb, validateDpUrl } = require("../services/timebombService");
 const { encrypt, decrypt } = require('../helpers/security');
@@ -168,11 +168,6 @@ router.post("/connect-device", sensitiveLimiter, checkApiKey, async (req, res) =
 router.post("/delete-device", sensitiveLimiter, checkApiKey, async (req, res) => {
   const { api_key } = req.body;
   if (!api_key) return res.status(400).json({ status: false, message: "API Key wajib dikirim." });
-
-  // 🛡️ SAFETY LOCK: Jangan hapus data asli kalau lagi di mode TEST
-  if (process.env.NODE_ENV === 'test' && !api_key.startsWith('test')) {
-    return res.status(403).json({ status: false, message: "[SAFETY] 🛡️ Blokir penghapusan data asli di lingkungan pengujian." });
-  }
 
   try {
     await disconnectWa(api_key);
@@ -535,6 +530,13 @@ router.post('/attendance/cancel-timebomb', (req, res) => {
 router.post("/ai/save-settings", checkApiKey, (req, res) => {
   const { ai_enabled, ai_source, ai_provider, ai_api_key, ai_system_prompt, ai_context_data, ai_target } = req.body;
   const apiKey = req.user.api_key;
+
+  // Validate AI settings (e.g., prompt length)
+  const aiVal = validateAiSettings(req.body);
+  if (!aiVal.valid) {
+    return res.status(400).json({ status: false, message: aiVal.error });
+  }
+
   try {
       db.prepare(`
           UPDATE users SET 

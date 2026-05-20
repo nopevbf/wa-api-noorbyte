@@ -1,9 +1,16 @@
 const { connectToWhatsApp } = require('../src/services/waEngine');
 const { generateAiResponse } = require('../src/services/aiEngine');
+const { processAiReply } = require('../src/services/aiProcessor');
 const db = require('../src/config/database');
 const { handleIncomingPulseMessage } = require('../src/services/pulseWatcher');
 
-jest.mock('../src/services/aiEngine');
+jest.mock('../src/services/aiEngine', () => {
+    const actual = jest.requireActual('../src/services/aiEngine');
+    return {
+        ...actual,
+        generateAiResponse: jest.fn(),
+    };
+});
 jest.mock('../src/config/database');
 jest.mock('../src/services/pulseWatcher', () => ({
     handleIncomingPulseMessage: jest.fn().mockResolvedValue({})
