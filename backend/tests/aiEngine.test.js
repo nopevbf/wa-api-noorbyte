@@ -70,4 +70,23 @@ describe('AI Engine', () => {
         const config = { source: 'system', provider: 'invalid' };
         await expect(generateAiResponse(config, 'Hello')).rejects.toThrow('Provider tidak didukung.');
     });
+
+    test('should mask API Key in error messages', async () => {
+        const secretKey = 'secret-1234567890-xyz';
+        process.env.AI_SYSTEM_API_KEY = secretKey;
+        
+        // Simulate axios error that might contain the key in message or URL
+        const error = new Error(`Request failed with status 403: Forbidden for key ${secretKey}`);
+        axios.post.mockRejectedValue(error);
+
+        const config = { source: 'system', provider: 'gemini' };
+        
+        try {
+            await generateAiResponse(config, 'Hello');
+            fail('Should have thrown an error');
+        } catch (e) {
+            expect(e.message).not.toContain(secretKey);
+            expect(e.message).toContain('***');
+        }
+    });
 });

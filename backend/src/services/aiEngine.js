@@ -12,19 +12,27 @@ async function generateAiResponse(config, userMessage) {
 
     const fullPrompt = `${systemPrompt || 'Anda adalah asisten AI.'}\n\nKonteks Tambahan:\n${contextData || '-'}\n\nUser: ${userMessage}`;
 
-    if (provider === 'gemini') {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`;
-        const response = await axios.post(url, {
-            contents: [{ parts: [{ text: fullPrompt }] }]
-        });
-        return response.data.candidates[0].content.parts[0].text;
-    } else if (provider === 'openai') {
-        const url = 'https://api.openai.com/v1/chat/completions';
-        const response = await axios.post(url, {
-            model: 'gpt-3.5-turbo',
-            messages: [{ role: 'user', content: fullPrompt }]
-        }, { headers: { Authorization: `Bearer ${apiKey}` } });
-        return response.data.choices[0].message.content;
+    try {
+        if (provider === 'gemini') {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`;
+            const response = await axios.post(url, {
+                contents: [{ parts: [{ text: fullPrompt }] }]
+            });
+            return response.data.candidates[0].content.parts[0].text;
+        } else if (provider === 'openai') {
+            const url = 'https://api.openai.com/v1/chat/completions';
+            const response = await axios.post(url, {
+                model: 'gpt-3.5-turbo',
+                messages: [{ role: 'user', content: fullPrompt }]
+            }, { headers: { Authorization: `Bearer ${apiKey}` } });
+            return response.data.choices[0].message.content;
+        }
+    } catch (error) {
+        let msg = error.message;
+        if (apiKey && msg.includes(apiKey)) {
+            msg = msg.replace(new RegExp(apiKey.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), '***');
+        }
+        throw new Error(msg);
     }
     throw new Error('Provider tidak didukung.');
 }

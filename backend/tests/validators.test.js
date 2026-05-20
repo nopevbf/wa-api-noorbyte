@@ -12,9 +12,20 @@ describe('normalizePhoneNumber', () => {
   it('should clean non-numeric characters and normalize', () => {
     expect(normalizePhoneNumber('+62 822-9850-7500')).toBe('6282298507500');
     expect(normalizePhoneNumber('0822 9850 7500')).toBe('6282298507500');
-  });
+    });
 
-  it('should return empty string for null/undefined/empty input', () => {
+    it('should handle "+" prefix correctly', () => {
+    expect(normalizePhoneNumber('+6282298507500')).toBe('6282298507500');
+    expect(normalizePhoneNumber('+1234567890')).toBe('1234567890');
+    });
+
+    it('should handle international numbers (non-62)', () => {
+    expect(normalizePhoneNumber('14155552671')).toBe('14155552671'); // USA
+    expect(normalizePhoneNumber('+442079460958')).toBe('442079460958'); // UK
+    });
+
+    it('should return empty string for null/undefined/empty', () => {
+
     expect(normalizePhoneNumber(null)).toBe('');
     expect(normalizePhoneNumber(undefined)).toBe('');
     expect(normalizePhoneNumber('')).toBe('');
@@ -149,17 +160,17 @@ describe('validateSaveSettings', () => {
 describe('AI Settings Validation', () => {
   const { validateAiSettings } = require('../src/helpers/validators');
 
-  it('should fail if ai_system_prompt exceeds 10000 characters', () => {
+  it('should pass if ai_system_prompt is within 10000 characters', () => {
+    const okPrompt = 'a'.repeat(10000);
+    const result = validateAiSettings({ ai_system_prompt: okPrompt });
+    expect(result.valid).toBe(true);
+  });
+
+  it('should fail if ai_system_prompt is 10001 characters', () => {
     const longPrompt = 'a'.repeat(10001);
     const result = validateAiSettings({ ai_system_prompt: longPrompt });
     expect(result.valid).toBe(false);
-    expect(result.error).toContain('ai_system_prompt');
-  });
-
-  it('should pass if ai_system_prompt is within 10000 characters', () => {
-    const okPrompt = 'a'.repeat(5000);
-    const result = validateAiSettings({ ai_system_prompt: okPrompt });
-    expect(result.valid).toBe(true);
+    expect(result.error).toContain('ai_system_prompt maksimal 10000 karakter');
   });
 
   it('should pass if ai_system_prompt is missing', () => {

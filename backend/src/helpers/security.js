@@ -1,9 +1,9 @@
 const crypto = require('crypto');
 const algorithm = 'aes-256-cbc';
-const key = Buffer.from(process.env.ENCRYPTION_KEY || '0123456789abcdef0123456789abcdef', 'utf8');
+const key = Buffer.from(process.env.ENCRYPTION_KEY || '', 'utf8');
 
 function validateEncryptionKey(k = process.env.ENCRYPTION_KEY) {
-    const keyToValidate = k || '0123456789abcdef0123456789abcdef';
+    const keyToValidate = k || '';
     if (keyToValidate.length !== 32) {
         throw new Error("ENCRYPTION_KEY must be exactly 32 characters (32 bytes). Current length: " + keyToValidate.length);
     }
@@ -38,14 +38,21 @@ function encrypt(text) {
 
 function decrypt(text) {
     if (!text) return null;
-    const textParts = text.split(':');
-    const iv = Buffer.from(textParts.shift(), 'hex');
-    const encryptedText = Buffer.from(textParts.join(':'), 'hex');
-    const decipher = crypto.createDecipheriv(algorithm, key, iv);
-    let decrypted = decipher.update(encryptedText);
-    decrypted = Buffer.concat([decrypted, decipher.final()]);
-    return decrypted.toString();
+    try {
+        const textParts = text.split(':');
+        if (textParts.length < 2) return null;
+        const iv = Buffer.from(textParts.shift(), 'hex');
+        const encryptedText = Buffer.from(textParts.join(':'), 'hex');
+        const decipher = crypto.createDecipheriv(algorithm, key, iv);
+        let decrypted = decipher.update(encryptedText);
+        decrypted = Buffer.concat([decrypted, decipher.final()]);
+        return decrypted.toString();
+    } catch (e) {
+        console.error("❌ Decryption failed. Key might have changed or data is corrupted:", e.message);
+        return "[DECRYPTION_FAILED]";
+    }
 }
+
 
 module.exports = { 
     isMaliciousString,
