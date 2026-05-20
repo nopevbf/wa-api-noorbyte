@@ -1,4 +1,29 @@
-const { validateManualTasks } = require('../src/helpers/validators');
+const { validateManualTasks, validateSaveSettings, normalizePhoneNumber } = require('../src/helpers/validators');
+
+describe('normalizePhoneNumber', () => {
+  it('should normalize Indonesian number starting with 08 to 628', () => {
+    expect(normalizePhoneNumber('082298507500')).toBe('6282298507500');
+  });
+
+  it('should keep number starting with 62 as is', () => {
+    expect(normalizePhoneNumber('6282298507500')).toBe('6282298507500');
+  });
+
+  it('should clean non-numeric characters and normalize', () => {
+    expect(normalizePhoneNumber('+62 822-9850-7500')).toBe('6282298507500');
+    expect(normalizePhoneNumber('0822 9850 7500')).toBe('6282298507500');
+  });
+
+  it('should return empty string for null/undefined/empty input', () => {
+    expect(normalizePhoneNumber(null)).toBe('');
+    expect(normalizePhoneNumber(undefined)).toBe('');
+    expect(normalizePhoneNumber('')).toBe('');
+  });
+
+  it('should handle numbers without country code prefix by just cleaning them if not starting with 0', () => {
+    expect(normalizePhoneNumber('82298507500')).toBe('82298507500');
+  });
+});
 
 describe('validateManualTasks — field contract: { date, description }', () => {
 
@@ -88,3 +113,58 @@ describe('validateManualTasks — field contract: { date, description }', () => 
     expect(result.data[0]).toHaveProperty('description');
   });
 });
+
+describe('validateSaveSettings', () => {
+  it('should PASS with valid settings', () => {
+    const body = { is_active: true, frequency: 'daily' };
+    const result = validateSaveSettings(body);
+    expect(result.valid).toBe(true);
+  });
+
+  it('should PASS with partial valid settings (optional fields)', () => {
+    expect(validateSaveSettings({ is_active: false }).valid).toBe(true);
+    expect(validateSaveSettings({ frequency: 'weekly' }).valid).toBe(true);
+  });
+
+  it('should FAIL with invalid frequency', () => {
+    const result = validateSaveSettings({ frequency: 'invalid' });
+    expect(result.valid).toBe(false);
+    expect(result.error).toMatch(/frequency/i);
+  });
+
+  it('should FAIL with invalid is_active (non-boolean)', () => {
+    const result = validateSaveSettings({ is_active: 'yes' });
+    expect(result.valid).toBe(false);
+    expect(result.error).toMatch(/is_active/i);
+  });
+
+  it('should NOT crash with null/undefined body', () => {
+    // Current implementation crashes here! Fix needed.
+    expect(() => validateSaveSettings(null)).not.toThrow();
+    expect(validateSaveSettings(null).valid).toBe(false);
+  });
+});
+
+
+describe('AI Settings Validation', () => {
+  const { validateAiSettings } = require('../src/helpers/validators');
+
+  it('should fail if ai_system_prompt exceeds 10000 characters', () => {
+    const longPrompt = 'a'.repeat(10001);
+    const result = validateAiSettings({ ai_system_prompt: longPrompt });
+    expect(result.valid).toBe(false);
+    expect(result.error).toContain('ai_system_prompt');
+  });
+
+  it('should pass if ai_system_prompt is within 10000 characters', () => {
+    const okPrompt = 'a'.repeat(5000);
+    const result = validateAiSettings({ ai_system_prompt: okPrompt });
+    expect(result.valid).toBe(true);
+  });
+
+  it('should pass if ai_system_prompt is missing', () => {
+    const result = validateAiSettings({});
+    expect(result.valid).toBe(true);
+  });
+});
+

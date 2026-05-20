@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Auto Reply - AI | NoorByteAPI</title>
+    
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    
+    <script id="tailwind-config">
+        tailwind.config = { 
+            darkMode: "class", 
+            theme: { 
+                extend: { 
+                    colors: { 
+                        primary: "#6366f1", 
+                        "background-light": "#f5f3ff", 
+                        "background-dark": "#0f172a",
+                        surface: "#ffffff",
+                        outline: "#e2e8f0"
+                    }, 
+                    fontFamily: { 
+                        display: ["Plus Jakarta Sans", "Inter", "sans-serif"],
+                        body: ["Plus Jakarta Sans", "Inter", "sans-serif"]
+                    } 
+                } 
+            } 
+        }
+    </script>
+    <style> 
+        body { font-family: 'Plus Jakarta Sans', sans-serif; } 
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        .toggle-checkbox:checked { right: 0; border-color: #6366f1; }
+        .toggle-checkbox:checked + .toggle-label { background-color: #6366f1; }
+        .toggle-checkbox:checked + .toggle-label:after { transform: translateX(100%); border-color: white; }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100">
+<div class="flex h-screen overflow-hidden">
+    
+    <div id="sidebar-container" class="z-50 shrink-0"></div>
+
+    <main class="flex-1 overflow-y-auto relative scrollbar-hide">
+        <header class="h-16 border-b border-slate-200/60 dark:border-slate-800/60 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md sticky top-0 z-10 flex items-center justify-between px-4 sm:px-8">
+            <div class="flex items-center gap-3">
+                <button id="toggleSidebarBtn" class="lg:hidden p-2 -ml-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-colors">
+                    <span class="material-symbols-outlined">menu</span>
+                </button>
+                <h2 id="navbar-page-name" class="text-lg font-bold tracking-tight hidden sm:block">Auto Reply - AI</h2>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 dark:text-emerald-400 px-3 py-1 rounded-full border border-emerald-100 dark:border-emerald-800/30 shadow-sm">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> System Ready
+                </div>
+                <div class="h-8 w-[1px] bg-slate-200/60 dark:bg-slate-800/60 mx-2"></div>
+                <div class="flex items-center gap-3">
+                    <div class="text-right hidden sm:block">
+                        <p id="navbar-user-name" class="text-xs font-extrabold text-slate-900 dark:text-white">Admin User</p>
+                        <p id="navbar-user-role" class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Master Access</p>
+                    </div>
+                    <div id="navbar-user-avatar" class="size-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center overflow-hidden font-bold text-primary text-xs shadow-sm shadow-primary/5">
+                        JD
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="p-4 sm:p-8 space-y-8 w-full">
+            <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+                <div>
+                    <h3 class="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">Auto Reply - AI</h3>
+                    <p class="text-slate-500 text-sm font-medium mt-1">Configure intelligent automated responses for connected channels.</p>
+                </div>
+            </div>
+
+            <!-- Bento Grid Layout -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                <!-- Left Column (Config) -->
+                <div class="lg:col-span-7 flex flex-col gap-8">
+                    <!-- Monitoring Configuration -->
+                    <section class="bg-surface dark:bg-slate-900/60 rounded-3xl border border-outline dark:border-slate-800 shadow-sm overflow-hidden flex flex-col backdrop-blur-sm">
+                        <div class="px-6 py-4 border-b border-outline dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 flex justify-between items-center">
+                            <div class="flex items-center gap-2">
+                                <span class="material-symbols-outlined text-primary text-[20px]">radar</span>
+                                <h4 class="text-[11px] font-bold uppercase tracking-widest text-slate-900 dark:text-white">Monitoring Configuration</h4>
+                            </div>
+                            <!-- Status Pill -->
+                            <div class="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-900/20 px-2.5 py-1 rounded-full border border-emerald-200 dark:border-emerald-800/50">
+                                <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                                <span class="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wide">Ready</span>
+                            </div>
+                        </div>
+                        <div class="p-8 flex flex-col gap-6">
+                            <!-- Device Select -->
+                            <div class="flex flex-col gap-2">
+                                <label class="text-[11px] font-bold uppercase tracking-widest text-slate-500">Pilih Perangkat (Connected Device)</label>
+                                <div class="relative">
+                                    <select id="device-select" class="w-full h-12 bg-slate-50 dark:bg-slate-800/50 border border-outline dark:border-slate-700 rounded-xl text-sm font-bold focus:ring-4 focus:ring-primary/10 focus:border-primary appearance-none px-4 outline-none transition-all cursor-pointer">
+                                        <option value="" disabled selected>-- Pilih Nomor Perangkat --</option>
+                                    </select>
+                                    <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-[20px]">expand_more</span>
+                                </div>
+                            </div>
+                            <!-- Target Input -->
+                            <div class="flex flex-col gap-2">
+                                <label class="text-[11px] font-bold uppercase tracking-widest text-slate-500">Monitor Target</label>
+                                <div id="tag-container" class="flex flex-wrap gap-2 p-3 bg-slate-50 dark:bg-slate-800/50 border border-outline dark:border-slate-700 rounded-xl min-h-[48px] focus-within:ring-4 focus-within:ring-primary/10 focus-within:border-primary transition-all">
+                                    <input id="ai-target-input" type="text" class="flex-1 bg-transparent border-none p-0 text-sm font-bold focus:ring-0 outline-none min-w-[120px]" placeholder="Type and hit Enter or Comma...">
+                                    <input id="ai-target" type="hidden">
+                                </div>
+                                <p class="text-[10px] text-slate-400 font-medium">Input Nomor HP (08xxx) atau ID Grup. Tekan Enter/Koma untuk menambah tag.</p>
+                            </div>
+                            <!-- Listening Mode Toggle -->
+                            <div class="flex items-center justify-between p-5 rounded-2xl bg-slate-50/50 dark:bg-slate-800/30 border border-outline dark:border-slate-700">
+                                <div>
+                                    <h5 class="text-sm font-bold text-slate-900 dark:text-white mb-0.5">AI Listening Mode</h5>
+                                    <p class="text-[12px] text-slate-500 font-medium">Process incoming messages without replying immediately.</p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input id="ai-listening-toggle" type="checkbox" value="" class="sr-only peer">
+                                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 dark:peer-focus:ring-primary/10 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
+                                </label>
+                            </div>
+
+                            <!-- Pending Save Alert -->
+                            <div id="pending-save-alert" class="hidden mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2">
+                                <span class="material-symbols-outlined text-amber-600 text-sm">warning</span>
+                                <div>
+                                    <p class="text-xs font-bold text-amber-900">Perubahan Belum Diterapkan</p>
+                                    <p class="text-[10px] text-amber-700">AI tidak akan mulai mendengarkan sampai Anda mengklik "Save Settings".</p>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- API Provider Configuration -->
+                    <section class="bg-surface dark:bg-slate-900/60 rounded-3xl border border-outline dark:border-slate-800 shadow-sm overflow-hidden flex flex-col backdrop-blur-sm">
+                        <div class="px-6 py-4 border-b border-outline dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 flex justify-between items-center">
+                            <div class="flex items-center gap-2">
+                                <span class="material-symbols-outlined text-primary text-[20px]">api</span>
+                                <h4 class="text-[11px] font-bold uppercase tracking-widest text-slate-900 dark:text-white">API Provider Configuration</h4>
+                            </div>
+                        </div>
+                        <div class="p-8 flex flex-col gap-6">
+                            <!-- Main Choice: System vs Private -->
+                            <div class="grid grid-cols-2 gap-4">
+                                <label class="cursor-pointer group">
+                                    <input type="radio" name="api_source" value="system" checked class="hidden peer">
+                                    <div class="p-4 rounded-2xl border-2 border-outline dark:border-slate-700 bg-slate-50/30 dark:bg-slate-800/30 peer-checked:border-primary peer-checked:bg-primary/5 transition-all text-center">
+                                        <p class="text-[11px] font-bold uppercase tracking-widest text-slate-500 peer-checked:text-primary">API Sistem</p>
+                                    </div>
+                                </label>
+                                <label class="cursor-pointer group">
+                                    <input type="radio" name="api_source" value="private" class="hidden peer" id="radio-api-private">
+                                    <div class="p-4 rounded-2xl border-2 border-outline dark:border-slate-700 bg-slate-50/30 dark:bg-slate-800/30 peer-checked:border-primary peer-checked:bg-primary/5 transition-all text-center">
+                                        <p class="text-[11px] font-bold uppercase tracking-widest text-slate-500 peer-checked:text-primary">API Pribadi</p>
+                                    </div>
+                                </label>
+                            </div>
+
+                            <!-- Private API Options (Hidden by default) -->
+                            <div id="private-api-options" class="hidden flex-col gap-6 animate-in fade-in slide-in-from-top-2 duration-300">
+                                <div class="grid grid-cols-3 gap-3">
+                                    <label class="cursor-pointer">
+                                        <input type="radio" name="private_provider" value="claude" class="hidden peer">
+                                        <div class="p-3 rounded-xl border border-outline dark:border-slate-700 bg-slate-50/30 dark:bg-slate-800/30 peer-checked:border-primary peer-checked:bg-primary/5 transition-all flex flex-col items-center gap-2">
+                                            <!-- Claude SVG Logo -->
+                                            <svg viewBox="0 0 24 24" class="size-6 fill-[#D97757]" xmlns="http://www.w3.org/2000/svg"><path d="M12 0L9.42857 2.57143L12 5.14286L14.5714 2.57143L12 0ZM5.14286 5.14286L2.57143 7.71429L5.14286 10.2857L7.71429 7.71429L5.14286 5.14286ZM18.8571 5.14286L16.2857 7.71429L18.8571 10.2857L21.4286 7.71429L18.8571 5.14286ZM2.57143 14.5714L0 17.1429L2.57143 19.7143L5.14286 17.1429L2.57143 14.5714ZM21.4286 14.5714L18.8571 17.1429L21.4286 19.7143L24 17.1429L21.4286 14.5714ZM7.71429 18.8571L5.14286 21.4286L7.71429 24L10.2857 21.4286L7.71429 18.8571ZM16.2857 18.8571L13.7143 21.4286L16.2857 24L18.8571 21.4286L16.2857 18.8571Z"/></svg>
+                                            <span class="text-[10px] font-bold uppercase tracking-widest text-slate-600 dark:text-slate-400 peer-checked:text-primary">Claude</span>
+                                        </div>
+                                    </label>
+                                    <label class="cursor-pointer">
+                                        <input type="radio" name="private_provider" value="gemini" class="hidden peer">
+                                        <div class="p-3 rounded-xl border border-outline dark:border-slate-700 bg-slate-50/30 dark:bg-slate-800/30 peer-checked:border-primary peer-checked:bg-primary/5 transition-all flex flex-col items-center gap-2">
+                                            <!-- Gemini SVG Logo -->
+                                            <svg viewBox="0 0 24 24" class="size-6" xmlns="http://www.w3.org/2000/svg"><path d="M12 0L14.5 9.5L24 12L14.5 14.5L12 24L9.5 14.5L0 12L9.5 9.5L12 0Z" fill="#4285F4"/></svg>
+                                            <span class="text-[10px] font-bold uppercase tracking-widest text-slate-600 dark:text-slate-400 peer-checked:text-primary">Gemini</span>
+                                        </div>
+                                    </label>
+                                    <label class="cursor-pointer">
+                                        <input type="radio" name="private_provider" value="codex" class="hidden peer">
+                                        <div class="p-3 rounded-xl border border-outline dark:border-slate-700 bg-slate-50/30 dark:bg-slate-800/30 peer-checked:border-primary peer-checked:bg-primary/5 transition-all flex flex-col items-center gap-2">
+                                            <span class="material-symbols-outlined text-slate-900 dark:text-white">code</span>
+                                            <span class="text-[10px] font-bold uppercase tracking-widest">Codex</span>
+                                        </div>
+                                    </label>
+                                </div>
+
+                                <!-- API Key Input -->
+                                <div id="private-key-container" class="hidden flex-col gap-2">
+                                    <label class="text-[11px] font-bold uppercase tracking-widest text-slate-500">API Key <span id="selected-provider-name"></span></label>
+                                    <div class="relative">
+                                        <input id="ai-api-key" type="password" class="w-full h-12 bg-slate-50 dark:bg-slate-800/50 border border-outline dark:border-slate-700 rounded-xl text-sm font-bold focus:ring-4 focus:ring-primary/10 focus:border-primary px-4 outline-none transition-all" placeholder="sk-...">
+                                        <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[20px]">vpn_key</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- AI Logic & Settings -->
+                    <section class="bg-surface dark:bg-slate-900/60 rounded-3xl border border-outline dark:border-slate-800 shadow-sm overflow-hidden flex flex-col flex-1 backdrop-blur-sm">
+                        <div class="px-6 py-4 border-b border-outline dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 flex justify-between items-center">
+                            <div class="flex items-center gap-2">
+                                <span class="material-symbols-outlined text-primary text-[20px]">psychology</span>
+                                <h4 class="text-[11px] font-bold uppercase tracking-widest text-slate-900 dark:text-white">AI Logic & Settings</h4>
+                            </div>
+                            <!-- Mode Switcher -->
+                            <div class="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-outline dark:border-slate-700">
+                                <button class="px-4 py-1.5 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm text-xs font-bold transition-all" id="btn-simple">Simple</button>
+                                <button class="px-4 py-1.5 rounded-lg text-slate-500 dark:text-slate-400 text-xs font-bold hover:text-slate-900 dark:hover:text-white transition-all" id="btn-json">JSON</button>
+                            </div>
+                        </div>
+                        <div class="p-8 flex flex-col gap-6 flex-1">
+                            <!-- Simple Mode View -->
+                            <div class="flex flex-col gap-6 h-full" id="view-simple">
+                                <div class="flex flex-col gap-2 flex-1">
+                                    <label class="text-[11px] font-bold uppercase tracking-widest text-slate-500">System Prompt (Kepribadian)</label>
+                                    <textarea id="ai-system-prompt" class="w-full flex-1 bg-slate-50 dark:bg-slate-800/50 border border-outline dark:border-slate-700 rounded-2xl p-4 text-sm font-bold focus:ring-4 focus:ring-primary/10 focus:border-primary text-slate-900 dark:text-white resize-none min-h-[120px] outline-none transition-all shadow-inner" placeholder="Contoh: Anda adalah asisten pendukung yang ramah dan ringkas untuk NoorByte. Selalu gunakan nada profesional..."></textarea>
+                                </div>
+                                <div class="flex flex-col gap-2 flex-1">
+                                    <label class="text-[11px] font-bold uppercase tracking-widest text-slate-500">Data Konteks (Basis Pengetahuan)</label>
+                                    <textarea id="ai-context-data" class="w-full flex-1 bg-slate-50 dark:bg-slate-800/50 border border-outline dark:border-slate-700 rounded-2xl p-4 text-sm font-bold focus:ring-4 focus:ring-primary/10 focus:border-primary text-slate-900 dark:text-white resize-none min-h-[120px] outline-none transition-all shadow-inner" placeholder="Tempelkan tautan FAQ atau data terstruktur di sini sebagai referensi AI..."></textarea>
+                                </div>
+                            </div>
+                            <!-- JSON Mode View (Hidden by default) -->
+                            <div class="hidden flex-col gap-2 h-full" id="view-json">
+                                <label class="text-[11px] font-bold uppercase tracking-widest text-slate-500">Configuration JSON</label>
+                                <div class="relative flex-1 bg-[#0f172a] rounded-2xl border border-outline dark:border-slate-800 overflow-hidden min-h-[260px] flex flex-col shadow-inner">
+                                    <div class="bg-slate-800/50 px-4 py-2 border-b border-slate-700/50 flex justify-between items-center shrink-0">
+                                        <span class="text-[10px] text-slate-400 font-mono uppercase tracking-widest font-bold">config.json</span>
+                                        <button class="text-slate-400 hover:text-white transition-colors"><span class="material-symbols-outlined text-sm">content_copy</span></button>
+                                    </div>
+                                    <textarea id="ai-config-json" class="w-full flex-1 bg-transparent p-6 text-[13px] text-emerald-400 font-mono focus:outline-none resize-none scrollbar-hide" spellcheck="false">{
+  "model": "gpt-4-turbo",
+  "temperature": 0.3,
+  "max_tokens": 150,
+  "system_prompt": "You are a Level 1 Support Bot.",
+  "triggers": [
+    {
+      "keyword": "billing",
+      "action": "escalate"
+    },
+    {
+      "intent": "greeting",
+      "action": "reply_standard"
+    }
+  ]
+}</textarea>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="px-8 pb-8 flex justify-end">
+                            <button id="save-settings-btn" class="px-10 py-3 rounded-xl bg-primary text-white text-sm font-black shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all active:scale-[0.98] flex items-center gap-2">
+                                <span class="material-symbols-outlined text-lg">save</span>
+                                <span>Save Settings</span>
+                            </button>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- Right Column (Real-time Log) -->
+                <div class="lg:col-span-5 flex flex-col">
+                    <section class="bg-surface dark:bg-slate-900/60 rounded-3xl border border-outline dark:border-slate-800 shadow-sm flex flex-col h-full overflow-hidden backdrop-blur-sm">
+                        <div class="px-6 py-4 border-b border-outline dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 flex justify-between items-center shrink-0">
+                            <div class="flex items-center gap-2">
+                                <span class="material-symbols-outlined text-primary text-[20px]">terminal</span>
+                                <h4 class="text-[11px] font-bold uppercase tracking-widest text-slate-900 dark:text-white">Real-time Activity</h4>
+                            </div>
+                            <span class="flex h-2 w-2 relative">
+                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                            </span>
+                        </div>
+                        <!-- Terminal Log Area -->
+                        <div id="terminal-scroll-container" class="flex-1 bg-[#0f172a] p-6 overflow-y-auto font-mono text-[12px] flex flex-col gap-6 scrollbar-hide shadow-inner">
+                            <!-- Logs will be rendered here dynamically -->
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="/js/sidebar.js"></script>
+<script>
+    (function() {
+        console.log('AI Auto Reply script initialized');
+
+        let originalAiState = false;
+
+        // Global state to ensure elements are found once
+        const DOM = {
+            btnSimple: document.getElementById('btn-simple'),
+            btnJson: document.getElementById('btn-json'),
+            viewSimple: document.getElementById('view-simple'),
+            viewJson: document.getElementById('view-json'),
+            apiSourceRadios: document.querySelectorAll('input[name="api_source"]'),
+            privateApiOptions: document.getElementById('private-api-options'),
+            privateProviderRadios: document.querySelectorAll('input[name="private_provider"]'),
+            privateKeyContainer: document.getElementById('private-key-container'),
+            selectedProviderName: document.getElementById('selected-provider-name'),
+            aiListeningToggle: document.getElementById('ai-listening-toggle'),
+            pendingSaveAlert: document.getElementById('pending-save-alert'),
+            deviceSelect: document.getElementById('device-select'),
+            aiTarget: document.getElementById('ai-target'),
+            aiTargetInput: document.getElementById('ai-target-input'),
+            tagContainer: document.getElementById('tag-container'),
+            saveBtn: document.getElementById('save-settings-btn'),
+            aiApiKey: document.getElementById('ai-api-key'),
+            aiSystemPrompt: document.getElementById('ai-system-prompt'),
+            aiContextData: document.getElementById('ai-context-data'),
+            terminalContainer: document.getElementById('terminal-scroll-container')
+        };
+
+        // Log System
+        window.addLogEntry = function(data) {
+            if (!DOM.terminalContainer) return;
+
+            const entry = document.createElement('div');
+            entry.className = 'flex flex-col gap-2 animate-in fade-in slide-in-from-bottom-2 duration-300';
+            
+            let typeClass = 'bg-slate-800 text-slate-300 border-slate-700';
+            let typeLabel = (data.type || 'info').toUpperCase();
+            
+            if (data.type === 'processing') typeClass = 'bg-blue-900/30 text-blue-400 border-blue-800/30';
+            if (data.type === 'outgoing') typeClass = 'bg-emerald-900/30 text-emerald-400 border-emerald-800/30';
+            if (data.type === 'error') typeClass = 'bg-rose-900/30 text-rose-400 border-rose-800/30';
+
+            const senderHtml = data.sender ? `<span class="text-slate-400">${data.sender}</span>` : '';
+
+            entry.innerHTML = `
+                <div class="flex items-center gap-3 text-slate-500 text-[10px] font-bold">
+                    <span>${data.timestamp || new Date().toLocaleTimeString()}</span>
+                    <span class="px-2 py-0.5 rounded ${typeClass} border uppercase tracking-widest">${typeLabel}</span>
+                    ${senderHtml}
+                </div>
+                <div class="${data.type === 'outgoing' ? 'text-emerald-400/90' : (data.type === 'incoming' ? 'text-slate-300 italic' : 'text-blue-300/70')} pl-4 border-l-2 ${data.type === 'incoming' ? 'border-slate-700' : (data.type === 'outgoing' ? 'border-emerald-900/30' : 'border-blue-900/30')}">
+                    "${data.message || ''}"
+                </div>
+            `;
+
+            DOM.terminalContainer.appendChild(entry);
+            DOM.terminalContainer.scrollTop = DOM.terminalContainer.scrollHeight;
+
+            while (DOM.terminalContainer.children.length > 50) {
+                DOM.terminalContainer.removeChild(DOM.terminalContainer.firstChild);
+            }
+        };
+
+        // Socket.io Setup
+        const socket = io();
+
+        socket.on('connect', () => {
+            console.log(`[SOCKET] Connected to server. ID: ${socket.id}`);
+        });
+
+        socket.on('ai_activity_log', (data) => {
+            const selectedDevice = DOM.deviceSelect.value;
+            console.log(`[AI Log Debug] Received for ${data.apiKey}. Selected: ${selectedDevice}. Match: ${data.apiKey === selectedDevice}`);
+            if (data.apiKey === selectedDevice) {
+                if (typeof window.addLogEntry === 'function') {
+                    window.addLogEntry(data);
+                } else {
+                    console.log('[AI Log] Entry received but addLogEntry not defined:', data);
+                }
+            }
+        });
+
+        // Tag System Logic
+        let tags = [];
+
+        function renderTags() {
+            // Remove existing tag elements (but keep the input)
+            const tagEls = DOM.tagContainer.querySelectorAll('.tag-pill');
+            tagEls.forEach(el => el.remove());
+
+            tags.forEach((tag, index) => {
+                const pill = document.createElement('div');
+                pill.className = 'tag-pill flex items-center gap-1.5 px-3 py-1 bg-primary/10 border border-primary/20 rounded-full text-xs font-bold text-primary animate-in zoom-in-95 duration-200';
+                pill.innerHTML = `
+                    <span>${tag}</span>
+                    <button type="button" class="hover:text-primary/70 transition-colors" onclick="window.removeAiTag(${index})">
+                        <span class="material-symbols-outlined text-sm font-bold">close</span>
+                    </button>
+                `;
+                DOM.tagContainer.insertBefore(pill, DOM.aiTargetInput);
+            });
+
+            // Sync with hidden input
+            DOM.aiTarget.value = tags.join(', ');
+        }
+
+        window.removeAiTag = (index) => {
+            tags.splice(index, 1);
+            renderTags();
+        };
+
+        if (DOM.aiTargetInput) {
+            DOM.aiTargetInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ',') {
+                    e.preventDefault();
+                    const val = DOM.aiTargetInput.value.trim().replace(',', '');
+                    if (val && !tags.includes(val)) {
+                        tags.push(val);
+                        DOM.aiTargetInput.value = '';
+                        renderTags();
+                    }
+                } else if (e.key === 'Backspace' && DOM.aiTargetInput.value === '' && tags.length > 0) {
+                    tags.pop();
+                    renderTags();
+                }
+            });
+
+            // Focus input when container clicked
+            DOM.tagContainer.addEventListener('click', () => {
+                DOM.aiTargetInput.focus();
+            });
+        }
+
+        // Utility: Show feedback
+        function notify(msg, type = 'info') {
+            console.log(`[Notification] ${type.toUpperCase()}: ${msg}`);
+            if (typeof window.showToast === 'function') {
+                window.showToast(msg, type);
+            } else {
+                alert(msg);
+            }
+        }
+
+        // 1. View Toggling
+        function switchView(mode) {
+            if (mode === 'simple') {
+                DOM.btnSimple.className = 'px-4 py-1.5 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm text-xs font-bold transition-all';
+                DOM.btnJson.className = 'px-4 py-1.5 rounded-lg text-slate-500 dark:text-slate-400 text-xs font-bold hover:text-slate-900 dark:hover:text-white transition-all';
+                DOM.viewSimple.classList.remove('hidden');
+                DOM.viewSimple.classList.add('flex');
+                DOM.viewJson.classList.add('hidden');
+                DOM.viewJson.classList.remove('flex');
+            } else {
+                DOM.btnJson.className = 'px-4 py-1.5 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm text-xs font-bold transition-all';
+                DOM.btnSimple.className = 'px-4 py-1.5 rounded-lg text-slate-500 dark:text-slate-400 text-xs font-bold hover:text-slate-900 dark:hover:text-white transition-all';
+                DOM.viewJson.classList.remove('hidden');
+                DOM.viewJson.classList.add('flex');
+                DOM.viewSimple.classList.add('hidden');
+                DOM.viewSimple.classList.remove('flex');
+            }
+        }
+
+        if (DOM.btnSimple) DOM.btnSimple.addEventListener('click', () => switchView('simple'));
+        if (DOM.btnJson) DOM.btnJson.addEventListener('click', () => switchView('json'));
+
+        // 2. API Provider Toggle
+        DOM.apiSourceRadios.forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                if (e.target.value === 'private') {
+                    DOM.privateApiOptions.classList.remove('hidden');
+                } else {
+                    DOM.privateApiOptions.classList.add('hidden');
+                    DOM.privateKeyContainer.classList.add('hidden');
+                }
+            });
+        });
+
+        DOM.privateProviderRadios.forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                DOM.privateKeyContainer.classList.remove('hidden');
+                const provider = e.target.value.charAt(0).toUpperCase() + e.target.value.slice(1);
+                DOM.selectedProviderName.innerText = `(${provider})`;
+            });
+        });
+
+        // 3. AI Listening Mode Change
+        if (DOM.aiListeningToggle) {
+            DOM.aiListeningToggle.addEventListener('change', (e) => {
+                const isChanged = e.target.checked !== originalAiState;
+                if (isChanged) {
+                    DOM.pendingSaveAlert.classList.remove('hidden');
+                } else {
+                    DOM.pendingSaveAlert.classList.add('hidden');
+                }
+            });
+        }
+
+        // 4. Load Devices
+        async function loadDevices() {
+            console.log('Loading devices...');
+            const isAdmin = localStorage.getItem('connectApi_loggedIn') === 'true';
+            const guestApiKey = localStorage.getItem('noorbyte_session');
+            
+            const query = isAdmin 
+                ? `?role=admin&api_key=${guestApiKey || ''}` 
+                : (guestApiKey ? `?api_key=${guestApiKey}` : '');
+                
+            try {
+                const response = await fetch(`/api/get-devices${query}`);
+                const result = await response.json();
+
+                if (result.status && result.data.length > 0) {
+                    while (DOM.deviceSelect.options.length > 1) {
+                        DOM.deviceSelect.remove(1);
+                    }
+                    
+                    result.data.forEach(device => {
+                        const option = document.createElement('option');
+                        option.value = device.api_key;
+                        option.textContent = `${device.phone || 'No Phone'} (${device.username})`;
+                        DOM.deviceSelect.appendChild(option);
+                    });
+                    console.log(`Loaded ${result.data.length} devices`);
+                }
+            } catch (error) {
+                console.error('Error loading devices:', error);
+            }
+        }
+
+        // 5. Load settings when device changes
+        if (DOM.deviceSelect) {
+            DOM.deviceSelect.addEventListener('change', async (e) => {
+                // Clear logs on device change
+                if (DOM.terminalContainer) {
+                    DOM.terminalContainer.innerHTML = '';
+                }
+
+                const deviceApiKey = e.target.value;
+                if (!deviceApiKey) return;
+                
+                console.log(`Loading AI settings for device: ${deviceApiKey}`);
+                try {
+                    const response = await fetch(`/api/ai/settings`, {
+                        headers: { 'Authorization': `Bearer ${deviceApiKey}` }
+                    });
+                    const result = await response.json();
+                    
+                    if (result.status && result.data) {
+                        const settings = result.data;
+                        originalAiState = !!settings.ai_enabled;
+                        DOM.aiListeningToggle.checked = originalAiState;
+                        DOM.pendingSaveAlert.classList.add('hidden');
+                        
+                        const sourceRadio = document.querySelector(`input[name="api_source"][value="${settings.ai_source || 'system'}"]`);
+                        if (sourceRadio) {
+                            sourceRadio.checked = true;
+                            sourceRadio.dispatchEvent(new Event('change'));
+                        }
+                        
+                        if (settings.ai_provider) {
+                            const providerRadio = document.querySelector(`input[name="private_provider"][value="${settings.ai_provider}"]`);
+                            if (providerRadio) {
+                                providerRadio.checked = true;
+                                providerRadio.dispatchEvent(new Event('change'));
+                            }
+                        }
+                        
+                        DOM.aiApiKey.value = settings.ai_api_key || '';
+                        DOM.aiSystemPrompt.value = settings.ai_system_prompt || '';
+                        DOM.aiContextData.value = settings.ai_context_data || '';
+                        
+                        // Handle Tags
+                        DOM.aiTarget.value = settings.ai_target || '';
+                        tags = settings.ai_target ? settings.ai_target.split(',').map(t => t.trim()).filter(t => t !== "") : [];
+                        renderTags();
+                        
+                        console.log('AI settings loaded successfully');
+                    }
+                } catch (error) {
+                    console.error('Error loading AI settings:', error);
+                }
+            });
+        }
+
+        // 6. Save settings
+        if (DOM.saveBtn) {
+            DOM.saveBtn.addEventListener('click', async () => {
+                console.log('Save Settings initiated');
+                const deviceApiKey = DOM.deviceSelect.value;
+                
+                if (!deviceApiKey) {
+                    notify('Pilih perangkat terlebih dahulu', 'error');
+                    return;
+                }
+                
+                const apiSourceEl = document.querySelector('input[name="api_source"]:checked');
+                const providerEl = document.querySelector('input[name="private_provider"]:checked');
+
+                const data = {
+                    ai_enabled: DOM.aiListeningToggle.checked,
+                    ai_source: apiSourceEl ? apiSourceEl.value : 'system',
+                    ai_provider: providerEl ? providerEl.value : null,
+                    ai_api_key: DOM.aiApiKey.value,
+                    ai_system_prompt: DOM.aiSystemPrompt.value,
+                    ai_context_data: DOM.aiContextData.value,
+                    ai_target: DOM.aiTarget.value
+                };
+                
+                try {
+                    DOM.saveBtn.disabled = true;
+                    const originalContent = DOM.saveBtn.innerHTML;
+                    DOM.saveBtn.innerHTML = `<span class="material-symbols-outlined text-lg animate-spin">sync</span><span>Menyimpan...</span>`;
+                    
+                    console.log('Requesting save-settings with data:', data);
+                    const response = await fetch('/api/ai/save-settings', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${deviceApiKey}`
+                        },
+                        body: JSON.stringify(data)
+                    });
+                    
+                    const result = await response.json();
+                    console.log('Save result:', result);
+
+                    if (result.status) {
+                        originalAiState = DOM.aiListeningToggle.checked;
+                        DOM.pendingSaveAlert.classList.add('hidden');
+                        notify('Pengaturan AI berhasil disimpan!', 'success');
+                    } else {
+                        notify(result.message || 'Gagal menyimpan pengaturan', 'error');
+                    }
+                    
+                    DOM.saveBtn.disabled = false;
+                    DOM.saveBtn.innerHTML = originalContent;
+                } catch (error) {
+                    console.error('Save error:', error);
+                    notify('Kesalahan sistem: ' + error.message, 'error');
+                    DOM.saveBtn.disabled = false;
+                    DOM.saveBtn.innerHTML = `<span class="material-symbols-outlined text-lg">save</span><span>Save Settings</span>`;
+                }
+            });
+        }
+
+        // Global Error Monitor
+        window.addEventListener('error', function(event) {
+            console.error('JS runtime error:', event.error);
+            // alert('Terjadi kesalahan JavaScript: ' + event.message);
+        });
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', loadDevices);
+        // Fallback jika DOM sudah load
+        if (document.readyState === 'complete' || document.readyState === 'interactive') {
+            loadDevices();
+        }
+    })();
+</script>
+</body>
+</html>

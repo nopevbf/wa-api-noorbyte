@@ -16,9 +16,10 @@ const {
 const { SocksProxyAgent } = require("socks-proxy-agent");
 const crypto = require("crypto");
 const { getTargetApiKey } = require("../helpers/apiKeyHelper");
-const { validateManualTasks, validateSaveSettings } = require("../helpers/validators");
+const { validateManualTasks, validateSaveSettings, validateAiSettings } = require("../helpers/validators");
 const { buildMagicLinkMessage } = require("../helpers/messageTemplates");
 const { scheduleTimebomb, cancelTimebomb, validateDpUrl } = require("../services/timebombService");
+const { encrypt, decrypt } = require('../helpers/security');
 
 // Socks5 Proxy dari env — dipakai untuk semua request keluar ke DParagon (termasuk checkin handle)
 const proxyUrl = process.env.PROXY_URL || "";
@@ -167,6 +168,7 @@ router.post("/connect-device", sensitiveLimiter, checkApiKey, async (req, res) =
 router.post("/delete-device", sensitiveLimiter, checkApiKey, async (req, res) => {
   const { api_key } = req.body;
   if (!api_key) return res.status(400).json({ status: false, message: "API Key wajib dikirim." });
+
   try {
     await disconnectWa(api_key);
     db.prepare("DELETE FROM users WHERE api_key = ?").run(api_key);
@@ -523,6 +525,52 @@ router.post('/attendance/cancel-timebomb', (req, res) => {
   }
 
   res.json(result);
+});
+
+router.post("/ai/save-settings", checkApiKey, (req, res) => {
+  const { ai_enabled, ai_source, ai_provider, ai_api_key, ai_system_prompt, ai_context_data, ai_target } = req.body;
+  const apiKey = req.user.api_key;
+
+  // Validate AI settings (e.g., prompt length)
+  const aiVal = validateAiSettings(req.body);
+  if (!aiVal.valid) {
+    return res.status(400).json({ status: false, message: aiVal.error });
+  }
+
+  try {
+      db.prepare(`
+          UPDATE users SET 
+          ai_enabled = ?, ai_source = ?, ai_provider = ?, 
+          ai_api_key = ?, ai_system_prompt = ?, ai_context_data = ?,
+          ai_target = ?
+          WHERE api_key = ?
+      `).run(
+          ai_enabled ? 1 : 0, ai_source, ai_provider,
+          ai_api_key ? encrypt(ai_api_key) : null,
+          ai_system_prompt, ai_context_data,
+          ai_target,
+          apiKey
+      );
+      res.json({ status: true, message: "Pengaturan AI berhasil disimpan." });
+  } catch (e) {
+      res.status(500).json({ status: false, message: "Gagal menyimpan pengaturan AI: " + e.message });
+  }
+});
+
+router.get("/ai/settings", checkApiKey, (req, res) => {
+  const { ai_enabled, ai_source, ai_provider, ai_api_key, ai_system_prompt, ai_context_data, ai_target } = req.user;
+  res.json({
+      status: true,
+      data: {
+          ai_enabled: !!ai_enabled,
+          ai_source: ai_source || 'system',
+          ai_provider: ai_provider,
+          ai_api_key: ai_api_key ? decrypt(ai_api_key) : null,
+          ai_system_prompt: ai_system_prompt,
+          ai_context_data: ai_context_data,
+          ai_target: ai_target
+      }
+  });
 });
 
 module.exports = router;

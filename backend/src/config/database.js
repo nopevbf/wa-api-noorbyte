@@ -1,8 +1,7 @@
 const Database = require("better-sqlite3");
 const path = require("path");
 
-// Deteksi jika berjalan di Fly.io (menggunakan ENV), jika tidak, gunakan db lokal.
-const dbPath = process.env.DB_PATH || path.join(__dirname, "../../database.db");
+const dbPath = process.env.DB_PATH || (process.env.NODE_ENV === "test" ? path.join(__dirname, "../../database_test.db") : path.join(__dirname, "../../database.db"));
 const db = new Database(dbPath);
 
 db.exec(`
@@ -13,7 +12,14 @@ db.exec(`
     api_key TEXT UNIQUE,
     webhook_url TEXT,
     status TEXT DEFAULT 'Disconnected',
-    role TEXT DEFAULT 'user'
+    role TEXT DEFAULT 'user',
+    ai_enabled INTEGER DEFAULT 0,
+    ai_source TEXT DEFAULT 'system',
+    ai_provider TEXT DEFAULT 'gemini',
+    ai_api_key TEXT,
+    ai_system_prompt TEXT,
+    ai_context_data TEXT,
+    ai_target TEXT
   );
 
   CREATE TABLE IF NOT EXISTS message_logs (
@@ -63,6 +69,13 @@ const migrations = [
   { table: 'automation_schedules', column: 'custom_days', sql: "ALTER TABLE automation_schedules ADD COLUMN custom_days TEXT" },
   { table: 'automation_schedules', column: 'excluded_dates', sql: "ALTER TABLE automation_schedules ADD COLUMN excluded_dates TEXT" },
   { table: 'automation_schedules', column: 'manual_tasks', sql: "ALTER TABLE automation_schedules ADD COLUMN manual_tasks TEXT" },
+  { table: 'users', column: 'ai_enabled', sql: "ALTER TABLE users ADD COLUMN ai_enabled INTEGER DEFAULT 0" },
+  { table: 'users', column: 'ai_source', sql: "ALTER TABLE users ADD COLUMN ai_source TEXT DEFAULT 'system'" },
+  { table: 'users', column: 'ai_provider', sql: "ALTER TABLE users ADD COLUMN ai_provider TEXT DEFAULT 'gemini'" },
+  { table: 'users', column: 'ai_api_key', sql: "ALTER TABLE users ADD COLUMN ai_api_key TEXT" },
+  { table: 'users', column: 'ai_system_prompt', sql: "ALTER TABLE users ADD COLUMN ai_system_prompt TEXT" },
+  { table: 'users', column: 'ai_context_data', sql: "ALTER TABLE users ADD COLUMN ai_context_data TEXT" },
+  { table: 'users', column: 'ai_target', sql: "ALTER TABLE users ADD COLUMN ai_target TEXT" },
 ];
 
 migrations.forEach(({ table, column, sql }) => {

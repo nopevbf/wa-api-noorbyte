@@ -22,6 +22,14 @@ const saveSettingsSchema = z.object({
 }).strip();
 
 /**
+ * Schema for AI settings validation.
+ * Limits ai_system_prompt to 10,000 characters.
+ */
+const aiSettingsSchema = z.object({
+  ai_system_prompt: z.string().max(10000, 'ai_system_prompt maksimal 10000 karakter.').optional(),
+}).strip();
+
+/**
  * Validates the manual_tasks field from a request body.
  * - If undefined/null, returns { valid: true, data: [] }
  * - If not an array, returns { valid: false, error: '...' }
@@ -61,14 +69,15 @@ function validateManualTasks(manualTasks) {
  * Validates mass-assignment-risky fields in the save-settings payload.
  * Only validates fields that have a narrow allowed range (is_active, frequency).
  *
- * @param {{ is_active?: any, frequency?: any }} body
+ * @param {Object} body
  * @returns {{ valid: boolean, error?: string }}
  */
 function validateSaveSettings(body) {
-  const result = saveSettingsSchema.safeParse({
-    is_active: body.is_active,
-    frequency: body.frequency,
-  });
+  if (!body || typeof body !== 'object') {
+    return { valid: false, error: 'Payload tidak valid.' };
+  }
+
+  const result = saveSettingsSchema.safeParse(body);
 
   if (!result.success) {
     const firstError = result.error.issues[0];
@@ -81,4 +90,56 @@ function validateSaveSettings(body) {
   return { valid: true };
 }
 
-module.exports = { validateManualTasks, validateSaveSettings, manualTaskSchema, saveSettingsSchema };
+/**
+ * Normalizes phone numbers to a standard Indonesian format (628...).
+ * - Converts input to string.
+ * - Removes all non-numeric characters.
+ * - Replaces a leading '0' with '62' (e.g., 0812 -> 62812).
+ * - Preserves existing '62' prefix.
+ *
+ * @param {string|number} phone - The phone number to normalize.
+ * @returns {string} Normalized numeric string or empty string if input is falsy.
+ */
+function normalizePhoneNumber(phone) {
+  if (!phone) return '';
+  
+  // Ensure we have a string and strip non-digits
+  let clean = String(phone).replace(/\D/g, '');
+  
+  // Replace leading '0' with '62' if present
+  if (clean.startsWith('0')) {
+    clean = '62' + clean.substring(1);
+  }
+  
+  return clean;
+}
+
+/**
+ * Validates AI settings payload.
+ *
+ * @param {Object} body
+ * @returns {{ valid: boolean, error?: string }}
+ */
+function validateAiSettings(body) {
+  if (!body || typeof body !== 'object') {
+    return { valid: false, error: 'Payload tidak valid.' };
+  }
+
+  const result = aiSettingsSchema.safeParse(body);
+
+  if (!result.success) {
+    const firstError = result.error.issues[0];
+    return { valid: false, error: firstError.message };
+  }
+
+  return { valid: true };
+}
+
+module.exports = { 
+  validateManualTasks, 
+  validateSaveSettings, 
+  normalizePhoneNumber, 
+  validateAiSettings,
+  manualTaskSchema, 
+  saveSettingsSchema 
+};

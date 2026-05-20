@@ -33,11 +33,27 @@
         <span class="material-symbols-outlined icon text-xl">group</span>
         <span class="text-sm font-semibold">WhatsApp Groups</span>
       </a>
-      <a href="/tester" data-path="/tester"
-        class="nav-link flex items-center gap-3 px-3.5 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-100/80 dark:hover:bg-slate-800/80 rounded-xl transition-all duration-200">
-        <span class="material-symbols-outlined icon">send</span>
-        <span class="text-sm font-semibold">Web Tester</span>
-      </a>
+      <!-- Menu Send Messages dengan Sub-menu -->
+      <div class="flex flex-col gap-1">
+        <button id="btn-send-messages"
+          class="nav-parent flex items-center justify-between w-full px-3.5 py-2.5 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100/80 dark:hover:bg-slate-800/80 transition-all duration-200 group">
+          <div class="flex items-center gap-3">
+            <span class="material-symbols-outlined text-xl icon">send</span>
+            <span class="text-sm font-semibold">Send Messages</span>
+          </div>
+          <span id="arrow-send-messages" class="material-symbols-outlined text-lg transition-transform duration-300">expand_more</span>
+        </button>
+        <div id="submenu-send-messages" class="hidden flex-col gap-1 pl-10 overflow-hidden transition-all duration-300">
+          <a href="/tester" data-path="/tester"
+            class="nav-link flex items-center gap-3 py-2 text-slate-500 dark:text-slate-400 hover:text-primary transition-colors">
+            <span class="text-xs font-bold uppercase tracking-widest">Send Test Message</span>
+          </a>
+          <a href="/auto-reply" data-path="/auto-reply"
+            class="nav-link flex items-center gap-3 py-2 text-slate-500 dark:text-slate-400 hover:text-primary transition-colors">
+            <span class="text-xs font-bold uppercase tracking-widest">Auto Reply - AI</span>
+          </a>
+        </div>
+      </div>
       <a href="/automation" data-path="/automation"
         class="nav-link flex items-center gap-3 px-3.5 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-100/80 dark:hover:bg-slate-800/80 rounded-xl transition-all duration-200">
         <span class="material-symbols-outlined icon"

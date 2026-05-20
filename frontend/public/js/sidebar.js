@@ -76,7 +76,43 @@ async function loadSidebar() {
     // 2. TEMA NORMAL (Dashboard, Devices, dll)
     // ==========================================
     else {
-      // A. Highlight Menu Navigasi Biasa (Warna Biru)
+      // Tunggu sebentar agar elemen sidebar benar-benar ter-render di DOM
+      setTimeout(() => {
+        // B. Logic Dropdown Send Messages
+        const btnSendMessages = document.getElementById("btn-send-messages");
+        const submenuSendMessages = document.getElementById("submenu-send-messages");
+        const arrowSendMessages = document.getElementById("arrow-send-messages");
+
+        if (btnSendMessages && submenuSendMessages) {
+          console.log("[SIDEBAR] Initializing Send Messages dropdown...");
+          const toggleSubmenu = (show) => {
+            if (show) {
+              submenuSendMessages.classList.remove("hidden");
+              submenuSendMessages.classList.add("flex");
+              if (arrowSendMessages) arrowSendMessages.style.transform = "rotate(180deg)";
+            } else {
+              submenuSendMessages.classList.add("hidden");
+              submenuSendMessages.classList.remove("flex");
+              if (arrowSendMessages) arrowSendMessages.style.transform = "rotate(0deg)";
+            }
+          };
+
+          btnSendMessages.addEventListener("click", (e) => {
+            e.preventDefault();
+            const isHidden = submenuSendMessages.classList.contains("hidden");
+            toggleSubmenu(isHidden);
+          });
+
+          // Otomatis buka jika di halaman terkait
+          const path = window.location.pathname;
+          if (path.includes("/tester") || path.includes("/auto-reply")) {
+            toggleSubmenu(true);
+            btnSendMessages.classList.add("bg-primary/5", "text-primary");
+          }
+        }
+      }, 50);
+
+      // C. Highlight Menu Navigasi Biasa (Warna Biru)
       const navLinks = document.querySelectorAll(
         ".nav-link, #sidebar-container nav a",
       );
@@ -359,7 +395,8 @@ async function loadNavbar() {
         "/automation": "Automation",
         "/checkin": "Check-in",
         "/groups": "Groups",
-        "/tester": "API Tester",
+        "/tester": "Send Test Message",
+        "/auto-reply": "Auto Reply - AI",
         "/verify": "Verification"
       };
 

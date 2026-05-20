@@ -27,6 +27,13 @@ global.io = new Server(server, {
   cors: corsOptions,
 });
 
+global.io.on('connection', (socket) => {
+    console.log(`[SOCKET] Client connected: ${socket.id}`);
+    socket.on('disconnect', () => {
+        console.log(`[SOCKET] Client disconnected: ${socket.id}`);
+    });
+});
+
 // 3. API Routes
 app.use("/api", apiRoutes);
 
@@ -35,7 +42,7 @@ const frontendPath = path.join(__dirname, "../frontend/public");
 app.use(express.static(frontendPath));
 
 // ROUTE UNTUK HALAMAN UI
-const uiPages = ["login", "dashboard", "devices", "groups", "tester", "automation", "verify", "jailbreak", "pulse"];
+const uiPages = ["login", "dashboard", "devices", "groups", "tester", "automation", "verify", "jailbreak", "pulse", "auto-reply"];
 uiPages.forEach(page => {
     app.get(`/${page}`, (req, res) => res.sendFile(path.join(frontendPath, `${page}.html`)));
 });
