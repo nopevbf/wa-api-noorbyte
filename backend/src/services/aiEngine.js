@@ -1,5 +1,5 @@
 const axios = require('axios');
-const { decrypt } = require('../helpers/security');
+const { decrypt, maskSensitiveData } = require('../helpers/security');
 
 async function generateAiResponse(config, userMessage) {
     const { source, provider: dbProvider, customKey, systemPrompt, contextData } = config;
@@ -28,11 +28,8 @@ async function generateAiResponse(config, userMessage) {
             return response.data.choices[0].message.content;
         }
     } catch (error) {
-        let msg = error.message;
-        if (apiKey && msg.includes(apiKey)) {
-            msg = msg.replace(new RegExp(apiKey.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), '***');
-        }
-        throw new Error(msg);
+        const maskedMsg = maskSensitiveData(error.message, apiKey);
+        throw new Error(maskedMsg);
     }
     throw new Error('Provider tidak didukung.');
 }
