@@ -82,7 +82,7 @@ function isMaliciousString(input) {
  * @returns {string} - Pesan yang sudah di-mask
  */
 function maskSensitiveData(message, secret) {
-    if (!message || !secret) return message;
+    if (!message || !secret || typeof secret !== 'string' || secret.length <= 3) return message;
     
     let stringMessage = message;
     

@@ -2,7 +2,6 @@ const axios = require("axios");
 const path = require("path");
 const puppeteer = require("puppeteer-extra");
 const StealthPlugin = require("puppeteer-extra-plugin-stealth");
-const { SocksProxyAgent } = require("socks-proxy-agent");
 
 puppeteer.use(StealthPlugin());
 
@@ -12,8 +11,12 @@ const DEFAULT_TIMEOUT_MS = 30000;
 const proxyUrl = process.env.PROXY_URL || "";
 
 // Buat fresh agent per request agar koneksi tidak stale
-function createAgent() {
-  return proxyUrl ? new SocksProxyAgent(proxyUrl) : undefined;
+async function createAgent() {
+  if (proxyUrl) {
+    const { SocksProxyAgent } = await import("socks-proxy-agent");
+    return new SocksProxyAgent(proxyUrl);
+  }
+  return undefined;
 }
 
 // ---------------------------------------------------------------------------
@@ -120,7 +123,7 @@ async function requestWithContext(config, stepLabel) {
   try {
     return await axios({
       ...config,
-      httpsAgent: createAgent(),
+      httpsAgent: await createAgent(),
       timeout: DEFAULT_TIMEOUT_MS,
     });
   } catch (err) {
@@ -198,7 +201,7 @@ async function executeStep1And2(dpApiUrl, dpEmail, dpPassword, logger = null, ma
         url: attempt.url,
         data: attempt.data,
         headers: buildHeaders(null, { baseApiUrl }),
-        httpsAgent: createAgent(),
+        httpsAgent: await createAgent(),
         timeout: DEFAULT_TIMEOUT_MS,
       });
       break;

@@ -64,16 +64,27 @@ describe('Security Validation', () => {
   });
 
   it('should throw error for corrupted IV or non-hex format', () => {
-    const { decrypt } = require('../src/helpers/security');
+    const originalEnv = process.env.ENCRYPTION_KEY;
+    process.env.ENCRYPTION_KEY = 'CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC';
     
-    // Invalid format (no colon)
-    expect(() => decrypt('not-hex-format')).toThrow(/Invalid encrypted text format/);
-    
-    // Corrupted IV (not valid hex)
-    expect(() => decrypt('zzzz:1234')).toThrow();
-    
-    // Non-hex encrypted data
-    expect(() => decrypt('abcd:zzzz')).toThrow();
+    let decrypt;
+    jest.isolateModules(() => {
+      const security = require('../src/helpers/security');
+      decrypt = security.decrypt;
+    });
+
+    try {
+      // Invalid format (no colon)
+      expect(() => decrypt('not-hex-format')).toThrow(/Invalid encrypted text format/);
+      
+      // Corrupted IV (not valid hex)
+      expect(() => decrypt('zzzz:1234')).toThrow();
+      
+      // Non-hex encrypted data
+      expect(() => decrypt('abcd:zzzz')).toThrow();
+    } finally {
+      process.env.ENCRYPTION_KEY = originalEnv;
+    }
   });
 });
 
@@ -95,5 +106,10 @@ describe('maskSensitiveData', () => {
   it('should return original message if secret is null/empty', () => {
     expect(maskSensitiveData('hello', null)).toBe('hello');
     expect(maskSensitiveData('hello', '')).toBe('hello');
+  });
+
+  it('should not mask short secrets (1-3 characters)', () => {
+    expect(maskSensitiveData('Log id 12', '12')).toBe('Log id 12');
+    expect(maskSensitiveData('Key abc error', 'abc')).toBe('Key abc error');
   });
 });

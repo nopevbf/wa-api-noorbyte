@@ -3,6 +3,22 @@
  */
 const request = require('supertest');
 const express = require('express');
+
+// Mock @whiskeysockets/baileys BEFORE requiring apiRoutes to prevent ESM error
+jest.mock('@whiskeysockets/baileys', () => ({
+    default: jest.fn(),
+    useMultiFileAuthState: jest.fn().mockResolvedValue({
+        state: { creds: {} },
+        saveCreds: jest.fn()
+    }),
+    fetchLatestBaileysVersion: jest.fn().mockResolvedValue({ version: [2, 2311, 5] }),
+    DisconnectReason: { loggedOut: 401 }
+}));
+
+// We must also mock pino, qrcode since waEngine requires them and they might clutter logs
+jest.mock('pino', () => jest.fn(() => ({ level: 'silent' })));
+jest.mock('qrcode', () => ({ toDataURL: jest.fn() }));
+
 const router = require('../src/routes/apiRoutes');
 const db = require('../src/config/database');
 const { encrypt } = require('../src/helpers/security');
