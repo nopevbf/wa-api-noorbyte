@@ -1,27 +1,25 @@
 const { validateManualTasks, validateSaveSettings, normalizePhoneNumber } = require('../src/helpers/validators');
 
 describe('normalizePhoneNumber', () => {
-  it('should normalize Indonesian number starting with 08 to 628', () => {
-    expect(normalizePhoneNumber('082298507500')).toBe('6282298507500');
-  });
+  const cases = [
+    { input: '082298507500', expected: '6282298507500', desc: 'Indonesian number starting with 08 to 628' },
+    { input: '6282298507500', expected: '6282298507500', desc: 'keep number starting with 62 as is' },
+    { input: '+62 822-9850-7500', expected: '6282298507500', desc: 'clean non-numeric characters and normalize' },
+    { input: '0822 9850 7500', expected: '6282298507500', desc: 'handle spaces' },
+    { input: '+6282298507500', expected: '6282298507500', desc: 'handle "+" prefix with 62' },
+    { input: '+1234567890', expected: '1234567890', desc: 'handle "+" prefix international' },
+    { input: '14155552671', expected: '14155552671', desc: 'USA international' },
+    { input: '+442079460958', expected: '442079460958', desc: 'UK international' },
+    { input: null, expected: '', desc: 'handle null' },
+    { input: undefined, expected: '', desc: 'handle undefined' },
+    { input: '', expected: '', desc: 'handle empty string' },
+    { input: '82298507500', expected: '82298507500', desc: 'keep numbers without country code as is' },
+  ];
 
-  it('should keep number starting with 62 as is', () => {
-    expect(normalizePhoneNumber('6282298507500')).toBe('6282298507500');
-  });
-
-  it('should clean non-numeric characters and normalize', () => {
-    expect(normalizePhoneNumber('+62 822-9850-7500')).toBe('6282298507500');
-    expect(normalizePhoneNumber('0822 9850 7500')).toBe('6282298507500');
-  });
-
-  it('should return empty string for null/undefined/empty input', () => {
-    expect(normalizePhoneNumber(null)).toBe('');
-    expect(normalizePhoneNumber(undefined)).toBe('');
-    expect(normalizePhoneNumber('')).toBe('');
-  });
-
-  it('should handle numbers without country code prefix by just cleaning them if not starting with 0', () => {
-    expect(normalizePhoneNumber('82298507500')).toBe('82298507500');
+  cases.forEach(({ input, expected, desc }) => {
+    it(`should ${desc}`, () => {
+      expect(normalizePhoneNumber(input)).toBe(expected);
+    });
   });
 });
 
@@ -149,17 +147,17 @@ describe('validateSaveSettings', () => {
 describe('AI Settings Validation', () => {
   const { validateAiSettings } = require('../src/helpers/validators');
 
-  it('should fail if ai_system_prompt exceeds 10000 characters', () => {
+  it('should pass if ai_system_prompt is within 10000 characters', () => {
+    const okPrompt = 'a'.repeat(10000);
+    const result = validateAiSettings({ ai_system_prompt: okPrompt });
+    expect(result.valid).toBe(true);
+  });
+
+  it('should fail if ai_system_prompt is 10001 characters', () => {
     const longPrompt = 'a'.repeat(10001);
     const result = validateAiSettings({ ai_system_prompt: longPrompt });
     expect(result.valid).toBe(false);
-    expect(result.error).toContain('ai_system_prompt');
-  });
-
-  it('should pass if ai_system_prompt is within 10000 characters', () => {
-    const okPrompt = 'a'.repeat(5000);
-    const result = validateAiSettings({ ai_system_prompt: okPrompt });
-    expect(result.valid).toBe(true);
+    expect(result.error).toContain('ai_system_prompt maksimal 10000 karakter');
   });
 
   it('should pass if ai_system_prompt is missing', () => {

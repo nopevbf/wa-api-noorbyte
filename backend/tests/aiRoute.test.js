@@ -1,22 +1,35 @@
+/**
+ * @jest-environment node
+ */
 const request = require('supertest');
 const express = require('express');
+
+// Mock @whiskeysockets/baileys BEFORE requiring apiRoutes to prevent ESM error
+jest.mock('@whiskeysockets/baileys', () => ({
+    default: jest.fn(),
+    useMultiFileAuthState: jest.fn().mockResolvedValue({
+        state: { creds: {} },
+        saveCreds: jest.fn()
+    }),
+    fetchLatestBaileysVersion: jest.fn().mockResolvedValue({ version: [2, 2311, 5] }),
+    DisconnectReason: { loggedOut: 401 }
+}));
+
+// We must also mock pino, qrcode since waEngine requires them and they might clutter logs
+jest.mock('pino', () => jest.fn(() => ({ level: 'silent' })));
+jest.mock('qrcode', () => ({ toDataURL: jest.fn() }));
+
 const router = require('../src/routes/apiRoutes');
 const db = require('../src/config/database');
 const { encrypt } = require('../src/helpers/security');
 
-jest.mock('socks-proxy-agent', () => ({
-    SocksProxyAgent: jest.fn()
-}));
+// Ensure ENCRYPTION_KEY is set for tests
+if (!process.env.ENCRYPTION_KEY) {
+    process.env.ENCRYPTION_KEY = 'f3e1c9b2d5a8e7f6g5h4i3j2k1l0m9n8';
+}
 
 // We use the real database for integration testing
 // jest.mock('../src/config/database'); 
-
-jest.mock('../src/services/waEngine', () => ({
-    sendMessageViaWa: jest.fn(),
-    disconnectWa: jest.fn(),
-    connectToWhatsApp: jest.fn(),
-    fetchGroups: jest.fn(),
-}));
 
 const app = express();
 app.use(express.json());

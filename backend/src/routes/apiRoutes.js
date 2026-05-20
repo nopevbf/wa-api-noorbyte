@@ -4,16 +4,15 @@ const db = require("../config/database");
 const appConfig = require("../config/appConfig");
 const checkApiKey = require("../middlewares/auth");
 const rateLimit = require("express-rate-limit");
-const { 
-  scrapeDparagonAttendance, 
-  parseDparagonTime, 
+const {
+  scrapeDparagonAttendance,
+  parseDparagonTime,
   getCachedData,
   setCachedData,
   isCacheExpired,
   formatAttendanceData
 } = require('../services/scraper.js');
 
-const { SocksProxyAgent } = require("socks-proxy-agent");
 const crypto = require("crypto");
 const { getTargetApiKey } = require("../helpers/apiKeyHelper");
 const { validateManualTasks, validateSaveSettings, validateAiSettings } = require("../helpers/validators");
@@ -21,13 +20,8 @@ const { buildMagicLinkMessage } = require("../helpers/messageTemplates");
 const { scheduleTimebomb, cancelTimebomb, validateDpUrl } = require("../services/timebombService");
 const { encrypt, decrypt } = require('../helpers/security');
 
-// Socks5 Proxy dari env — dipakai untuk semua request keluar ke DParagon (termasuk checkin handle)
-const proxyUrl = process.env.PROXY_URL || "";
-const proxyAgent = proxyUrl ? new SocksProxyAgent(proxyUrl) : null;
-
 // Rate limiter untuk endpoint yang sensitif (device management, auth)
-const sensitiveLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 menit
+const sensitiveLimiter = rateLimit({  windowMs: 15 * 60 * 1000, // 15 menit
   max: 20,
   standardHeaders: true,
   legacyHeaders: false,
