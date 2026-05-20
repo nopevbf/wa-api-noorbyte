@@ -115,4 +115,46 @@ describe('waEngine AI Integration', () => {
         await messageListener(m);
         expect(generateAiResponse).not.toHaveBeenCalled();
     });
+
+    test('should process multiple messages in batch', async () => {
+        let messageListener;
+        mockSock.ev.on.mockImplementation((event, listener) => {
+            if (event === 'messages.upsert') messageListener = listener;
+        });
+
+        await connectToWhatsApp('test_api_key', null);
+
+        db.prepare.mockImplementation((query) => {
+            if (query.includes('FROM users')) {
+                return {
+                    get: jest.fn().mockReturnValue({
+                        ai_enabled: 1,
+                        ai_target: '' // Match all
+                    })
+                };
+            }
+            return { run: jest.fn(), get: jest.fn(), all: jest.fn() };
+        });
+
+        generateAiResponse.mockResolvedValue('AI Response');
+        mockSock.sendMessage = jest.fn().mockResolvedValue({});
+
+        const m = {
+            messages: [
+                {
+                    key: { remoteJid: 'user1@s.whatsapp.net', fromMe: false },
+                    message: { conversation: 'Msg 1' }
+                },
+                {
+                    key: { remoteJid: 'user2@s.whatsapp.net', fromMe: false },
+                    message: { conversation: 'Msg 2' }
+                }
+            ]
+        };
+
+        await messageListener(m);
+
+        expect(generateAiResponse).toHaveBeenCalledTimes(2);
+        expect(mockSock.sendMessage).toHaveBeenCalledTimes(2);
+    });
 });

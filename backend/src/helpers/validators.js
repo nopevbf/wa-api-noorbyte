@@ -61,14 +61,15 @@ function validateManualTasks(manualTasks) {
  * Validates mass-assignment-risky fields in the save-settings payload.
  * Only validates fields that have a narrow allowed range (is_active, frequency).
  *
- * @param {{ is_active?: any, frequency?: any }} body
+ * @param {Object} body
  * @returns {{ valid: boolean, error?: string }}
  */
 function validateSaveSettings(body) {
-  const result = saveSettingsSchema.safeParse({
-    is_active: body.is_active,
-    frequency: body.frequency,
-  });
+  if (!body || typeof body !== 'object') {
+    return { valid: false, error: 'Payload tidak valid.' };
+  }
+
+  const result = saveSettingsSchema.safeParse(body);
 
   if (!result.success) {
     const firstError = result.error.issues[0];

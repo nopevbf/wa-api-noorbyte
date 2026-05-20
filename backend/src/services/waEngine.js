@@ -137,72 +137,63 @@ async function connectToWhatsApp(apiKey, io) {
         sock.ev.on('creds.update', saveCreds);
 
         sock.ev.on('messages.upsert', async (m) => {
-            const msg = m.messages[0];
-            const me = sock.user?.id || 'Unknown';
-            if (!msg.message || msg.key.fromMe) return;
+            for (const msg of m.messages) {
+                if (!msg.message || msg.key.fromMe) continue;
 
-            handleIncomingPulseMessage(apiKey, msg).catch(e => {});
+                handleIncomingPulseMessage(apiKey, msg).catch(e => {});
 
-            const remoteJid = msg.key.remoteJid;
-            const participant = msg.key.participant || remoteJid;
-            const pushName = msg.pushName || participant.split('@')[0];
-            
-            let messageContent = msg.message;
-            if (messageContent?.ephemeralMessage) messageContent = messageContent.ephemeralMessage.message;
-            if (messageContent?.viewOnceMessage) messageContent = messageContent.viewOnceMessage.message;
-            if (messageContent?.viewOnceMessageV2) messageContent = messageContent.viewOnceMessageV2.message;
-            const text = messageContent?.conversation || messageContent?.extendedTextMessage?.text || messageContent?.imageMessage?.caption || messageContent?.videoMessage?.caption || '';
+                const remoteJid = msg.key.remoteJid;
+                const participant = msg.key.participant || remoteJid;
+                const pushName = msg.pushName || participant.split('@')[0];
+                
+                let messageContent = msg.message;
+                if (messageContent?.ephemeralMessage) messageContent = messageContent.ephemeralMessage.message;
+                if (messageContent?.viewOnceMessage) messageContent = messageContent.viewOnceMessage.message;
+                if (messageContent?.viewOnceMessageV2) messageContent = messageContent.viewOnceMessageV2.message;
+                const text = messageContent?.conversation || messageContent?.extendedTextMessage?.text || messageContent?.imageMessage?.caption || messageContent?.videoMessage?.caption || '';
 
-            const user = db.prepare('SELECT ai_enabled, ai_source, ai_provider, ai_api_key, ai_system_prompt, ai_context_data, ai_target, webhook_url FROM users WHERE api_key = ?').get(apiKey);
-            
-            if (user && user.ai_enabled) {
-                const targetSetting = user.ai_target ? user.ai_target.trim() : '';
-                let isTargetMatch = !targetSetting;
+                const user = db.prepare('SELECT ai_enabled, ai_source, ai_provider, ai_api_key, ai_system_prompt, ai_context_data, ai_target, webhook_url FROM users WHERE api_key = ?').get(apiKey);
+                
+                if (user && user.ai_enabled) {
+                    const targetSetting = user.ai_target ? user.ai_target.trim() : '';
+                    let isTargetMatch = !targetSetting;
 
-                if (targetSetting) {
-                    const targets = targetSetting.split(',').map(t => normalizePhoneNumber(t.trim())).filter(t => t !== '');
-                    const myContacts = contactMappings.get(apiKey);
+                    if (targetSetting) {
+                        const targets = targetSetting.split(',').map(t => normalizePhoneNumber(t.trim())).filter(t => t !== '');
+                        const myContacts = contactMappings.get(apiKey);
 
-                    isTargetMatch = targets.some(t => {
-                        // 1. Direct JID match (for LID or specific JID string)
-                        if (remoteJid.includes(t) || participant.includes(t)) return true;
-
-                        // 2. Normalize sender/participant numbers for comparison
-                        const senderNumbers = participant.replace(/\D/g, '');
-                        const groupNumbers = remoteJid.replace(/\D/g, '');
-                        if (senderNumbers === t || groupNumbers === t) return true;
-
-                        // 3. Metadata Lookup (The LID Solution)
+                        // Pre-calculate sender info outside target loop
+                        const senderNumbers = normalizePhoneNumber(participant);
+                        const groupNumbers = normalizePhoneNumber(remoteJid);
                         const contact = myContacts?.get(participant) || myContacts?.get(remoteJid);
-                        if (contact) {
-                            // Check various ID fields in contact metadata
-                            const contactIdClean = contact.id?.replace(/\D/g, '') || '';
-                            if (contactIdClean === t) return true;
-                            
-                            // Sometimes numbers are in notify or other Baileys fields
-                            if (contact.notify && contact.notify.replace(/\D/g, '') === t) return true;
+                        const contactIdClean = contact ? normalizePhoneNumber(contact.id) : '';
+                        const contactNotifyClean = contact?.notify ? normalizePhoneNumber(contact.notify) : '';
+
+                        isTargetMatch = targets.some(t => {
+                            if (remoteJid.includes(t) || participant.includes(t)) return true;
+                            if (senderNumbers === t || groupNumbers === t) return true;
+                            if (contactIdClean === t || contactNotifyClean === t) return true;
+                            return false;
+                        });
+                    }
+
+                    if (isTargetMatch && text) {
+                        logAiActivity(apiKey, 'incoming', pushName, text);
+                        const aiConfig = {
+                            source: user.ai_source,
+                            provider: user.ai_provider,
+                            customKey: user.ai_api_key,
+                            systemPrompt: user.ai_system_prompt,
+                            contextData: user.ai_context_data
+                        };
+                        try {
+                            logAiActivity(apiKey, 'processing', pushName, 'Thinking...');
+                            const aiReply = await generateAiResponse(aiConfig, text);
+                            await sendMessageViaWa(apiKey, remoteJid, aiReply, 'text');
+                            logAiActivity(apiKey, 'outgoing', pushName, aiReply);
+                        } catch (e) {
+                            logAiActivity(apiKey, 'error', pushName, e.message);
                         }
-
-                        return false;
-                    });
-                }
-
-                if (isTargetMatch && text) {
-                    logAiActivity(apiKey, 'incoming', pushName, text);
-                    const aiConfig = {
-                        source: user.ai_source,
-                        provider: user.ai_provider,
-                        customKey: user.ai_api_key,
-                        systemPrompt: user.ai_system_prompt,
-                        contextData: user.ai_context_data
-                    };
-                    try {
-                        logAiActivity(apiKey, 'processing', pushName, 'Thinking...');
-                        const aiReply = await generateAiResponse(aiConfig, text);
-                        await sendMessageViaWa(apiKey, remoteJid, aiReply, 'text');
-                        logAiActivity(apiKey, 'outgoing', pushName, aiReply);
-                    } catch (e) {
-                        logAiActivity(apiKey, 'error', pushName, e.message);
                     }
                 }
             }

@@ -1,4 +1,4 @@
-const { validateManualTasks, normalizePhoneNumber } = require('../src/helpers/validators');
+const { validateManualTasks, validateSaveSettings, normalizePhoneNumber } = require('../src/helpers/validators');
 
 describe('normalizePhoneNumber', () => {
   it('should normalize Indonesian number starting with 08 to 628', () => {
@@ -111,5 +111,36 @@ describe('validateManualTasks — field contract: { date, description }', () => 
     expect(result.data[0]).not.toHaveProperty('task_name');
     expect(result.data[0]).toHaveProperty('date');
     expect(result.data[0]).toHaveProperty('description');
+  });
+});
+
+describe('validateSaveSettings', () => {
+  it('should PASS with valid settings', () => {
+    const body = { is_active: true, frequency: 'daily' };
+    const result = validateSaveSettings(body);
+    expect(result.valid).toBe(true);
+  });
+
+  it('should PASS with partial valid settings (optional fields)', () => {
+    expect(validateSaveSettings({ is_active: false }).valid).toBe(true);
+    expect(validateSaveSettings({ frequency: 'weekly' }).valid).toBe(true);
+  });
+
+  it('should FAIL with invalid frequency', () => {
+    const result = validateSaveSettings({ frequency: 'invalid' });
+    expect(result.valid).toBe(false);
+    expect(result.error).toMatch(/frequency/i);
+  });
+
+  it('should FAIL with invalid is_active (non-boolean)', () => {
+    const result = validateSaveSettings({ is_active: 'yes' });
+    expect(result.valid).toBe(false);
+    expect(result.error).toMatch(/is_active/i);
+  });
+
+  it('should NOT crash with null/undefined body', () => {
+    // Current implementation crashes here! Fix needed.
+    expect(() => validateSaveSettings(null)).not.toThrow();
+    expect(validateSaveSettings(null).valid).toBe(false);
   });
 });
