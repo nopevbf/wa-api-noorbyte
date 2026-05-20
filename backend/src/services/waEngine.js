@@ -7,6 +7,7 @@ const path = require('path');
 const db = require('../config/database');
 const { handleIncomingPulseMessage } = require('./pulseWatcher');
 const { generateAiResponse } = require('./aiEngine');
+const { normalizePhoneNumber } = require('../helpers/validators');
 
 const activeSessions = new Map();
 const contactMappings = new Map(); // apiKey -> Map(jid -> info)
@@ -159,18 +160,29 @@ async function connectToWhatsApp(apiKey, io) {
                 let isTargetMatch = !targetSetting;
 
                 if (targetSetting) {
-                    const targets = targetSetting.split(',').map(t => t.trim());
+                    const targets = targetSetting.split(',').map(t => normalizePhoneNumber(t.trim())).filter(t => t !== '');
                     const myContacts = contactMappings.get(apiKey);
-                    const senderNumbers = participant.replace(/\D/g, '');
-                    const groupNumbers = remoteJid.replace(/\D/g, '');
-                    
+
                     isTargetMatch = targets.some(t => {
-                        const tClean = t.replace(/\D/g, '');
-                        if (remoteJid === t || remoteJid.includes(t) || participant === t || participant.includes(t)) return true;
-                        if (tClean && (senderNumbers.includes(tClean) || groupNumbers.includes(tClean))) return true;
-                        let tMatch = tClean;
-                        if (tMatch.startsWith('0')) tMatch = '62' + tMatch.substring(1);
-                        if (tMatch && (senderNumbers.includes(tMatch) || groupNumbers.includes(tMatch))) return true;
+                        // 1. Direct JID match (for LID or specific JID string)
+                        if (remoteJid.includes(t) || participant.includes(t)) return true;
+
+                        // 2. Normalize sender/participant numbers for comparison
+                        const senderNumbers = participant.replace(/\D/g, '');
+                        const groupNumbers = remoteJid.replace(/\D/g, '');
+                        if (senderNumbers === t || groupNumbers === t) return true;
+
+                        // 3. Metadata Lookup (The LID Solution)
+                        const contact = myContacts?.get(participant) || myContacts?.get(remoteJid);
+                        if (contact) {
+                            // Check various ID fields in contact metadata
+                            const contactIdClean = contact.id?.replace(/\D/g, '') || '';
+                            if (contactIdClean === t) return true;
+                            
+                            // Sometimes numbers are in notify or other Baileys fields
+                            if (contact.notify && contact.notify.replace(/\D/g, '') === t) return true;
+                        }
+
                         return false;
                     });
                 }
