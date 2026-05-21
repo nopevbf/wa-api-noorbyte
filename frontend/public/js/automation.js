@@ -688,39 +688,42 @@ document.addEventListener("DOMContentLoaded", async () => {
         console.warn("Gagal fetch KPI:", err);
       }
 
-      if (result.status && result.data) {
+      if (result.status) {
         const data = result.data;
-        data.kpi = kpiData;
-
-        // --- SUNTIKAN PENANGKAP REAL DATA KPI ---
-        if (data.kpi) {
-          // 1. Tangkap waktu terakhir jalan
-          if (data.kpi.last_run) {
-            lastRunDate = new Date(data.kpi.last_run);
-            updateLastRunTimer(); // Langsung eksekusi ngitung ago
-          }
-          // 2. Tangkap Data Lainnya
-          if (data.kpi.success_rate !== undefined) {
-            document.getElementById("metricSuccessRate").innerText =
-              `${data.kpi.success_rate}%`;
-          }
-          if (data.kpi.avg_latency !== undefined) {
-            document.getElementById("metricLatency").innerText =
-              `${data.kpi.avg_latency}s`;
-          }
-          if (data.kpi.data_processed !== undefined) {
-            document.getElementById("metricData").innerText =
-              `${data.kpi.data_processed} MB`;
-          }
-        }
-
-        // Render backend logs into terminal (always, even on page reload)
-        if (data.logs && data.logs.length > 0) {
-          renderBackendLogs(data.logs);
-        }
-
+        
         // --- CONFIGURATION SYNC (Only on Initial Load or Device Change) ---
         if (isInitial) {
+          if (!data) {
+            // No data on server? Reset form to empty/defaults (except device selector)
+            if (document.getElementById("dpApiUrl")) document.getElementById("dpApiUrl").value = defaultDparagonApiUrl;
+            if (document.getElementById("dpEmail")) document.getElementById("dpEmail").value = "";
+            if (document.getElementById("accountPassword")) document.getElementById("accountPassword").value = "";
+            if (document.getElementById("targetNumber")) document.getElementById("targetNumber").value = "";
+            if (document.getElementById("scheduleToggle")) {
+              document.getElementById("scheduleToggle").checked = false;
+              updatePreviewUI(false);
+            }
+            if (document.getElementById("executionTime")) {
+              const exInput = document.getElementById("executionTime");
+              exInput.value = "08:00";
+              exInput.dispatchEvent(new Event("sync"));
+            }
+            document.getElementById("freqDaily").checked = true;
+            toggleCustomDays();
+            if (excludedDatesList) excludedDatesList.innerHTML = "";
+            return;
+          }
+
+          // Restore Core Configuration
+          if (data.dp_api_url && document.getElementById("dpApiUrl"))
+            document.getElementById("dpApiUrl").value = data.dp_api_url;
+          if (data.dp_email && document.getElementById("dpEmail"))
+            document.getElementById("dpEmail").value = data.dp_email;
+          if (data.dp_password && document.getElementById("accountPassword"))
+            document.getElementById("accountPassword").value = data.dp_password;
+          if (data.target_number && document.getElementById("targetNumber"))
+            document.getElementById("targetNumber").value = data.target_number;
+
           // Restore schedule toggle from backend state
           const schedToggle = document.getElementById("scheduleToggle");
           if (schedToggle) {
@@ -768,6 +771,37 @@ document.addEventListener("DOMContentLoaded", async () => {
           if (typeof showToast === 'function') {
             showToast("Konfigurasi disinkronkan dari server ✅", "success");
           }
+        }
+
+        if (!data) return;
+
+        data.kpi = kpiData;
+
+        // --- SUNTIKAN PENANGKAP REAL DATA KPI ---
+        if (data.kpi) {
+          // 1. Tangkap waktu terakhir jalan
+          if (data.kpi.last_run) {
+            lastRunDate = new Date(data.kpi.last_run);
+            updateLastRunTimer(); // Langsung eksekusi ngitung ago
+          }
+          // 2. Tangkap Data Lainnya
+          if (data.kpi.success_rate !== undefined) {
+            document.getElementById("metricSuccessRate").innerText =
+              `${data.kpi.success_rate}%`;
+          }
+          if (data.kpi.avg_latency !== undefined) {
+            document.getElementById("metricLatency").innerText =
+              `${data.kpi.avg_latency}s`;
+          }
+          if (data.kpi.data_processed !== undefined) {
+            document.getElementById("metricData").innerText =
+              `${data.kpi.data_processed} MB`;
+          }
+        }
+
+        // Render backend logs into terminal (always, even on page reload)
+        if (data.logs && data.logs.length > 0) {
+          renderBackendLogs(data.logs);
         }
 
         // Update message preview from backend cached message

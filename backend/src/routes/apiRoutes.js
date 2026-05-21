@@ -34,7 +34,9 @@ const {
   disconnectWa,
   connectToWhatsApp,
   fetchGroups,
+  resolveTargets,
 } = require("../services/waEngine");
+const { syncTargets, bindCandidateToTarget } = require("../services/monitorService");
 
 // ENDPOINT: App Config (expose env & default DParagon URL ke frontend)
 router.get("/app-config", (req, res) => {
@@ -521,6 +523,20 @@ router.post('/attendance/cancel-timebomb', (req, res) => {
   res.json(result);
 });
 
+router.post("/ai/resolve-targets", checkApiKey, async (req, res) => {
+  const { targets } = req.body;
+  if (!targets || !Array.isArray(targets)) {
+      return res.status(400).json({ status: false, message: "Targets harus berupa array string." });
+  }
+
+  try {
+      const result = await resolveTargets(req.user.api_key, targets);
+      res.json({ status: true, data: result });
+  } catch (e) {
+      res.status(500).json({ status: false, message: e.message });
+  }
+});
+
 router.post("/ai/save-settings", checkApiKey, (req, res) => {
   const { ai_enabled, ai_source, ai_provider, ai_api_key, ai_system_prompt, ai_context_data, ai_target } = req.body;
   const apiKey = req.user.api_key;
@@ -545,9 +561,39 @@ router.post("/ai/save-settings", checkApiKey, (req, res) => {
           ai_target,
           apiKey
       );
+
+      console.log(`[API /ai/save-settings] Payload ai_target received:`, ai_target);
+
+      // --- Sync Monitor Targets ---
+      syncTargets(apiKey, ai_target);
+
       res.json({ status: true, message: "Pengaturan AI berhasil disimpan." });
   } catch (e) {
       res.status(500).json({ status: false, message: "Gagal menyimpan pengaturan AI: " + e.message });
+  }
+});
+
+router.get("/ai/monitor-targets", checkApiKey, (req, res) => {
+  const apiKey = req.user.api_key;
+  try {
+      const targets = db.prepare('SELECT * FROM monitor_targets WHERE api_key = ?').all(apiKey);
+      const candidates = db.prepare("SELECT * FROM monitor_identity_candidates WHERE api_key = ? AND status = 'unassigned'").all(apiKey);
+      res.json({ status: true, data: { targets, candidates } });
+  } catch (e) {
+      res.status(500).json({ status: false, message: e.message });
+  }
+});
+
+router.post("/ai/bind-candidate", checkApiKey, (req, res) => {
+  const { candidate_id, target_id } = req.body;
+  if (!candidate_id || !target_id) {
+    return res.status(400).json({ status: false, message: "Candidate ID and Target ID are required." });
+  }
+  try {
+      const result = bindCandidateToTarget(candidate_id, target_id);
+      res.json({ status: true, message: "Identitas berhasil di-bind ke target." });
+  } catch (e) {
+      res.status(500).json({ status: false, message: e.message });
   }
 });
 
