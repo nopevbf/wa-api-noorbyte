@@ -15,7 +15,7 @@ const {
 
 const crypto = require("crypto");
 const { getTargetApiKey } = require("../helpers/apiKeyHelper");
-const { validateManualTasks, validateSaveSettings, validateAiSettings } = require("../helpers/validators");
+const { validateManualTasks, validateSaveSettings, validateAiSettings, validateResolveTargets } = require("../helpers/validators");
 const { buildMagicLinkMessage } = require("../helpers/messageTemplates");
 const { scheduleTimebomb, cancelTimebomb, validateDpUrl } = require("../services/timebombService");
 const { encrypt, decrypt } = require('../helpers/security');
@@ -524,11 +524,12 @@ router.post('/attendance/cancel-timebomb', (req, res) => {
 });
 
 router.post("/ai/resolve-targets", checkApiKey, async (req, res) => {
-  const { targets } = req.body;
-  if (!targets || !Array.isArray(targets)) {
-      return res.status(400).json({ status: false, message: "Targets harus berupa array string." });
+  const validation = validateResolveTargets(req.body);
+  if (!validation.valid) {
+    return res.status(400).json({ status: false, message: validation.error });
   }
 
+  const { targets } = req.body;
   try {
       const result = await resolveTargets(req.user.api_key, targets);
       res.json({ status: true, data: result });

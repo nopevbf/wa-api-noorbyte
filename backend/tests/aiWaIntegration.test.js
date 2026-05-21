@@ -1,8 +1,32 @@
-const { connectToWhatsApp } = require('../src/services/waEngine');
+jest.mock('../src/config/database');
+jest.mock('../src/services/pulseWatcher', () => ({
+    handleIncomingPulseMessage: jest.fn().mockResolvedValue({})
+}));
+
+// Unmock waEngine because we want to test its real logic
+jest.unmock('../src/services/waEngine');
+
+const mockSock = {
+    ev: {
+        on: jest.fn(),
+        removeAllListeners: jest.fn(),
+    },
+    ws: { close: jest.fn() },
+    user: { id: 'test_user' }
+};
+
+jest.mock('@whiskeysockets/baileys', () => ({
+    default: jest.fn().mockReturnValue(mockSock),
+    useMultiFileAuthState: jest.fn().mockResolvedValue({ state: {}, saveCreds: jest.fn() }),
+    fetchLatestBaileysVersion: jest.fn().mockResolvedValue({ version: '1.0.0' }),
+    DisconnectReason: { loggedOut: 401 },
+    jidNormalizedUser: (jid) => jid?.split('@')[0].split(':')[0] + '@s.whatsapp.net',
+}));
+
+const { connectToWhatsApp } = jest.requireActual('../src/services/waEngine');
 const { generateAiResponse } = require('../src/services/aiEngine');
 const { processAiReply } = require('../src/services/aiProcessor');
 const db = require('../src/config/database');
-const { handleIncomingPulseMessage } = require('../src/services/pulseWatcher');
 
 jest.mock('../src/services/aiEngine', () => {
     const actual = jest.requireActual('../src/services/aiEngine');
@@ -11,37 +35,17 @@ jest.mock('../src/services/aiEngine', () => {
         generateAiResponse: jest.fn(),
     };
 });
-jest.mock('../src/config/database');
-jest.mock('../src/services/pulseWatcher', () => ({
-    handleIncomingPulseMessage: jest.fn().mockResolvedValue({})
-}));
-jest.mock('@whiskeysockets/baileys', () => ({
-    default: jest.fn().mockReturnValue({
-        ev: {
-            on: jest.fn(),
-            removeAllListeners: jest.fn(),
-        },
-        ws: { close: jest.fn() },
-    }),
-    useMultiFileAuthState: jest.fn().mockResolvedValue({ state: {}, saveCreds: jest.fn() }),
-    fetchLatestBaileysVersion: jest.fn().mockResolvedValue({ version: '1.0.0' }),
-    DisconnectReason: { loggedOut: 401 }
-}));
 
 describe('waEngine AI Integration', () => {
-    let mockSock;
-
     beforeEach(() => {
         jest.clearAllMocks();
-        const makeWASocket = require('@whiskeysockets/baileys').default;
-        mockSock = makeWASocket();
-        mockSock.user = { id: 'test_user' };
+        // Reset shared mock methods
+        mockSock.ev.on.mockReset();
+        mockSock.ev.removeAllListeners.mockReset();
+        mockSock.ws.close.mockReset();
     });
 
     test('should call generateAiResponse and sendMessage when AI is enabled', async () => {
-        // This is tricky because connectToWhatsApp sets up listeners
-        // We need to capture the 'messages.upsert' listener and trigger it manually
-        
         let messageListener;
         mockSock.ev.on.mockImplementation((event, listener) => {
             if (event === 'messages.upsert') {
@@ -72,7 +76,7 @@ describe('waEngine AI Integration', () => {
 
         generateAiResponse.mockResolvedValue('AI Response');
         
-        // Mock sendMessage on mockSock
+        // Mock sendMessage
         mockSock.sendMessage = jest.fn().mockResolvedValue({});
 
         // Simulate incoming message
@@ -89,7 +93,7 @@ describe('waEngine AI Integration', () => {
             source: 'custom',
             provider: 'openai'
         }), 'Hello AI');
-        expect(mockSock.sendMessage).toHaveBeenCalledWith('62812345678@s.whatsapp.net', { text: 'AI Response' });
+        expect(mockSock.sendMessage).toHaveBeenCalledWith('62812345678@s.whatsapp.net', { text: 'AI Response' }, {});
     });
 
     test('should NOT call generateAiResponse if sender does not match ai_target', async () => {
@@ -163,5 +167,7 @@ describe('waEngine AI Integration', () => {
 
         expect(generateAiResponse).toHaveBeenCalledTimes(2);
         expect(mockSock.sendMessage).toHaveBeenCalledTimes(2);
+        expect(mockSock.sendMessage).toHaveBeenCalledWith('user1@s.whatsapp.net', { text: 'AI Response' }, {});
+        expect(mockSock.sendMessage).toHaveBeenCalledWith('user2@s.whatsapp.net', { text: 'AI Response' }, {});
     });
 });

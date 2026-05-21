@@ -144,4 +144,28 @@ describe('AI Routes Integration', () => {
             expect(res.body.data.ai_system_prompt).toBe('Test prompt');
         });
     });
+
+    describe('POST /ai/resolve-targets', () => {
+        test('should reject invalid payload (not an array)', async () => {
+            const response = await request(app)
+                .post('/ai/resolve-targets')
+                .set('Authorization', `Bearer ${testApiKey}`)
+                .send({ targets: 'not-an-array' });
+
+            expect(response.status).toBe(400);
+            expect(response.body.status).toBe(false);
+            expect(response.body.message).toContain('array');
+        });
+
+        test('should reject array with non-string elements', async () => {
+            const response = await request(app)
+                .post('/ai/resolve-targets')
+                .set('Authorization', `Bearer ${testApiKey}`)
+                .send({ targets: [123, null] });
+
+            expect(response.status).toBe(400);
+            expect(response.body.status).toBe(false);
+            expect(response.body.message).toContain('string');
+        });
+    });
 });

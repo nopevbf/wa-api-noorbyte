@@ -30,6 +30,18 @@ const aiSettingsSchema = z.object({
 }).strip();
 
 /**
+ * Schema for resolve-targets validation.
+ */
+const resolveTargetsSchema = z.object({
+  targets: z.array(z.string({
+    invalid_type_error: "Setiap target harus berupa string."
+  }), {
+    required_error: "Field targets wajib ada.",
+    invalid_type_error: "Targets harus berupa array."
+  }).min(1, "Minimal harus ada satu target.")
+}).strip();
+
+/**
  * Validates the manual_tasks field from a request body.
  * - If undefined/null, returns { valid: true, data: [] }
  * - If not an array, returns { valid: false, error: '...' }
@@ -135,11 +147,33 @@ function validateAiSettings(body) {
   return { valid: true };
 }
 
+/**
+ * Validates resolve-targets payload.
+ *
+ * @param {Object} body
+ * @returns {{ valid: boolean, error?: string }}
+ */
+function validateResolveTargets(body) {
+  if (!body || typeof body !== 'object') {
+    return { valid: false, error: 'Payload tidak valid.' };
+  }
+
+  const result = resolveTargetsSchema.safeParse(body);
+
+  if (!result.success) {
+    const firstError = result.error.issues[0];
+    return { valid: false, error: firstError.message };
+  }
+
+  return { valid: true };
+}
+
 module.exports = { 
   validateManualTasks, 
   validateSaveSettings, 
   normalizePhoneNumber, 
   validateAiSettings,
+  validateResolveTargets,
   manualTaskSchema, 
   saveSettingsSchema 
 };
