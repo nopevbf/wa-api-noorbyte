@@ -1,11 +1,17 @@
-const { sendMessageViaWa } = require('../src/services/waEngine');
-const { processAiReply } = require('../src/services/aiProcessor');
 const db = require('../src/config/database');
+
+// Mock Baileys to avoid ESM issues in Jest
+jest.mock('@whiskeysockets/baileys', () => ({
+  jidNormalizedUser: (jid) => jid?.split('@')[0].split(':')[0] + '@s.whatsapp.net',
+}));
 
 jest.mock('../src/services/waEngine', () => ({
   sendMessageViaWa: jest.fn().mockResolvedValue({ status: 'success' }),
   logAiActivity: jest.fn(),
 }));
+
+const { processAiReply } = require('../src/services/aiProcessor');
+const { sendMessageViaWa, logAiActivity } = require('../src/services/waEngine');
 
 // Mock AI service to avoid real API calls
 jest.mock('../src/services/aiEngine', () => {
@@ -48,7 +54,10 @@ describe('AI Auto-Reply Integration Flow', () => {
       testApiKey,
       '628999999999@s.whatsapp.net',
       expect.any(String),
-      'text'
+      'text',
+      null,
+      null,
+      {}
     );
   });
 
