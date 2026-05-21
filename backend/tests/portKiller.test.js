@@ -1,7 +1,6 @@
+jest.mock('child_process');
 const { killPortProcess } = require('../src/helpers/portKiller');
 const child_process = require('child_process');
-
-jest.mock('child_process');
 
 describe('Port Killer', () => {
   let originalEnv;

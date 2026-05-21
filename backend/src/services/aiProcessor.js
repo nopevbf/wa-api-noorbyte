@@ -1,72 +1,99 @@
 const db = require('../config/database');
 const { normalizePhoneNumber } = require('../helpers/validators');
 const { generateAiResponse } = require('./aiEngine');
+const { 
+    getBotPossibleJids, 
+    getMessageContent, 
+    extractText, 
+    shouldBotReplyInGroup 
+} = require('../helpers/aiUtils');
+
+/**
+ * Checks if the incoming message matches any of the target settings or monitor targets.
+ */
+function isTargetMatch(user, incomingJid, remoteJid, isGroup, apiKey) {
+    const { findResolvedTarget, tryResolveWaitingTarget } = require('./monitorService');
+    const targetSetting = user.ai_target ? user.ai_target.trim().toLowerCase() : '';
+    const isAllTarget = !targetSetting || targetSetting === 'all';
+
+    if (isAllTarget) return true;
+
+    const targets = targetSetting.split(',').map(t => t.trim().toLowerCase());
+    const normIncoming = normalizePhoneNumber(incomingJid);
+    const normRemote = normalizePhoneNumber(remoteJid);
+
+    const matchDirect = targets.some(t => {
+        const normT = normalizePhoneNumber(t);
+        if (t === incomingJid || t === remoteJid) return true;
+        if (normT && (normT === normIncoming || normT === normRemote)) return true;
+        return false;
+    });
+
+    if (matchDirect) return true;
+
+    // Fallback to monitor_targets table
+    let resolvedTarget = null;
+    if (isGroup) {
+        resolvedTarget = findResolvedTarget(apiKey, remoteJid);
+    } else {
+        resolvedTarget = findResolvedTarget(apiKey, incomingJid);
+        if (!resolvedTarget) {
+            resolvedTarget = tryResolveWaitingTarget(apiKey, incomingJid, remoteJid);
+        }
+    }
+    return !!resolvedTarget;
+}
 
 /**
  * Core logic for processing an incoming message with AI.
  */
-async function processAiReply(apiKey, msg, contactMap = new Map()) {
-    // Lazy load to avoid circular dependency
+async function processAiReply(apiKey, msg, contactMap = new Map(), botIdentities = { id: null, lid: null }) {
     const { sendMessageViaWa, logAiActivity } = require('./waEngine');
+    const { jidNormalizedUser } = require('@whiskeysockets/baileys');
     
     const remoteJid = msg.key?.remoteJid || msg.from;
     const participant = msg.key?.participant || remoteJid;
+    const incomingJid = jidNormalizedUser(participant);
     const pushName = msg.pushName || participant?.split('@')[0] || 'Unknown';
     
-    let text = '';
-    if (msg.body) {
-        text = msg.body;
-    } else {
-        let messageContent = msg.message;
-        if (messageContent?.ephemeralMessage) messageContent = messageContent.ephemeralMessage.message;
-        if (messageContent?.viewOnceMessage) messageContent = messageContent.viewOnceMessage.message;
-        if (messageContent?.viewOnceMessageV2) messageContent = messageContent.viewOnceMessageV2.message;
-        text = messageContent?.conversation || messageContent?.extendedTextMessage?.text || messageContent?.imageMessage?.caption || messageContent?.videoMessage?.caption || '';
-    }
-
-    if (!text) return;
+    if (msg.key?.fromMe) return;
 
     const user = db.prepare('SELECT ai_enabled, ai_source, ai_provider, ai_api_key, ai_system_prompt, ai_context_data, ai_target FROM users WHERE api_key = ?').get(apiKey);
+    if (!user || !user.ai_enabled) return;
+
+    const isGroup = remoteJid.endsWith('@g.us');
     
-    if (user && user.ai_enabled) {
-        const targetSetting = user.ai_target ? user.ai_target.trim().toLowerCase() : '';
-        let isTargetMatch = !targetSetting || targetSetting === 'all';
+    if (!isTargetMatch(user, incomingJid, remoteJid, isGroup, apiKey)) return;
 
-        if (!isTargetMatch && targetSetting) {
-            const targets = targetSetting.split(',').map(t => normalizePhoneNumber(t.trim())).filter(t => t !== '');
-            const senderNumbers = normalizePhoneNumber(participant);
-            const groupNumbers = normalizePhoneNumber(remoteJid);
-            const contact = contactMap.get(participant) || contactMap.get(remoteJid);
-            const contactIdClean = contact ? normalizePhoneNumber(contact.id) : '';
-            const contactNotifyClean = contact?.notify ? normalizePhoneNumber(contact.notify) : '';
+    let replyOptions = {};
+    if (isGroup) {
+        const botPossibleJids = getBotPossibleJids(botIdentities);
+        if (!shouldBotReplyInGroup(msg, botPossibleJids)) return;
+        replyOptions = { quoted: msg };
+    }
 
-            isTargetMatch = targets.some(t => {
-                if (remoteJid.includes(t) || participant.includes(t)) return true;
-                if (senderNumbers === t || groupNumbers === t) return true;
-                if (contactIdClean === t || contactNotifyClean === t) return true;
-                return false;
-            });
-        }
+    const content = getMessageContent(msg);
+    const text = extractText(msg, content);
+    if (!text) return;
 
-        if (isTargetMatch) {
-            logAiActivity(apiKey, 'incoming', pushName, text);
-            const aiConfig = {
-                source: user.ai_source,
-                provider: user.ai_provider,
-                customKey: user.ai_api_key,
-                systemPrompt: user.ai_system_prompt,
-                contextData: user.ai_context_data
-            };
-            try {
-                logAiActivity(apiKey, 'processing', pushName, 'Thinking...');
-                const aiReply = await generateAiResponse(aiConfig, text);
-                await sendMessageViaWa(apiKey, remoteJid, aiReply, 'text');
-                logAiActivity(apiKey, 'outgoing', pushName, aiReply);
-            } catch (e) {
-                logAiActivity(apiKey, 'error', pushName, e.message);
-            }
-        }
+    logAiActivity(apiKey, 'incoming', pushName, text);
+    const aiConfig = {
+        source: user.ai_source,
+        provider: user.ai_provider,
+        customKey: user.ai_api_key,
+        systemPrompt: user.ai_system_prompt,
+        contextData: user.ai_context_data
+    };
+
+    try {
+        logAiActivity(apiKey, 'processing', pushName, 'Thinking...');
+        const aiReply = await generateAiResponse(aiConfig, text);
+        await sendMessageViaWa(apiKey, remoteJid, aiReply, 'text', null, null, replyOptions);
+        logAiActivity(apiKey, 'outgoing', pushName, aiReply);
+    } catch (e) {
+        console.error(`[AI-Processor] Error:`, e.message);
+        logAiActivity(apiKey, 'error', pushName, e.message);
     }
 }
 
-module.exports = { processAiReply };
+module.exports = { processAiReply, isTargetMatch };

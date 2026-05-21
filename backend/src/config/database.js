@@ -59,6 +59,36 @@ db.exec(`
     used INTEGER DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
+
+  CREATE TABLE IF NOT EXISTS monitor_targets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    api_key TEXT,
+    target_input TEXT,
+    target_type TEXT,
+    phone TEXT,
+    pn_jid TEXT,
+    lid_jid TEXT,
+    group_jid TEXT,
+    status TEXT DEFAULT 'waiting_first_message',
+    last_resolved_at DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(api_key, target_input)
+  );
+
+  CREATE TABLE IF NOT EXISTS monitor_identity_candidates (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    api_key TEXT,
+    incoming_jid TEXT,
+    remote_jid TEXT,
+    participant_jid TEXT,
+    status TEXT DEFAULT 'unassigned',
+    monitor_target_id INTEGER,
+    first_seen_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    last_seen_at DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(api_key, incoming_jid)
+  );
 `);
 
 // Migrasi Database: Tambahkan kolom baru jika belum ada

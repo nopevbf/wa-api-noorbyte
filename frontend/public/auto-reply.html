@@ -35,9 +35,38 @@
         .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-        .toggle-checkbox:checked { right: 0; border-color: #6366f1; }
-        .toggle-checkbox:checked + .toggle-label { background-color: #6366f1; }
-        .toggle-checkbox:checked + .toggle-label:after { transform: translateX(100%); border-color: white; }
+        
+        /* Glassmorphism Effects */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .dark .glass-card {
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        /* Custom Status Animations */
+        @keyframes pulse-soft {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .status-pulse {
+            animation: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        /* Tag Enhancements */
+        .tag-pill {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .tag-pill:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.05);
+        }
     </style>
 </head>
 <body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100">
@@ -71,11 +100,15 @@
         </header>
 
         <div class="p-4 sm:p-8 space-y-8 w-full">
-            <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h3 class="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">Auto Reply - AI</h3>
                     <p class="text-slate-500 text-sm font-medium mt-1">Configure intelligent automated responses for connected channels.</p>
                 </div>
+                <button id="save-settings-btn" class="px-8 py-3 rounded-xl bg-primary text-white text-sm font-black shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all active:scale-[0.98] flex items-center gap-2 h-fit">
+                    <span class="material-symbols-outlined text-lg">save</span>
+                    <span>Save Settings</span>
+                </button>
             </div>
 
             <!-- Bento Grid Layout -->
@@ -113,8 +146,24 @@
                                     <input id="ai-target-input" type="text" class="flex-1 bg-transparent border-none p-0 text-sm font-bold focus:ring-0 outline-none min-w-[120px]" placeholder="Type and hit Enter or Comma...">
                                     <input id="ai-target" type="hidden">
                                 </div>
-                                <p class="text-[10px] text-slate-400 font-medium">Input Nomor HP (08xxx) atau ID Grup. Tekan Enter/Koma untuk menambah tag.</p>
+                                <p class="text-[10px] text-slate-400 font-medium flex items-center gap-1.5 mt-1.5">
+                                    <span class="material-symbols-outlined text-[14px] text-primary/60">info</span>
+                                    <span>Input Nomor HP (08xxx) atau ID Grup. <b>Kosongkan untuk membalas semua pesan secara global.</b></span>
+                                </p>
                             </div>
+
+                            <!-- Candidates (LID Mapping) Container -->
+                            <div id="candidates-container" class="hidden flex flex-col gap-3 p-5 rounded-2xl bg-rose-50/30 dark:bg-rose-900/10 border border-rose-200/50 dark:border-rose-800/30">
+                                <div class="flex items-center gap-2">
+                                    <span class="material-symbols-outlined text-rose-500 text-lg">link_off</span>
+                                    <h5 class="text-xs font-bold text-rose-900 dark:text-rose-400 uppercase tracking-widest">Identitas Tidak Dikenal</h5>
+                                </div>
+                                <p class="text-[10px] text-rose-700 dark:text-rose-500 font-medium">Sistem mendeteksi pesan dari identitas baru (LID). Pilih target yang sesuai untuk menghubungkannya.</p>
+                                <div id="candidates-list" class="flex flex-col gap-2">
+                                    <!-- Candidates rendered here -->
+                                </div>
+                            </div>
+
                             <!-- Listening Mode Toggle -->
                             <div class="flex items-center justify-between p-5 rounded-2xl bg-slate-50/50 dark:bg-slate-800/30 border border-outline dark:border-slate-700">
                                 <div>
@@ -255,18 +304,12 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="px-8 pb-8 flex justify-end">
-                            <button id="save-settings-btn" class="px-10 py-3 rounded-xl bg-primary text-white text-sm font-black shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all active:scale-[0.98] flex items-center gap-2">
-                                <span class="material-symbols-outlined text-lg">save</span>
-                                <span>Save Settings</span>
-                            </button>
-                        </div>
                     </section>
                 </div>
 
                 <!-- Right Column (Real-time Log) -->
-                <div class="lg:col-span-5 flex flex-col">
-                    <section class="bg-surface dark:bg-slate-900/60 rounded-3xl border border-outline dark:border-slate-800 shadow-sm flex flex-col h-full overflow-hidden backdrop-blur-sm">
+                <div class="lg:col-span-5 flex flex-col h-full">
+                    <section class="bg-surface dark:bg-slate-900/60 rounded-3xl border border-outline dark:border-slate-800 shadow-sm flex flex-col lg:h-[calc(100vh-12rem)] overflow-hidden backdrop-blur-sm sticky top-24">
                         <div class="px-6 py-4 border-b border-outline dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 flex justify-between items-center shrink-0">
                             <div class="flex items-center gap-2">
                                 <span class="material-symbols-outlined text-primary text-[20px]">terminal</span>
@@ -278,7 +321,7 @@
                             </span>
                         </div>
                         <!-- Terminal Log Area -->
-                        <div id="terminal-scroll-container" class="flex-1 bg-[#0f172a] p-6 overflow-y-auto font-mono text-[12px] flex flex-col gap-6 scrollbar-hide shadow-inner">
+                        <div id="terminal-scroll-container" class="flex-1 bg-[#0f172a] p-6 overflow-y-auto font-mono text-[12px] flex flex-col gap-6 scrollbar-hide shadow-inner min-h-[400px]">
                             <!-- Logs will be rendered here dynamically -->
                         </div>
                     </section>
@@ -376,18 +419,54 @@
 
         // Tag System Logic
         let tags = [];
+        let monitorData = { targets: [], candidates: [] };
+
+        async function loadMonitorTargets() {
+            const deviceApiKey = DOM.deviceSelect.value;
+            if (!deviceApiKey) return;
+
+            try {
+                const response = await fetch('/api/ai/monitor-targets', {
+                    headers: { 'Authorization': `Bearer ${deviceApiKey}` }
+                });
+                const result = await response.json();
+                if (result.status) {
+                    monitorData = result.data;
+                    renderTags();
+                    renderCandidates();
+                }
+            } catch (e) {
+                console.error('Failed to load monitor targets:', e);
+            }
+        }
 
         function renderTags() {
             // Remove existing tag elements (but keep the input)
             const tagEls = DOM.tagContainer.querySelectorAll('.tag-pill');
             tagEls.forEach(el => el.remove());
 
-            tags.forEach((tag, index) => {
+            // Use monitorData.targets if available, otherwise fallback to tags
+            const displayTargets = monitorData.targets.length > 0 ? monitorData.targets : tags.map(t => ({ target_input: t, status: 'unknown' }));
+
+            displayTargets.forEach((target, index) => {
                 const pill = document.createElement('div');
-                pill.className = 'tag-pill flex items-center gap-1.5 px-3 py-1 bg-primary/10 border border-primary/20 rounded-full text-xs font-bold text-primary animate-in zoom-in-95 duration-200';
+                let statusColor = 'bg-primary/10 border-primary/20 text-primary';
+                let statusText = '';
+                let tooltip = '';
+
+                if (target.status === 'waiting_first_message') {
+                    statusColor = 'bg-amber-500/10 border-amber-500/20 text-amber-600';
+                    statusText = ' (Waiting)';
+                    tooltip = 'title="Minta nomor ini mengirim 1 pesan ke bot agar sistem bisa mengenali identitasnya."';
+                } else if (target.status === 'resolved') {
+                    statusColor = 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600';
+                    statusText = ' (Ready)';
+                }
+
+                pill.className = `tag-pill flex items-center gap-1.5 px-3 py-1 ${statusColor} border rounded-full text-xs font-bold animate-in zoom-in-95 duration-200`;
                 pill.innerHTML = `
-                    <span>${tag}</span>
-                    <button type="button" class="hover:text-primary/70 transition-colors" onclick="window.removeAiTag(${index})">
+                    <span class="max-w-[150px] truncate" ${tooltip}>${target.target_input}${statusText}</span>
+                    <button type="button" class="hover:opacity-70 transition-colors" onclick="window.removeAiTag(${index}, '${target.target_input}')">
                         <span class="material-symbols-outlined text-sm font-bold">close</span>
                     </button>
                 `;
@@ -395,26 +474,91 @@
             });
 
             // Sync with hidden input
-            DOM.aiTarget.value = tags.join(', ');
+            DOM.aiTarget.value = displayTargets.map(t => t.target_input).join(', ');
         }
 
-        window.removeAiTag = (index) => {
-            tags.splice(index, 1);
+        function renderCandidates() {
+            const container = document.getElementById('candidates-container');
+            if (!container) return;
+
+            if (monitorData.candidates.length === 0) {
+                container.classList.add('hidden');
+                return;
+            }
+
+            container.classList.remove('hidden');
+            const list = document.getElementById('candidates-list');
+            list.innerHTML = '';
+
+            monitorData.candidates.forEach(can => {
+                const item = document.createElement('div');
+                item.className = 'flex items-center justify-between p-3 bg-rose-500/5 border border-rose-500/10 rounded-xl mb-2';
+                item.innerHTML = `
+                    <div class="flex flex-col">
+                        <span class="text-[10px] font-bold text-rose-600 uppercase tracking-widest">Needs Binding</span>
+                        <span class="text-sm font-mono text-slate-700 dark:text-slate-300">${can.incoming_jid}</span>
+                    </div>
+                    <select class="text-[10px] font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 outline-none" onchange="window.bindCandidate(${can.id}, this.value)">
+                        <option value="">Bind to Target...</option>
+                        ${monitorData.targets.filter(t => t.status === 'waiting_first_message').map(t => `<option value="${t.id}">${t.target_input}</option>`).join('')}
+                    </select>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        window.bindCandidate = async (candidateId, targetId) => {
+            if (!targetId) return;
+            const deviceApiKey = DOM.deviceSelect.value;
+            try {
+                const response = await fetch('/api/ai/bind-candidate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${deviceApiKey}`
+                    },
+                    body: JSON.stringify({ candidate_id: candidateId, target_id: targetId })
+                });
+                const result = await response.json();
+                if (result.status) {
+                    notify('Identity bound successfully!', 'success');
+                    loadMonitorTargets();
+                } else {
+                    notify(result.message, 'error');
+                }
+            } catch (e) {
+                notify('Failed to bind: ' + e.message, 'error');
+            }
+        };
+
+        window.removeAiTag = (index, targetInput) => {
+            if (monitorData.targets.length > 0) {
+                monitorData.targets = monitorData.targets.filter(t => t.target_input !== targetInput);
+            } else {
+                tags.splice(index, 1);
+            }
             renderTags();
         };
 
         if (DOM.aiTargetInput) {
-            DOM.aiTargetInput.addEventListener('keydown', (e) => {
+            DOM.aiTargetInput.addEventListener('keydown', async (e) => {
                 if (e.key === 'Enter' || e.key === ',') {
                     e.preventDefault();
                     const val = DOM.aiTargetInput.value.trim().replace(',', '');
-                    if (val && !tags.includes(val)) {
-                        tags.push(val);
+                    if (val) {
                         DOM.aiTargetInput.value = '';
+                        if (monitorData.targets.length > 0) {
+                            if (!monitorData.targets.find(t => t.target_input === val)) {
+                                monitorData.targets.push({ target_input: val, status: 'waiting_first_message' });
+                            }
+                        } else {
+                            if (!tags.includes(val)) tags.push(val);
+                        }
                         renderTags();
                     }
-                } else if (e.key === 'Backspace' && DOM.aiTargetInput.value === '' && tags.length > 0) {
-                    tags.pop();
+                } else if (e.key === 'Backspace' && DOM.aiTargetInput.value === '' && (tags.length > 0 || monitorData.targets.length > 0)) {
+                    if (monitorData.targets.length > 0) monitorData.targets.pop();
+                    else tags.pop();
                     renderTags();
                 }
             });
@@ -515,6 +659,16 @@
                         DOM.deviceSelect.appendChild(option);
                     });
                     console.log(`Loaded ${result.data.length} devices`);
+
+                    // Auto-select saved device
+                    const savedDevice = localStorage.getItem("automationSelectedDevice");
+                    if (savedDevice) {
+                        const matchOption = Array.from(DOM.deviceSelect.options).find(o => o.value === savedDevice);
+                        if (matchOption && !matchOption.disabled) {
+                            DOM.deviceSelect.value = savedDevice;
+                            DOM.deviceSelect.dispatchEvent(new Event('change'));
+                        }
+                    }
                 }
             } catch (error) {
                 console.error('Error loading devices:', error);
@@ -531,6 +685,9 @@
 
                 const deviceApiKey = e.target.value;
                 if (!deviceApiKey) return;
+                
+                // Save to local storage to maintain consistency across pages
+                localStorage.setItem("automationSelectedDevice", deviceApiKey);
                 
                 console.log(`Loading AI settings for device: ${deviceApiKey}`);
                 try {
@@ -566,7 +723,9 @@
                         // Handle Tags
                         DOM.aiTarget.value = settings.ai_target || '';
                         tags = settings.ai_target ? settings.ai_target.split(',').map(t => t.trim()).filter(t => t !== "") : [];
-                        renderTags();
+                        
+                        // Load and render detailed monitor targets (with status)
+                        await loadMonitorTargets();
                         
                         console.log('AI settings loaded successfully');
                     }
@@ -585,6 +744,21 @@
                 if (!deviceApiKey) {
                     notify('Pilih perangkat terlebih dahulu', 'error');
                     return;
+                }
+
+                // Capture pending text in target input
+                if (DOM.aiTargetInput && DOM.aiTargetInput.value.trim() !== '') {
+                    const val = DOM.aiTargetInput.value.trim().replace(',', '');
+                    if (monitorData.targets.length > 0) {
+                        if (!monitorData.targets.find(t => t.target_input === val)) {
+                            const isGroup = val.endsWith('@g.us');
+                            monitorData.targets.push({ target_input: val, status: isGroup ? 'resolved' : 'waiting_first_message' });
+                        }
+                    } else {
+                        if (!tags.includes(val)) tags.push(val);
+                    }
+                    renderTags();
+                    DOM.aiTargetInput.value = '';
                 }
                 
                 const apiSourceEl = document.querySelector('input[name="api_source"]:checked');

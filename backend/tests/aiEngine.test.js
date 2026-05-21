@@ -1,7 +1,6 @@
+jest.mock('axios');
 const { generateAiResponse } = require('../src/services/aiEngine');
 const axios = require('axios');
-
-jest.mock('axios');
 
 describe('AI Engine', () => {
     beforeEach(() => {

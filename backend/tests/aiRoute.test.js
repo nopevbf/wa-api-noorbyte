@@ -116,5 +116,56 @@ describe('AI Routes Integration', () => {
             expect(res.body.data.ai_enabled).toBe(false);
             expect(res.body.data.ai_source).toBe('system'); // Default from DB/Route
         });
+
+        it('should return all saved settings including ai_target', async () => {
+            // Setup data
+            const settings = {
+                ai_enabled: true,
+                ai_source: 'system',
+                ai_provider: null,
+                ai_api_key: null,
+                ai_system_prompt: 'Test prompt',
+                ai_context_data: 'Test context',
+                ai_target: '08123456789'
+            };
+
+            await request(app)
+                .post('/ai/save-settings')
+                .set('Authorization', `Bearer ${testApiKey}`)
+                .send(settings);
+
+            // Fetch data
+            const res = await request(app)
+                .get('/ai/settings')
+                .set('Authorization', `Bearer ${testApiKey}`);
+            
+            expect(res.status).toBe(200);
+            expect(res.body.data.ai_target).toBe('08123456789');
+            expect(res.body.data.ai_system_prompt).toBe('Test prompt');
+        });
+    });
+
+    describe('POST /ai/resolve-targets', () => {
+        test('should reject invalid payload (not an array)', async () => {
+            const response = await request(app)
+                .post('/ai/resolve-targets')
+                .set('Authorization', `Bearer ${testApiKey}`)
+                .send({ targets: 'not-an-array' });
+
+            expect(response.status).toBe(400);
+            expect(response.body.status).toBe(false);
+            expect(response.body.message).toContain('array');
+        });
+
+        test('should reject array with non-string elements', async () => {
+            const response = await request(app)
+                .post('/ai/resolve-targets')
+                .set('Authorization', `Bearer ${testApiKey}`)
+                .send({ targets: [123, null] });
+
+            expect(response.status).toBe(400);
+            expect(response.body.status).toBe(false);
+            expect(response.body.message).toContain('string');
+        });
     });
 });

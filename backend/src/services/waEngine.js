@@ -153,7 +153,11 @@ async function connectToWhatsApp(apiKey, io) {
                 
                 // Process with AI Auto-Reply
                 const myContacts = contactMappings.get(apiKey);
-                await processAiReply(apiKey, msg, myContacts).catch(e => {
+                const botIdentities = {
+                    id: sock.user?.id,
+                    lid: sock.user?.lid || sock.authState?.creds?.me?.lid
+                };
+                await processAiReply(apiKey, msg, myContacts, botIdentities).catch(e => {
                     console.error(`[${apiKey}] ❌ AI Error:`, e.message);
                 });
             }
@@ -166,19 +170,19 @@ async function connectToWhatsApp(apiKey, io) {
     }
 }
 
-async function sendMessageViaWa(apiKey, number, message, msgType = 'text', mediaBase64 = null, fileName = null) {
+async function sendMessageViaWa(apiKey, number, message, msgType = 'text', mediaBase64 = null, fileName = null, options = {}) {
     const waSocket = activeSessions.get(apiKey);
     if (!waSocket || !waSocket.user) throw new Error('Sistem WhatsApp belum siap/terkoneksi.');
     const waJid = number.includes('@') ? number : formatNumber(number);
     if ((msgType === 'image' || (msgType === 'text' && mediaBase64 && mediaBase64.startsWith('data:image/'))) && mediaBase64) {
         const buffer = Buffer.from(mediaBase64.split(',')[1], 'base64');
-        await waSocket.sendMessage(waJid, { image: buffer, caption: message });
+        await waSocket.sendMessage(waJid, { image: buffer, caption: message }, options);
     } else if ((msgType === 'document' || (msgType === 'text' && mediaBase64)) && mediaBase64) {
         const buffer = Buffer.from(mediaBase64.split(',')[1], 'base64');
         const mimeType = mediaBase64.split(';')[0].split(':')[1];
-        await waSocket.sendMessage(waJid, { document: buffer, mimetype: mimeType, fileName: fileName || 'document.file', caption: message });
+        await waSocket.sendMessage(waJid, { document: buffer, mimetype: mimeType, fileName: fileName || 'document.file', caption: message }, options);
     } else {
-        await waSocket.sendMessage(waJid, { text: message });
+        await waSocket.sendMessage(waJid, { text: message }, options);
     }
 }
 
@@ -217,6 +221,32 @@ function logAiActivity(apiKey, type, sender, message) {
     }
 }
 
+async function resolveTargets(apiKey, targets) {
+    const map = contactMappings.get(apiKey);
+    if (!map) return targets.map(t => ({ original: t, resolved: t }));
+
+    return targets.map(target => {
+        const cleanTarget = normalizePhoneNumber(target);
+        if (!cleanTarget) return { original: target, resolved: target };
+
+        // Attempt to find LID from contact map
+        for (const [jid, contact] of map.entries()) {
+            // Check if this contact matches the normalized target phone number
+            const contactPn = contact.pn ? normalizePhoneNumber(contact.pn) : '';
+            const contactId = contact.id ? normalizePhoneNumber(contact.id) : '';
+            const jidClean = normalizePhoneNumber(jid);
+
+            if (contactPn === cleanTarget || contactId === cleanTarget || jidClean === cleanTarget) {
+                // If it's an LID-keyed contact or has a lid property
+                if (jid.includes('@lid')) return { original: target, resolved: jid.split('@')[0] };
+                if (contact.lid) return { original: target, resolved: contact.lid.split('@')[0] };
+            }
+        }
+
+        return { original: target, resolved: target };
+    });
+}
+
 module.exports = {
     initAllSessions,
     sendMessageViaWa,
@@ -224,5 +254,6 @@ module.exports = {
     connectToWhatsApp,
     fetchGroups,
     logAiActivity,
-    purgeDevice
+    purgeDevice,
+    resolveTargets
 };
