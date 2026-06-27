@@ -7,10 +7,8 @@ module.exports = {
   transform: {
     '^.+\\.jsx?$': 'babel-jest',
   },
-  moduleNameMapper: {
-    '^cheerio$': '<rootDir>/node_modules/cheerio/dist/commonjs/index.js',
-  },
+  moduleNameMapper: {},
   transformIgnorePatterns: [
-    '/node_modules/(?!(cheerio|socks-proxy-agent|@whiskeysockets/baileys)/)'
+    '/node_modules/(?!(socks-proxy-agent|@whiskeysockets/baileys)/)'
   ]
 };
