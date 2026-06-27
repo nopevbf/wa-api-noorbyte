@@ -16,7 +16,16 @@ jest.mock('@whiskeysockets/baileys', () => ({
 }));
 
 // We must also mock pino, qrcode since waEngine requires them and they might clutter logs
-jest.mock('pino', () => jest.fn(() => ({ level: 'silent' })));
+jest.mock('pino', () => {
+    const mock = jest.fn(() => ({
+        level: 'silent',
+        info: jest.fn(),
+        error: jest.fn(),
+        warn: jest.fn(),
+        debug: jest.fn()
+    }));
+    return mock;
+});
 jest.mock('qrcode', () => ({ toDataURL: jest.fn() }));
 
 const router = require('../src/routes/apiRoutes');

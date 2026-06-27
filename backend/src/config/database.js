@@ -92,6 +92,11 @@ db.exec(`
 `);
 
 // Migrasi Database: Tambahkan kolom baru jika belum ada
+/**
+ * NOTE: db.exec untuk pembuatan tabel dan penambahan kolom secara manual cukup stabil untuk saat ini.
+ * Ke depannya, pertimbangkan untuk menggunakan tool migrasi formal (seperti Knex atau Sequelize) 
+ * agar track record schema lebih terkelola dengan baik.
+ */
 const migrations = [
   { table: 'users', column: 'role', sql: "ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user'" },
   { table: 'automation_schedules', column: 'start_date', sql: "ALTER TABLE automation_schedules ADD COLUMN start_date TEXT" },

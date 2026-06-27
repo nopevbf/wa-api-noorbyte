@@ -4,6 +4,7 @@ const db = require("../config/database");
 const appConfig = require("../config/appConfig");
 const checkApiKey = require("../middlewares/auth");
 const rateLimit = require("express-rate-limit");
+const logger = require("../helpers/logger");
 const {
   scrapeDparagonAttendance,
   parseDparagonTime,
@@ -83,6 +84,7 @@ router.get("/dashboard-stats", (req, res) => {
       data: { totalMessages: totalMsg, successRate: successRate, recentLogs: recentLogs },
     });
   } catch (error) {
+    logger.error({ error: error.message, stack: error.stack }, "Gagal mengambil statistik dashboard");
     res.status(500).json({
       status: false,
       message: "Gagal mengambil statistik",
@@ -118,6 +120,7 @@ router.get("/get-devices", (req, res) => {
     }
     res.status(200).json({ status: true, data: devices });
   } catch (error) {
+    logger.error({ error: error.message }, "Gagal mengambil data device");
     res.status(500).json({ status: false, message: "Gagal mengambil data device." });
   }
 });
@@ -134,7 +137,8 @@ router.post("/add-device", sensitiveLimiter, checkApiKey, (req, res) => {
     db.prepare("INSERT INTO users (username, phone, api_key, status, role) VALUES (?, ?, ?, ?, ?)").run(name, phone, token, "Disconnected", role);
     res.status(200).json({ status: true, message: "Device berhasil ditambahkan!", token: token });
   } catch (error) {
-    res.status(500).json({ status: false, message: "Gagal menambah device.", error: error.message });
+    logger.error({ error: error.message }, "Gagal menambah device");
+    res.status(500).json({ status: false, message: "Gagal menambah device." });
   }
 });
 
@@ -146,7 +150,8 @@ router.post("/disconnect-device", sensitiveLimiter, checkApiKey, async (req, res
     db.prepare("UPDATE users SET status = ? WHERE api_key = ?").run("Disconnected", api_key);
     res.status(200).json({ status: true, message: "Device berhasil diputus (Logged Out)." });
   } catch (error) {
-    res.status(500).json({ status: false, message: "Gagal memutus device.", error: error.message });
+    logger.error({ error: error.message, api_key }, "Gagal memutus device");
+    res.status(500).json({ status: false, message: "Gagal memutus device." });
   }
 });
 
@@ -157,7 +162,8 @@ router.post("/connect-device", sensitiveLimiter, checkApiKey, async (req, res) =
     connectToWhatsApp(api_key, global.io);
     res.status(200).json({ status: true, message: "Mesin WA dinyalakan. Menunggu QR..." });
   } catch (error) {
-    res.status(500).json({ status: false, message: "Gagal memulai koneksi.", error: error.message });
+    logger.error({ error: error.message, api_key }, "Gagal memulai koneksi WA");
+    res.status(500).json({ status: false, message: "Gagal memulai koneksi." });
   }
 });
 
@@ -171,7 +177,8 @@ router.post("/delete-device", sensitiveLimiter, checkApiKey, async (req, res) =>
     db.prepare("DELETE FROM message_logs WHERE api_key = ?").run(api_key);
     res.status(200).json({ status: true, message: "Device berhasil dihapus permanen." });
   } catch (error) {
-    res.status(500).json({ status: false, message: "Gagal menghapus device.", error: error.message });
+    logger.error({ error: error.message, api_key }, "Gagal menghapus device");
+    res.status(500).json({ status: false, message: "Gagal menghapus device." });
   }
 });
 
@@ -195,9 +202,10 @@ router.post("/send-message", checkApiKey, async (req, res) => {
       meta: { api_version: "v1.0", execution_time_ms: Date.now() - startTimer },
     });
   } catch (error) {
+    logger.error({ error: error.message, number, apiKey }, "Gagal mengirim pesan");
     const msgTextToSave = msg_type === "text" ? message : `[${msg_type.toUpperCase()}] ${message || ""}`;
     db.prepare("INSERT INTO message_logs (api_key, target_number, message, status) VALUES (?, ?, ?, ?)").run(apiKey, number, msgTextToSave, "FAILED");
-    res.status(500).json({ status: "error", message: error.message, meta: { api_version: "v1.0", execution_time_ms: Date.now() - startTimer } });
+    res.status(500).json({ status: "error", message: "Internal server error during message delivery.", meta: { api_version: "v1.0", execution_time_ms: Date.now() - startTimer } });
   }
 });
 
@@ -210,7 +218,8 @@ router.get("/groups/:apiKey", async (req, res) => {
     const groups = await fetchGroups(apiKey);
     res.status(200).json({ status: true, message: "Berhasil mengambil grup.", data: groups });
   } catch (error) {
-    res.status(500).json({ status: false, message: "Gagal mengambil daftar grup.", error: error.message });
+    logger.error({ error: error.message, apiKey }, "Gagal mengambil daftar grup");
+    res.status(500).json({ status: false, message: "Gagal mengambil daftar grup." });
   }
 });
 
@@ -247,7 +256,8 @@ router.post("/auth/magic-link", async (req, res) => {
     await sendMessageViaWa(senderDevice.api_key, phone, messageText, "text");
     res.status(200).json({ status: true, message: "Magic link terkirim." });
   } catch (error) {
-    res.status(500).json({ status: false, message: error.message });
+    logger.error({ error: error.message, phone }, "Gagal mengirim magic link");
+    res.status(500).json({ status: false, message: "Terjadi kesalahan sistem." });
   }
 });
 
@@ -267,6 +277,7 @@ router.post("/auth/verify", (req, res) => {
     }
     res.status(200).json({ status: true, message: "Otentikasi berhasil.", data: { username: user.username, phone: user.phone, api_key: user.api_key } });
   } catch (error) {
+    logger.error({ error: error.message }, "Kesalahan server saat verifikasi token");
     res.status(500).json({ status: false, message: "Kesalahan server saat verifikasi." });
   }
 });
@@ -323,7 +334,8 @@ router.post("/automation/save-settings", checkApiKey, (req, res) => {
     }
     res.status(200).json({ status: true, message: "Pengaturan berhasil disimpan." });
   } catch (error) {
-    res.status(500).json({ status: false, message: "Gagal menyimpan.", error: error.message });
+    logger.error({ error: error.message, effectiveApiKey }, "Gagal menyimpan pengaturan otomatis");
+    res.status(500).json({ status: false, message: "Gagal menyimpan." });
   }
 });
 
@@ -352,7 +364,8 @@ router.post("/automation/run-manual", sensitiveLimiter, checkApiKey, (req, res) 
     }
     res.status(200).json({ status: true, message: "Jadwal manual run terdaftar." });
   } catch (error) {
-    res.status(500).json({ status: false, message: "Gagal menjadwalkan.", error: error.message });
+    logger.error({ error: error.message, api_key }, "Gagal menjadwalkan manual run");
+    res.status(500).json({ status: false, message: "Gagal menjadwalkan." });
   }
 });
 
@@ -363,7 +376,8 @@ router.post("/automation/cancel-manual", checkApiKey, (req, res) => {
     db.prepare(`UPDATE automation_schedules SET manual_run_time = NULL, manual_run_status = NULL WHERE api_key = ?`).run(api_key);
     res.status(200).json({ status: true, message: "Jadwal manual berhasil dibatalkan." });
   } catch (error) {
-    res.status(500).json({ status: false, message: "Gagal membatalkan jadwal.", error: error.message });
+    logger.error({ error: error.message, api_key }, "Gagal membatalkan manual run");
+    res.status(500).json({ status: false, message: "Gagal membatalkan jadwal." });
   }
 });
 
@@ -386,6 +400,7 @@ router.get("/automation/status", checkApiKey, (req, res) => {
       data: { ...schedule, logs, custom_days, excluded_dates }
     });
   } catch (error) {
+    logger.error({ error: error.message, api_key }, "Gagal mengambil status otomatisasi");
     res.status(500).json({ status: false, message: "Gagal mengambil status." });
   }
 });
@@ -398,6 +413,7 @@ router.post('/rename-device', sensitiveLimiter, checkApiKey, async (req, res) =>
     db.prepare("UPDATE users SET username = ? WHERE api_key = ?").run(new_name, api_key);
     res.json({ status: true, message: "Berhasil diubah." });
   } catch (error) {
+    logger.error({ error: error.message, api_key }, "Gagal mengubah nama device");
     res.status(500).json({ status: false, message: "Gagal mengubah." });
   }
 });
@@ -414,6 +430,7 @@ router.get("/automation/kpi", checkApiKey, (req, res) => {
     const success_rate = total === 0 ? 0 : Math.round((success / total) * 1000) / 10;
     res.status(200).json({ status: true, data: { success_rate, total_sent: total } });
   } catch (error) {
+    logger.error({ error: error.message, api_key }, "Gagal mengambil KPI otomatisasi");
     res.status(500).json({ status: false, message: "Gagal ambil KPI." });
   }
 });
@@ -441,6 +458,7 @@ router.get("/attendance/history", async (req, res) => {
     
     res.json({ status: true, data: formattedData, current_page: targetPage });
   } catch (error) {
+    logger.error({ error: error.message }, "Gagal mengambil history kehadiran");
     res.status(500).json({ status: false, message: "Gagal ambil history." });
   }
 });
@@ -469,7 +487,7 @@ router.get("/attendance/recent", async (req, res) => {
 
     res.json({ status: true, data: formattedData.slice(0, 2) });
   } catch (error) {
-    console.error("Recent Error:", error);
+    logger.error({ error: error.message, fullName }, "Gagal mengambil data kehadiran terbaru");
     res.status(500).json({ status: false, message: "Error." });
   }
 });
@@ -477,7 +495,7 @@ router.get("/attendance/recent", async (req, res) => {
 router.post('/jailbreak/execute', async (req, res) => {
   const { env, email, password, fullName } = req.body;
   if (!env || !email || !password || !fullName) return res.status(400).json({ status: false, message: "Missing data." });
-  scrapeDparagonAttendance(env, email, password, fullName, 1).catch(console.error);
+  scrapeDparagonAttendance(env, email, password, fullName, 1).catch(e => logger.error({ error: e.message }, "Jailbreak background execution failed"));
   res.json({ status: true, message: "Started." });
 });
 
@@ -534,7 +552,8 @@ router.post("/ai/resolve-targets", checkApiKey, async (req, res) => {
       const result = await resolveTargets(req.user.api_key, targets);
       res.json({ status: true, data: result });
   } catch (e) {
-      res.status(500).json({ status: false, message: e.message });
+      logger.error({ error: e.message, api_key: req.user.api_key }, "Gagal resolve AI targets");
+      res.status(500).json({ status: false, message: "Internal server error." });
   }
 });
 
@@ -563,14 +582,15 @@ router.post("/ai/save-settings", checkApiKey, (req, res) => {
           apiKey
       );
 
-      console.log(`[API /ai/save-settings] Payload ai_target received:`, ai_target);
+      logger.info({ apiKey, ai_target }, "Pengaturan AI disimpan");
 
       // --- Sync Monitor Targets ---
       syncTargets(apiKey, ai_target);
 
       res.json({ status: true, message: "Pengaturan AI berhasil disimpan." });
   } catch (e) {
-      res.status(500).json({ status: false, message: "Gagal menyimpan pengaturan AI: " + e.message });
+      logger.error({ error: e.message, apiKey }, "Gagal menyimpan pengaturan AI");
+      res.status(500).json({ status: false, message: "Gagal menyimpan pengaturan AI." });
   }
 });
 
@@ -581,7 +601,8 @@ router.get("/ai/monitor-targets", checkApiKey, (req, res) => {
       const candidates = db.prepare("SELECT * FROM monitor_identity_candidates WHERE api_key = ? AND status = 'unassigned'").all(apiKey);
       res.json({ status: true, data: { targets, candidates } });
   } catch (e) {
-      res.status(500).json({ status: false, message: e.message });
+      logger.error({ error: e.message, apiKey }, "Gagal mengambil monitor targets");
+      res.status(500).json({ status: false, message: "Terjadi kesalahan sistem." });
   }
 });
 
@@ -594,7 +615,8 @@ router.post("/ai/bind-candidate", checkApiKey, (req, res) => {
       const result = bindCandidateToTarget(candidate_id, target_id);
       res.json({ status: true, message: "Identitas berhasil di-bind ke target." });
   } catch (e) {
-      res.status(500).json({ status: false, message: e.message });
+      logger.error({ error: e.message, candidate_id, target_id }, "Gagal bind candidate ke target");
+      res.status(500).json({ status: false, message: "Gagal memproses permintaan." });
   }
 });
 

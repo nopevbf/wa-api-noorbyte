@@ -7,6 +7,7 @@ const {
     extractText, 
     shouldBotReplyInGroup 
 } = require('../helpers/aiUtils');
+const { isAiPaused, sendBotMessage } = require('../helpers/humanTakeover');
 
 /**
  * Checks if the incoming message matches any of the target settings or monitor targets.
@@ -48,7 +49,7 @@ function isTargetMatch(user, incomingJid, remoteJid, isGroup, apiKey) {
  * Core logic for processing an incoming message with AI.
  */
 async function processAiReply(apiKey, msg, contactMap = new Map(), botIdentities = { id: null, lid: null }) {
-    const { sendMessageViaWa, logAiActivity } = require('./waEngine');
+    const { sendMessageViaWa, logAiActivity, activeSessions } = require('./waEngine');
     const { jidNormalizedUser } = require('@whiskeysockets/baileys');
     
     const remoteJid = msg.key?.remoteJid || msg.from;
@@ -57,6 +58,12 @@ async function processAiReply(apiKey, msg, contactMap = new Map(), botIdentities
     const pushName = msg.pushName || participant?.split('@')[0] || 'Unknown';
     
     if (msg.key?.fromMe) return;
+
+    // Check if AI is paused for this chat (Human Takeover)
+    if (isAiPaused(remoteJid)) {
+        console.log(`[AI SKIP] Human takeover active for ${remoteJid}`);
+        return;
+    }
 
     const user = db.prepare('SELECT ai_enabled, ai_source, ai_provider, ai_api_key, ai_system_prompt, ai_context_data, ai_target FROM users WHERE api_key = ?').get(apiKey);
     if (!user || !user.ai_enabled) return;
@@ -88,7 +95,14 @@ async function processAiReply(apiKey, msg, contactMap = new Map(), botIdentities
     try {
         logAiActivity(apiKey, 'processing', pushName, 'Thinking...');
         const aiReply = await generateAiResponse(aiConfig, text);
-        await sendMessageViaWa(apiKey, remoteJid, aiReply, 'text', null, null, replyOptions);
+        
+        const sock = activeSessions.get(apiKey);
+        if (sock) {
+            await sendBotMessage(sock, remoteJid, { text: aiReply }, replyOptions);
+        } else {
+            await sendMessageViaWa(apiKey, remoteJid, aiReply, 'text', null, null, replyOptions);
+        }
+        
         logAiActivity(apiKey, 'outgoing', pushName, aiReply);
     } catch (e) {
         console.error(`[AI-Processor] Error:`, e.message);

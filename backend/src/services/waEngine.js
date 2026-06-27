@@ -9,6 +9,19 @@ const { handleIncomingPulseMessage } = require('./pulseWatcher');
 const { generateAiResponse } = require('./aiEngine');
 const { processAiReply } = require('./aiProcessor');
 const { normalizePhoneNumber } = require('../helpers/validators');
+const { 
+    isAiPaused, 
+    pauseAiForChat, 
+    pauseAiForever,
+    resumeAiForChat, 
+    isManualOwnerMessage, 
+    getMessageText,
+    sendBotMessage,
+    isDuplicateMessage,
+    isRealOwnerMessage,
+    getSenderJid,
+    OWNER_ALLOWED_JIDS
+} = require('../helpers/humanTakeover');
 
 const activeSessions = new Map();
 const contactMappings = new Map(); // apiKey -> Map(jid -> info)
@@ -147,7 +160,54 @@ async function connectToWhatsApp(apiKey, io) {
 
         sock.ev.on('messages.upsert', async (m) => {
             for (const msg of m.messages) {
-                if (!msg.message || msg.key.fromMe) continue;
+                if (!msg.message) continue;
+
+                // 1. Deduplicate message ID
+                if (isDuplicateMessage(msg)) continue;
+
+                const remoteJid = msg.key.remoteJid;
+                const participant = msg.key.participant || remoteJid;
+                const fromMe = msg.key.fromMe;
+                const messageId = msg.key.id;
+                const text = getMessageText(msg)?.trim().toLowerCase();
+
+                // 2. Strict Owner Identity Check
+                const senderJid = getSenderJid(msg);
+                const isOwner = isRealOwnerMessage(msg);
+
+                console.log(`[OWNER CHECK] {
+                    fromMe: ${fromMe},
+                    senderJid: '${senderJid}',
+                    ownerAllowedJids: ${JSON.stringify(OWNER_ALLOWED_JIDS)},
+                    matched: ${isOwner}
+                }`);
+
+                // If fromMe is true but sender is not bot identity, skip and log (Baileys echo/bug)
+                if (fromMe && !isOwner) {
+                    console.log(`[FROM ME SKIP] fromMe true but sender is not owner/bot. Sender: ${senderJid}`);
+                    continue;
+                }
+
+                // Handle Human Takeover & Commands (ONLY for true owner)
+                if (isOwner) {
+                    if (text === '/ai off') {
+                        pauseAiForever(remoteJid);
+                        continue;
+                    } else if (text === '/ai on') {
+                        resumeAiForChat(remoteJid);
+                        continue;
+                    }
+
+                    if (isManualOwnerMessage(msg)) {
+                        pauseAiForChat(remoteJid, 1); // 1 min for testing
+                    }
+                    continue;
+                }
+
+                // Restriction: Non-owners cannot use /ai on/off
+                if (text === '/ai off' || text === '/ai on') {
+                    console.log(`[COMMAND SKIP] Non-owner tried AI command`);
+                }
 
                 handleIncomingPulseMessage(apiKey, msg).catch(e => {});
                 
@@ -174,16 +234,20 @@ async function sendMessageViaWa(apiKey, number, message, msgType = 'text', media
     const waSocket = activeSessions.get(apiKey);
     if (!waSocket || !waSocket.user) throw new Error('Sistem WhatsApp belum siap/terkoneksi.');
     const waJid = number.includes('@') ? number : formatNumber(number);
+    
+    let content;
     if ((msgType === 'image' || (msgType === 'text' && mediaBase64 && mediaBase64.startsWith('data:image/'))) && mediaBase64) {
         const buffer = Buffer.from(mediaBase64.split(',')[1], 'base64');
-        await waSocket.sendMessage(waJid, { image: buffer, caption: message }, options);
+        content = { image: buffer, caption: message };
     } else if ((msgType === 'document' || (msgType === 'text' && mediaBase64)) && mediaBase64) {
         const buffer = Buffer.from(mediaBase64.split(',')[1], 'base64');
         const mimeType = mediaBase64.split(';')[0].split(':')[1];
-        await waSocket.sendMessage(waJid, { document: buffer, mimetype: mimeType, fileName: fileName || 'document.file', caption: message }, options);
+        content = { document: buffer, mimetype: mimeType, fileName: fileName || 'document.file', caption: message };
     } else {
-        await waSocket.sendMessage(waJid, { text: message }, options);
+        content = { text: message };
     }
+    
+    return await sendBotMessage(waSocket, waJid, content, options);
 }
 
 function initAllSessions(io) {
@@ -255,5 +319,6 @@ module.exports = {
     fetchGroups,
     logAiActivity,
     purgeDevice,
-    resolveTargets
+    resolveTargets,
+    activeSessions
 };

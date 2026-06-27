@@ -5,10 +5,14 @@ jest.mock('@whiskeysockets/baileys', () => ({
   jidNormalizedUser: (jid) => jid?.split('@')[0].split(':')[0] + '@s.whatsapp.net',
 }));
 
-jest.mock('../src/services/waEngine', () => ({
-  sendMessageViaWa: jest.fn().mockResolvedValue({ status: 'success' }),
-  logAiActivity: jest.fn(),
-}));
+jest.mock('../src/services/waEngine', () => {
+  const activeSessions = new Map();
+  return {
+    sendMessageViaWa: jest.fn().mockResolvedValue({ status: 'success' }),
+    logAiActivity: jest.fn(),
+    activeSessions,
+  };
+});
 
 const { processAiReply } = require('../src/services/aiProcessor');
 const { sendMessageViaWa, logAiActivity } = require('../src/services/waEngine');
@@ -73,5 +77,52 @@ describe('AI Auto-Reply Integration Flow', () => {
     await processAiReply(testApiKey, incomingMessage);
 
     expect(sendMessageViaWa).not.toHaveBeenCalled();
+  });
+
+  it('should skip AI if Human Takeover is active (paused)', async () => {
+    const { pauseAiForChat, resumeAiForChat } = require('../src/helpers/humanTakeover');
+    const remoteJid = '628999999999@s.whatsapp.net';
+    
+    // Activate human takeover
+    pauseAiForChat(remoteJid, 15);
+    
+    const incomingMessage = {
+      from: remoteJid,
+      body: 'Halo, saya mau tanya',
+      pushName: 'Customer'
+    };
+
+    jest.clearAllMocks();
+    await processAiReply(testApiKey, incomingMessage);
+
+    // AI should not send any message
+    expect(sendMessageViaWa).not.toHaveBeenCalled();
+    
+    // Cleanup for next tests
+    resumeAiForChat(remoteJid);
+  });
+
+  it('should NOT trigger Human Takeover when a non-owner sends a normal message', async () => {
+    const { isAiPaused, resumeAiForChat } = require('../src/helpers/humanTakeover');
+    const remoteJid = '628999999999@s.whatsapp.net';
+    
+    // Ensure AI is resumed
+    resumeAiForChat(remoteJid);
+    
+    const incomingMessage = {
+      key: { remoteJid, fromMe: false, id: 'user_msg_id' },
+      from: remoteJid,
+      body: 'Halo, saya mau tanya',
+      pushName: 'Customer'
+    };
+
+    // We can't directly test waEngine listener here easily without a lot of mocking,
+    // but we can verify our assumption that processAiReply doesn't trigger pause.
+    // The actual fix is in the waEngine listener.
+    
+    await processAiReply(testApiKey, incomingMessage);
+
+    // AI should NOT be paused by a normal user message
+    expect(isAiPaused(remoteJid)).toBe(false);
   });
 });
