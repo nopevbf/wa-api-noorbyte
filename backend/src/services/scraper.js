@@ -26,6 +26,7 @@ if (!process.env.NODE_ENV) {
 
 const puppeteer = require('puppeteer');
 const path = require('path');
+const { parseDparagonTime } = require('../helpers/timeFormatter');
 
 // 2. DEBUGGING: Print semua isi config biar keliatan beneran kebaca atau nggak!
 console.log("==========================================");
@@ -37,77 +38,7 @@ console.log("==========================================");
 // key: fullName (string) -> value: { data: Array, timestamp: number }
 const userCacheRegistry = new Map();
 
-/**
- * Helper: TRANSLATOR WAKTU INDO -> TIMESTAMP (FIXED SQA APPROVED)
- */
-function parseDparagonTime(rawTime) {
-    if (!rawTime || rawTime === "-") return 0;
 
-    // 1. Bersihkan (WIB)
-    let rawStr = String(rawTime)
-        .replace(/\(WIB\)/gi, "")
-        .trim();
-
-    // 2. Ekstrak Jam (Pakai Regex sapu jagat)
-    const timeMatch = rawStr.match(/(\d{1,2}:\d{2}(:\d{2})?)/);
-    let timePart = "00:00:00";
-    if (timeMatch) {
-        timePart = timeMatch[0]; // Dapat "16:02:31"
-    }
-
-    // 3. Ekstrak Tanggal (Buang Jam, Buang Nama Hari "Kamis,")
-    let datePart = rawStr
-        .replace(timePart, "")
-        .replace(/^[a-zA-Z]+,\s+/i, "")
-        .trim();
-
-    // 4. Ratakan spasi dan enter yang nyangkut
-    datePart = datePart
-        .replace(/[\n\r]+/g, " ")
-        .replace(/\s{2,}/g, " ")
-        .trim();
-
-    // 5. Translate Bulan Indo -> Eng biar bisa dibaca Node.js
-    const bulanId = [
-        "Januari",
-        "Februari",
-        "Maret",
-        "April",
-        "Mei",
-        "Juni",
-        "Juli",
-        "Agustus",
-        "September",
-        "Oktober",
-        "November",
-        "Desember",
-    ];
-    const bulanEn = [
-        "January",
-        "February",
-        "March",
-        "April",
-        "May",
-        "June",
-        "July",
-        "August",
-        "September",
-        "October",
-        "November",
-        "December",
-    ];
-
-    bulanId.forEach((id, index) => {
-        datePart = datePart.replace(new RegExp(id, "gi"), bulanEn[index]);
-    });
-
-    // 6. Gabungkan jadi format standar (Misal: "02 April 2026 16:02:31")
-    const finalDateTimeStr = `${datePart} ${timePart}`;
-    const parsedDate = new Date(finalDateTimeStr).getTime();
-
-    // Kembalikan Timestamp (Angka milidetik), kalau masih gagal kembalikan 0
-    return isNaN(parsedDate) ? 0 : parsedDate;
-}
 
 /**
  * Helper: Cek apakah cache expired (5 menit)

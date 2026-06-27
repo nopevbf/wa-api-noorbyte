@@ -6,7 +6,6 @@ const checkApiKey = require("../middlewares/auth");
 const rateLimit = require("express-rate-limit");
 const {
   scrapeDparagonAttendance,
-  parseDparagonTime,
   getCachedData,
   setCachedData,
   isCacheExpired,
