@@ -13,6 +13,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
         rel="stylesheet" />
     <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
     <link rel="stylesheet" href="/css/checkin.css">
     <script id="tailwind-config">
         tailwind.config = {
@@ -94,6 +95,31 @@
                                                 class="w-full bg-slate-950 border border-slate-800 rounded-lg py-2.5 px-3 text-slate-300 font-mono text-xs focus:outline-none transition-all"
                                                 type="text" value="110.41448" placeholder="e.g. 110.41448" />
                                         </div>
+                                    </div>
+                                    
+                                    <button id="btnToggleMap" type="button"
+                                        class="w-full bg-slate-950 hover:bg-slate-900 border border-slate-800 py-2.5 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-all active:scale-95 shadow-sm">
+                                        <span class="material-symbols-outlined text-base">map</span>
+                                        <span>Pilih dari Peta</span>
+                                    </button>
+
+                                    <div id="mapSearchArea" class="hidden relative mt-2">
+                                        <input type="text" id="mapSearchInput" list="mapSearchSuggestions"
+                                            class="w-full bg-slate-950 border border-slate-800 rounded-lg py-2.5 pl-3 pr-16 text-slate-300 font-mono text-xs focus:outline-none transition-all"
+                                            placeholder="Cari lokasi (misal: Sleman, Malioboro)..." />
+                                        <datalist id="mapSearchSuggestions"></datalist>
+                                        <button type="button" id="btnMapSearchClear"
+                                            class="hidden absolute right-9 top-2.5 text-slate-500 hover:text-slate-300 transition-colors">
+                                            <span class="material-symbols-outlined text-base">close</span>
+                                        </button>
+                                        <button type="button" id="btnMapSearch"
+                                            class="absolute right-2 top-2.5 text-slate-500 hover:text-red-500 transition-colors">
+                                            <span class="material-symbols-outlined text-base">search</span>
+                                        </button>
+                                    </div>
+
+                                    <div id="mapContainer" class="hidden w-full h-64 rounded-lg overflow-hidden border border-slate-800 transition-all duration-300">
+                                        <div id="map" class="w-full h-full z-10"></div>
                                     </div>
 
                                     <button id="btnSetLocation"
@@ -472,6 +498,7 @@
         </div>
 
         <script src="/socket.io/socket.io.js"></script>
+        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
         <script src="/js/checkin.js"></script>
         <script src="/js/sidebar.js"></script>
 </body>
