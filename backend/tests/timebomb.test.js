@@ -45,7 +45,23 @@ describe('calculateDelay', () => {
     expect(delay).toBeLessThanOrEqual(30 * 60 * 1000 + 2000);
   });
 
-  it('should return negative or zero for past time today', () => {
+  it('should subtract 1 minute from delay if action is MASUK', () => {
+    // Arrange: target 30 menit dari sekarang
+    const now = new Date();
+    const futureMinute = now.getMinutes() + 30;
+    const hh = String(now.getHours() + (futureMinute >= 60 ? 1 : 0)).padStart(2, '0');
+    const mm = String(futureMinute % 60).padStart(2, '0');
+    const targetTime = `${hh}:${mm}`;
+
+    // Act
+    const delay = calculateDelay(targetTime, 'MASUK');
+
+    // Assert: delay harus sekitar 29 menit (karena dikurangi 1 menit untuk MASUK)
+    expect(delay).toBeGreaterThan(28 * 60 * 1000 - 2000);
+    expect(delay).toBeLessThanOrEqual(29 * 60 * 1000 + 2000);
+  });
+
+  it('should return positive delay (tomorrow) for past time today', () => {
     // Arrange: target 1 jam yang lalu
     const now = new Date();
     let pastHour = now.getHours() - 1;
@@ -54,10 +70,10 @@ describe('calculateDelay', () => {
     const targetTime = `${String(pastHour).padStart(2, '0')}:${mm}`;
 
     // Act
-    const delay = calculateDelay(targetTime);
+    const delay = calculateDelay(targetTime, 'KELUAR');
 
-    // Assert: delay negatif atau nol (waktu sudah lewat)
-    expect(delay).toBeLessThanOrEqual(0);
+    // Assert: delay positif (waktu besok, sekitar 23 jam)
+    expect(delay).toBeGreaterThan(22 * 60 * 60 * 1000);
   });
 
   it('should handle edge case "00:00" correctly', () => {
@@ -107,8 +123,9 @@ describe('scheduleTimebomb', () => {
     expect(timebombRegistry.has(result.timer_key)).toBe(true);
   });
 
-  it('should reject when targetTime is in the past', () => {
+  it('should schedule for tomorrow when targetTime is in the past', () => {
     // Arrange: 1 jam yang lalu
+    jest.useFakeTimers();
     const now = new Date();
     let pastHour = now.getHours() - 1;
     if (pastHour < 0) pastHour = 23; // wrap around
@@ -116,6 +133,7 @@ describe('scheduleTimebomb', () => {
 
     const params = {
       targetTime: `${String(pastHour).padStart(2, '0')}:${mm}`,
+      action: 'KELUAR',
       token: 'test-token',
       dpUrl: 'https://api.dparagon.com/v2',
       apiKey: 'key-001',
@@ -126,8 +144,8 @@ describe('scheduleTimebomb', () => {
     const result = scheduleTimebomb(params);
 
     // Assert
-    expect(result.status).toBe(false);
-    expect(result.message).toBeDefined();
+    expect(result.status).toBe(true);
+    expect(result.timer_key).toBeDefined();
   });
 
   it('should reject when payload is incomplete (missing latitude)', () => {

@@ -33,14 +33,29 @@ const timebombRegistry = new Map();
  * Returns negative value if target time is in the past.
  * 
  * @param {string} targetTime - "HH:MM" format (24-hour)
- * @returns {number} delay in milliseconds (negative = past)
+ * @param {string} action - "MASUK" or "KELUAR"
+ * @returns {number} delay in milliseconds
  */
-function calculateDelay(targetTime) {
+function calculateDelay(targetTime, action = '') {
   const [hours, minutes] = targetTime.split(':').map(Number);
   const now = new Date();
   const target = new Date();
   target.setHours(hours, minutes, 0, 0);
-  return target.getTime() - now.getTime();
+
+  // Jika target lebih kecil dari sekarang, berarti dijadwalkan untuk besok
+  if (target.getTime() <= now.getTime()) {
+    target.setDate(target.getDate() + 1);
+  }
+
+  let delay = target.getTime() - now.getTime();
+
+  // Jika MASUK (Check-in), kurangi 1 menit (60000ms) agar tidak terdeteksi telat
+  if (action.toUpperCase() === 'MASUK') {
+    delay -= 60000;
+  }
+
+  // Jika delay negatif setelah dikurangi buffer, jalankan langsung (delay 0)
+  return delay < 0 ? 0 : delay;
 }
 
 /**
@@ -113,24 +128,22 @@ function validateDpUrl(url) {
  * 
  * @param {Object} params
  * @param {string} params.targetTime - "HH:MM" format (24-hour)
+ * @param {string} params.action     - "MASUK" or "KELUAR"
  * @param {string} params.token      - Bearer token for DParagon API
  * @param {string} params.dpUrl      - DParagon API base URL
  * @param {string} params.apiKey     - User's NoorByte API key
  * @param {Object} params.payload    - { latitude, longitude, image }
  * @returns {{ status: boolean, message: string, timer_key?: string }}
  */
-function scheduleTimebomb({ targetTime, token, dpUrl, apiKey, payload }) {
+function scheduleTimebomb({ targetTime, action, token, dpUrl, apiKey, payload }) {
   // 1. Validate inputs
   const validation = validateTimebombParams({ token, payload });
   if (!validation.valid) {
     return { status: false, message: validation.error };
   }
 
-  // 2. Check time is in the future
-  const delay = calculateDelay(targetTime);
-  if (delay <= 0) {
-    return { status: false, message: `Waktu target (${targetTime}) sudah lewat. Pilih waktu di masa depan.` };
-  }
+  // 2. Calculate delay
+  const delay = calculateDelay(targetTime, action);
 
   // 3. Generate unique timer key
   const timerKey = crypto.randomBytes(8).toString('hex');
