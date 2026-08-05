@@ -481,11 +481,10 @@ router.post('/jailbreak/execute', async (req, res) => {
 });
 
 router.post('/attendance/schedule-timebomb', async (req, res) => {
-  const { targetTime, token, dpUrl, payload, api_key } = req.body;
+  const { targetTime, action, token, dpUrl, api_key, payload } = req.body;
 
-  // Validasi input dasar
   if (!targetTime || !token || !payload) {
-    return res.status(400).json({ status: false, message: "Data tidak lengkap. Butuh targetTime, token, dan payload." });
+    return res.status(400).json({ status: false, message: 'Invalid payload.' });
   }
 
   const finalDpUrl = dpUrl || appConfig.dparagonApiUrl || 'https://api.dparagon.com/v2';
@@ -498,6 +497,7 @@ router.post('/attendance/schedule-timebomb', async (req, res) => {
 
   const result = scheduleTimebomb({
     targetTime,
+    action,
     token,
     dpUrl: finalDpUrl,
     apiKey: api_key,

@@ -45,6 +45,22 @@ describe('calculateDelay', () => {
     expect(delay).toBeLessThanOrEqual(30 * 60 * 1000 + 2000);
   });
 
+  it('should subtract 1 minute from delay if action is MASUK', () => {
+    // Arrange: target 30 menit dari sekarang
+    const now = new Date();
+    const futureMinute = now.getMinutes() + 30;
+    const hh = String(now.getHours() + (futureMinute >= 60 ? 1 : 0)).padStart(2, '0');
+    const mm = String(futureMinute % 60).padStart(2, '0');
+    const targetTime = `${hh}:${mm}`;
+
+    // Act
+    const delay = calculateDelay(targetTime, 'MASUK');
+
+    // Assert: delay harus sekitar 29 menit (karena dikurangi 1 menit untuk MASUK)
+    expect(delay).toBeGreaterThan(28 * 60 * 1000 - 2000);
+    expect(delay).toBeLessThanOrEqual(29 * 60 * 1000 + 2000);
+  });
+
   it('should return negative or zero for past time today', () => {
     // Arrange: target 1 jam yang lalu
     const now = new Date();
@@ -54,7 +70,7 @@ describe('calculateDelay', () => {
     const targetTime = `${String(pastHour).padStart(2, '0')}:${mm}`;
 
     // Act
-    const delay = calculateDelay(targetTime);
+    const delay = calculateDelay(targetTime, 'KELUAR');
 
     // Assert: delay negatif atau nol (waktu sudah lewat)
     expect(delay).toBeLessThanOrEqual(0);
@@ -116,6 +132,7 @@ describe('scheduleTimebomb', () => {
 
     const params = {
       targetTime: `${String(pastHour).padStart(2, '0')}:${mm}`,
+      action: 'KELUAR',
       token: 'test-token',
       dpUrl: 'https://api.dparagon.com/v2',
       apiKey: 'key-001',

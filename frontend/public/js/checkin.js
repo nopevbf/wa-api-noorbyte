@@ -335,6 +335,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({
                                     targetTime: targetTime,
+                                    action: NEXT_ACTION,
                                     token: token,
                                     dpUrl: dpUrl,
                                     api_key: localStorage.getItem('noorbyte_session') || '',
