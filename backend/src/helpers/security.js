@@ -50,7 +50,7 @@ try {
     validateEncryptionKey();
 } catch (e) {
     logger.error("FATAL: Security initialization failed", { error: e.message });
-    process.exit(1);
+    throw e;
 }
 
 class DecryptionError extends Error {

@@ -488,6 +488,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 showSystemAlert('BYPASS SUCCESS', "Data kehadiran diterima. Memulai sinkronisasi log otomatis...", 'success');
                 if (isTimeBombMode) {
                     btnCapture.innerHTML = `<span class="material-symbols-outlined text-xl">cloud_done</span> STANDBY DI SERVER`;
+                    // Ensure it turns emerald whether it was red (MASUK) or amber (KELUAR)
+                    btnCapture.classList.remove('bg-red-600', 'hover:bg-red-700', 'bg-amber-500', 'hover:bg-amber-600');
+                    btnCapture.classList.add('bg-emerald-600', 'hover:bg-emerald-700');
                 } else {
                     btnCapture.innerHTML = `<span class="material-symbols-outlined text-xl">check_circle</span> TERKIRIM`;
                 }

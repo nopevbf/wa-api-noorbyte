@@ -37,6 +37,7 @@ const timebombRegistry = new Map();
  * @returns {number} delay in milliseconds
  */
 function calculateDelay(targetTime, action = '') {
+  const DELAY_EXPIRED = -1;
   const [hours, minutes] = targetTime.split(':').map(Number);
   const now = new Date();
   const target = new Date();
@@ -46,7 +47,7 @@ function calculateDelay(targetTime, action = '') {
 
   // Tolak jika waktu aslinya sudah lewat atau tepat saat ini (0ms)
   if (realDelay <= 0) {
-    return -1; 
+    return DELAY_EXPIRED; 
   }
 
   let finalDelay = realDelay;
