@@ -85,8 +85,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             const retakeBtn = document.getElementById('btnRetake');
             if (retakeBtn) retakeBtn.classList.remove('hidden');
             
-            // 4. RELOAD DATA RIWAYAT (WIDGET)
-            loadRecentAttendanceWidget(true);
+            // 4. UPDATE LOCAL STORAGE STATE
+            markAttendanceSuccessLocally();
         });
 
         socket.on(`timebomb-error-${myApiKey}`, (data) => {
@@ -119,7 +119,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (typeof isJailbreakSessionValid === 'function' && isJailbreakSessionValid()) {
         console.log("[SYSTEM] Valid Jailbreak session detected.");
         if (authModal) authModal.classList.add('hidden');
-        loadRecentAttendanceWidget();
+        initAttendanceState();
         // Start camera slightly delayed to ensure DOM is ready
         setTimeout(() => {
             if (typeof startCamera === 'function') startCamera();
@@ -484,12 +484,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const result = await response.json();
 
-            // 4. Handle Response
-            if (response.ok && result.status !== false) {
+                        if (response.ok && result.status !== false) {
                 showSystemAlert('BYPASS SUCCESS', "Data kehadiran diterima. Memulai sinkronisasi log otomatis...", 'success');
                 btnCapture.innerHTML = `<span class="material-symbols-outlined text-xl">check_circle</span> TERKIRIM`;
                 btnRetake.classList.remove('hidden');
-                loadRecentAttendanceWidget(true);
+                markAttendanceSuccessLocally();
             } else {
                 // ==========================================
                 // SQA X-RAY: BEDAH ERROR DARI SERVER
@@ -764,7 +763,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         authModal.classList.add('hidden');
                         if (typeof updateJailbreakActivity === 'function') updateJailbreakActivity();
                         if (typeof startCamera === 'function') startCamera();
-                        if (typeof loadRecentAttendanceWidget === 'function') loadRecentAttendanceWidget(true);
+                        initAttendanceState();
                     }, 500);
                 }, 1500);
 
@@ -1029,163 +1028,78 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Event Klik "View Full Log"
     if (btnViewFullLog) {
-        btnViewFullLog.addEventListener('click', (e) => {
-            e.preventDefault();
-            historyContainer.innerHTML = '';
-            historyPage = 1;
-            isHistoryEnd = false;
-            endIndicator.classList.add('hidden');
-
-            historyModal.classList.remove('hidden');
-            historyModal.classList.add('flex');
-            setTimeout(() => {
-                historyModal.classList.remove('opacity-0');
-                historyBox.classList.remove('scale-95');
-            }, 10);
-
-            loadHistoryData();
+                btnSetLocation.className = "w-full bg-slate-800 hover:bg-slate-700 hover:border-error/50 text-slate-200 border border-slate-700 py-3 rounded-lg font-bold text-xs md:text-sm flex items-center justify-center gap-2 transition-all active:scale-95 shadow-sm";
+            }
         });
     }
 
-    // Event Tutup Modal
-    if (btnCloseHistory) {
-        btnCloseHistory.addEventListener('click', () => {
-            historyModal.classList.add('opacity-0');
-            historyBox.classList.add('scale-95');
+
+    // ==========================================
+    // LOGIC SWITCH ACTION MANUAL
+    // ==========================================
+    const btnSwitchAction = document.getElementById('btnSwitchAction');
+    if (btnSwitchAction) {
+        btnSwitchAction.addEventListener('click', () => {
+            NEXT_ACTION = NEXT_ACTION === 'MASUK' ? 'KELUAR' : 'MASUK';
+            renderAttendanceStateUI();
+            
+            // Animasi kecil di tombol saat di-klik
+            btnSwitchAction.querySelector('span').classList.add('animate-spin');
             setTimeout(() => {
-                historyModal.classList.remove('flex');
-                historyModal.classList.add('hidden');
-            }, 300);
+                btnSwitchAction.querySelector('span').classList.remove('animate-spin');
+            }, 500);
+
+            showSystemAlert('MANUAL OVERRIDE', `Status Absen diubah paksa menjadi: ${NEXT_ACTION}`, 'success');
         });
     }
 
 });
 
-async function loadRecentAttendanceWidget(forceSync = false) {
-    const container = document.getElementById('dashboardRecentLogs');
-    if (!container) return;
+// ==========================================
+// LOCAL ATTENDANCE STATE (PENGGANTI HISTORY)
+// ==========================================
+function markAttendanceSuccessLocally() {
+    if (NEXT_ACTION === 'MASUK') {
+        const today = new Date().toISOString().split('T')[0];
+        localStorage.setItem('last_checkin_date', today);
+    }
+    initAttendanceState();
+}
 
-    // Tampilkan efek loading animasi
-    container.innerHTML = `<div class="text-center text-xs text-slate-500 animate-pulse py-4"><span class="material-symbols-outlined animate-spin mb-1 text-red-500">autorenew</span><br>Syncing node...</div>`;
-
-    try {
-        const token = localStorage.getItem('access_token') || localStorage.getItem('dparagon_token');
-        const fullName = localStorage.getItem('full_name') || '';    // Ambil nama dari storage
-
-        // Selipkan &name= ke URL
-        const url = forceSync
-            ? `/api/attendance/recent?force=true&name=${encodeURIComponent(fullName)}`
-            : `/api/attendance/recent?name=${encodeURIComponent(fullName)}`;
-
-        const response = await fetch(url, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-
-        const result = await response.json();
-
-        if (result.status && result.data && result.data.length > 0) {
-            container.innerHTML = ''; // Bersihkan container
-
-            // ==========================================
-            // SQA INJECTION: DETEKSI ABSEN KELUAR/MASUK
-            // ==========================================
-            const latestLog = result.data[0];
-            const today = new Date();
-
-            // Format pencocokan tanggal (bisa "07 April" atau "7 April")
-            const d1 = today.toLocaleDateString('id-ID', { day: '2-digit', month: 'long' });
-            const d2 = today.toLocaleDateString('id-ID', { day: 'numeric', month: 'long' });
-
-            const isToday = latestLog.raw_time.includes(d1) || latestLog.raw_time.includes(d2);
-
-            if (isToday && latestLog.status.toLowerCase() === 'checkin') {
-                NEXT_ACTION = "KELUAR";
-            } else {
-                NEXT_ACTION = "MASUK";
-            }
-
-            // Ubah teks breadcrumb UI di atas
-            const labelAbsen = document.getElementById('labelAbsen');
-            if (labelAbsen) {
-                labelAbsen.innerText = `Absen ${NEXT_ACTION}`;
-                if (NEXT_ACTION === 'KELUAR') {
-                    labelAbsen.classList.replace('text-red-600', 'text-amber-500');
-                } else {
-                    labelAbsen.classList.replace('text-amber-500', 'text-red-600');
-                }
-            }
-            // ==========================================
-
-            result.data.forEach(item => {
-                // Formatting Teks Waktu
-                let dateText = "Unknown Date";
-                let timeText = "--:--";
-
-                if (item.raw_time) {
-                    const parts = item.raw_time.split('\n');
-                    if (parts.length >= 2) {
-                        dateText = parts[0].trim();
-                        const rawTimeStr = parts[1].trim();
-                        timeText = rawTimeStr.replace(' (WIB)', '');
-                    } else {
-                        timeText = item.raw_time.trim();
-                    }
-                }
-
-                // ==========================================
-                // DYNAMIC BADGE: Checkin (Hijau) | Checkout (Orange)
-                // ==========================================
-                const isCheckin = item.status.toLowerCase() === 'checkin';
-                const badgeClass = isCheckin
-                    ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/30"
-                    : "bg-orange-500/10 text-orange-500 border-orange-500/30";
-                const dotClass = isCheckin ? "bg-emerald-500" : "bg-orange-500";
-
-                const badgeHtml = `<span class="${badgeClass} border text-[10px] px-2 py-1 rounded-full font-bold uppercase flex items-center gap-1 shadow-sm"><div class="w-1.5 h-1.5 ${dotClass} rounded-full animate-pulse"></div> ${item.status}</span>`;
-
-                // Render HTML Kartu
-                const shiftText = item.shift_info && item.shift_info !== "-" ? item.shift_info : "D'Paragon Node";
-
-                const html = `
-                    <div class="flex items-center gap-4 p-3 bg-slate-900 border border-slate-800 rounded-xl hover:border-slate-700 transition-colors shadow-sm">
-                        <div class="w-12 h-12 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center shrink-0 overflow-hidden">
-                            ${item.image_url
-                        ? `<img src="${item.image_url}" class="w-full h-full object-cover">`
-                        : `<span class="material-symbols-outlined text-slate-500 text-xl">person</span>`
-                    }
-                        </div>
-                        
-                        <div class="flex-1 min-w-0">
-                            <h4 class="text-slate-200 text-xs font-bold truncate">${shiftText}</h4>
-                            <p class="text-slate-500 text-[10px] mt-0.5 truncate">${dateText} • ${timeText}</p>
-                        </div>
-                        
-                        <div>${badgeHtml}</div>
-                    </div>
-                `;
-                container.insertAdjacentHTML('beforeend', html);
-            });
+function renderAttendanceStateUI() {
+    // Ubah breadcrumb Label
+    const labelAbsen = document.getElementById('labelAbsen');
+    if (labelAbsen) {
+        labelAbsen.innerText = `Absen ${NEXT_ACTION}`;
+        if (NEXT_ACTION === 'KELUAR') {
+            labelAbsen.classList.replace('text-red-600', 'text-amber-500');
         } else {
-            // ==========================================
-            // JIKA DATA KOSONG: Munculkan Info Klik View Log
-            // ==========================================
-            container.innerHTML = `
-                <div class="flex flex-col items-center justify-center py-5 bg-slate-950/50 rounded-xl border border-slate-800 border-dashed text-center">
-                    <span class="material-symbols-outlined text-slate-600 mb-2 text-2xl">history_toggle_off</span>
-                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Belum Ada Data Disinkronkan.</p>
-                    <p class="text-[9px] text-slate-500 mt-1">Klik <span class="text-red-500 font-bold uppercase">View Full Log</span> terlebih dahulu.</p>
-                </div>
-            `;
+            labelAbsen.classList.replace('text-amber-500', 'text-red-600');
         }
-    } catch (error) {
-        console.error("Widget Error:", error);
-        container.innerHTML = `
-            <div class="flex items-center justify-center py-4 bg-error/10 border border-error/20 rounded-lg">
-                <p class="text-[10px] font-bold text-error uppercase tracking-widest">Refresh Halaman ya 😃</p>
-            </div>
-        `;
+    }
+
+    // Ubah Button Capture (jika tidak sedang dalam TimeBomb)
+    const btnCapture = document.getElementById('btnCapture');
+    const isTimeBombActive = document.getElementById('toggleTimeBomb')?.checked;
+    if (btnCapture && !isTimeBombActive && btnCapture.innerText.includes('Ambil & Kirim')) {
+        // Biarkan 'Ambil & Kirim'
+    } else if (btnCapture && !isTimeBombActive) {
+        const btnColor = NEXT_ACTION === 'KELUAR' ? 'bg-amber-500 hover:bg-amber-600' : 'bg-red-600 hover:bg-red-700';
+        btnCapture.className = `w-full ${btnColor} text-white py-3.5 md:py-4 rounded-xl font-black text-sm md:text-lg uppercase tracking-widest flex items-center justify-center gap-3 active:scale-95 transition-all shadow-lg`;
+        btnCapture.innerHTML = `ABSEN ${NEXT_ACTION}`;
     }
 }
 
-// End of File
+function initAttendanceState() {
+    const today = new Date().toISOString().split('T')[0];
+    const lastCheckin = localStorage.getItem('last_checkin_date');
+    
+    // Jika hari ini sudah pernah absen (MASUK), maka selanjutnya KELUAR
+    if (lastCheckin === today) {
+        NEXT_ACTION = 'KELUAR';
+    } else {
+        NEXT_ACTION = 'MASUK';
+    }
 
+    renderAttendanceStateUI();
+}
