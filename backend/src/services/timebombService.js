@@ -29,12 +29,12 @@ const timebombRegistry = new Map();
 // ==========================================
 
 /**
- * Menghitung waktu tunda (delay) dalam milidetik antara waktu saat ini dan waktu target.
- * Mengurangi buffer 1 menit khusus untuk check-in (MASUK).
+ * Calculates the delay in milliseconds between the current time and the target time.
+ * Deducts a 1-minute buffer specifically for check-in (MASUK) actions to ensure timely execution.
  * 
- * @param {string} targetTime - Format "HH:MM" (24-jam)
- * @param {string} action - "MASUK" atau "KELUAR"
- * @returns {number} Delay dalam milidetik, atau DELAY_EXPIRED (-1) jika target sudah lewat.
+ * @param {string} targetTime - Time in "HH:MM" format (24-hour)
+ * @param {string} action - The action type: "MASUK" or "KELUAR"
+ * @returns {number} Delay in milliseconds, or DELAY_EXPIRED (-1) if the target time is in the past.
  */
 function calculateDelay(targetTime, action = '') {
   const DELAY_EXPIRED = -1;
@@ -64,12 +64,16 @@ function calculateDelay(targetTime, action = '') {
 /**
  * Validate the required fields for scheduling a time-bomb.
  * 
- * @param {Object} params - { token, payload }
+ * @param {Object} params - { token, payload, targetTime }
  * @returns {{ valid: boolean, error?: string }}
  */
-function validateTimebombParams({ token, payload }) {
+function validateTimebombParams({ token, payload, targetTime }) {
   if (!token) {
     return { valid: false, error: 'Token otorisasi tidak boleh kosong.' };
+  }
+
+  if (targetTime && !/^([01]\d|2[0-3]):([0-5]\d)$/.test(targetTime)) {
+    return { valid: false, error: 'Format targetTime tidak valid. Gunakan format HH:MM (24-jam).' };
   }
 
   if (!payload ||
@@ -140,7 +144,7 @@ function validateDpUrl(url) {
  */
 function scheduleTimebomb({ targetTime, action, token, dpUrl, apiKey, payload }) {
   // 1. Validate inputs
-  const validation = validateTimebombParams({ token, payload });
+  const validation = validateTimebombParams({ token, payload, targetTime });
   if (!validation.valid) {
     return { status: false, message: validation.error };
   }

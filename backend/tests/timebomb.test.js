@@ -169,6 +169,39 @@ describe('scheduleTimebomb', () => {
     expect(result.message).toMatch(/payload|latitude/i);
   });
 
+  it('should reject when targetTime is exactly now (0ms delay)', () => {
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
+
+    const params = {
+      targetTime: `${hh}:${mm}`,
+      action: 'KELUAR',
+      token: 'test-token',
+      dpUrl: 'https://api.dparagon.com/v2',
+      apiKey: 'key-003',
+      payload: { latitude: -7.75, longitude: 110.41, image: 'img' }
+    };
+
+    const result = scheduleTimebomb(params);
+    expect(result.status).toBe(false);
+  });
+
+  it('should reject when targetTime has an invalid format (e.g. "25:61")', () => {
+    const params = {
+      targetTime: '25:61',
+      action: 'KELUAR',
+      token: 'test-token',
+      dpUrl: 'https://api.dparagon.com/v2',
+      apiKey: 'key-004',
+      payload: { latitude: -7.75, longitude: 110.41, image: 'img' }
+    };
+
+    const result = scheduleTimebomb(params);
+    expect(result.status).toBe(false);
+    expect(result.message).toMatch(/Format targetTime tidak valid/i);
+  });
+
   it('should reject when token is missing', () => {
     const now = new Date();
     const futureMinute = now.getMinutes() + 10;
