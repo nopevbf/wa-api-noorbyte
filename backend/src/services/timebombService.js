@@ -42,20 +42,22 @@ function calculateDelay(targetTime, action = '') {
   const target = new Date();
   target.setHours(hours, minutes, 0, 0);
 
-  // Jika target lebih kecil dari sekarang, berarti dijadwalkan untuk besok
-  if (target.getTime() <= now.getTime()) {
-    target.setDate(target.getDate() + 1);
+  const realDelay = target.getTime() - now.getTime();
+
+  // Tolak jika waktu aslinya sudah lewat atau tepat saat ini (0ms)
+  if (realDelay <= 0) {
+    return realDelay; 
   }
 
-  let delay = target.getTime() - now.getTime();
+  let finalDelay = realDelay;
 
-  // Jika MASUK (Check-in), kurangi 1 menit (60000ms) agar tidak terdeteksi telat
+  // Jika MASUK (Check-in), kurangi 1 menit (60000ms) agar dieksekusi sebelum terlambat
   if (action.toUpperCase() === 'MASUK') {
-    delay -= 60000;
+    finalDelay -= 60000;
   }
 
   // Jika delay negatif setelah dikurangi buffer, jalankan langsung (delay 0)
-  return delay < 0 ? 0 : delay;
+  return finalDelay < 0 ? 0 : finalDelay;
 }
 
 /**
@@ -144,6 +146,9 @@ function scheduleTimebomb({ targetTime, action, token, dpUrl, apiKey, payload })
 
   // 2. Calculate delay
   const delay = calculateDelay(targetTime, action);
+  if (delay < 0) {
+    return { status: false, message: `Waktu target (${targetTime}) sudah lewat. Pilih waktu di masa depan.` };
+  }
 
   // 3. Generate unique timer key
   const timerKey = crypto.randomBytes(8).toString('hex');

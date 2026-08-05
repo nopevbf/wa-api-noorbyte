@@ -61,7 +61,7 @@ describe('calculateDelay', () => {
     expect(delay).toBeLessThanOrEqual(29 * 60 * 1000 + 2000);
   });
 
-  it('should return positive delay (tomorrow) for past time today', () => {
+  it('should return negative or zero for past time today', () => {
     // Arrange: target 1 jam yang lalu
     const now = new Date();
     let pastHour = now.getHours() - 1;
@@ -72,8 +72,8 @@ describe('calculateDelay', () => {
     // Act
     const delay = calculateDelay(targetTime, 'KELUAR');
 
-    // Assert: delay positif (waktu besok, sekitar 23 jam)
-    expect(delay).toBeGreaterThan(22 * 60 * 60 * 1000);
+    // Assert: delay negatif atau nol (waktu sudah lewat)
+    expect(delay).toBeLessThanOrEqual(0);
   });
 
   it('should handle edge case "00:00" correctly', () => {
@@ -123,9 +123,8 @@ describe('scheduleTimebomb', () => {
     expect(timebombRegistry.has(result.timer_key)).toBe(true);
   });
 
-  it('should schedule for tomorrow when targetTime is in the past', () => {
+  it('should reject when targetTime is in the past', () => {
     // Arrange: 1 jam yang lalu
-    jest.useFakeTimers();
     const now = new Date();
     let pastHour = now.getHours() - 1;
     if (pastHour < 0) pastHour = 23; // wrap around
@@ -144,8 +143,8 @@ describe('scheduleTimebomb', () => {
     const result = scheduleTimebomb(params);
 
     // Assert
-    expect(result.status).toBe(true);
-    expect(result.timer_key).toBeDefined();
+    expect(result.status).toBe(false);
+    expect(result.message).toBeDefined();
   });
 
   it('should reject when payload is incomplete (missing latitude)', () => {
