@@ -35,6 +35,21 @@ navigator.mediaDevices = {
     })
 };
 
+// Mock global fetch for executeTimebomb tests
+window.fetch = jest.fn();
+
+// Mock window.t for i18n
+window.t = (key) => {
+    const dict = {
+        "STANDBY_DI_SERVER": "STANDBY DI SERVER",
+        "TERKIRIM": "TERKIRIM"
+    };
+    return dict[key] || key;
+};
+
+// Require checkin.js ONCE globally
+require('../../frontend/public/js/checkin.js');
+
 describe('Checkin Page Time-Bomb Mode Functionality & UI', () => {
     beforeEach(() => {
         jest.clearAllMocks();
@@ -79,18 +94,15 @@ describe('Checkin Page Time-Bomb Mode Functionality & UI', () => {
         });
         global.fetch = window.fetch;
 
-        // Clear require cache for checkin.js to reload it fresh
-        delete require.cache[require.resolve('../../frontend/public/js/checkin.js')];
+        // Restore original fetch if needed
+        global.fetch = window.fetch;
     });
 
     // TEST 1: ABSEN MASUK Time-Bomb Standby Color
     test('Happy Path: Scheduling timebomb for MASUK should change capture button to green standby', async () => {
-        require('../../frontend/public/js/checkin.js');
+        // Init state as MASUK (localStorage last_checkin is empty)
         document.dispatchEvent(new Event('DOMContentLoaded'));
         await new Promise(resolve => setTimeout(resolve, 10));
-
-        // Set NEXT_ACTION to MASUK
-        window.NEXT_ACTION = 'MASUK';
 
         const cameraFeed = document.getElementById('cameraFeed');
         cameraFeed.srcObject = {};
@@ -133,14 +145,13 @@ describe('Checkin Page Time-Bomb Mode Functionality & UI', () => {
         expect(btnCapture.disabled).toBe(true);
     });
 
-    // TEST 2: ABSEN KELUAR Time-Bomb Standby Color (Diharapkan Gagal karena classList.replace bg-red-600)
+    // TEST 2: ABSEN KELUAR Time-Bomb Standby Color
     test('Happy Path: Scheduling timebomb for KELUAR should change capture button to green standby', async () => {
-        require('../../frontend/public/js/checkin.js');
+        // Set state to KELUAR by simulating already checked in today
+        const today = new Date().toISOString().split('T')[0];
+        localStorage.setItem('last_checkin_date', today);
         document.dispatchEvent(new Event('DOMContentLoaded'));
         await new Promise(resolve => setTimeout(resolve, 10));
-
-        // Set NEXT_ACTION to KELUAR
-        window.NEXT_ACTION = 'KELUAR';
 
         const cameraFeed = document.getElementById('cameraFeed');
         cameraFeed.srcObject = {};
@@ -181,7 +192,6 @@ describe('Checkin Page Time-Bomb Mode Functionality & UI', () => {
 
     // TEST 3: CANCEL TIME-BOMB (Diharapkan Gagal karena isPreviewMode tidak direset)
     test('Happy Path: Cancelling timebomb should reset isPreviewMode and clear photo', async () => {
-        require('../../frontend/public/js/checkin.js');
         document.dispatchEvent(new Event('DOMContentLoaded'));
         await new Promise(resolve => setTimeout(resolve, 10));
 
@@ -231,7 +241,6 @@ describe('Checkin Page Time-Bomb Mode Functionality & UI', () => {
 
     // TEST 4: Socket Success Handler (Diharapkan Gagal karena isPreviewMode tidak direset)
     test('Edge Case: Socket timebomb-success should reset isPreviewMode and clear photo', async () => {
-        require('../../frontend/public/js/checkin.js');
         document.dispatchEvent(new Event('DOMContentLoaded'));
         await new Promise(resolve => setTimeout(resolve, 10));
 

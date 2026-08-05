@@ -38,6 +38,9 @@ describe('Location Map Integration on Checkin Page', () => {
     let mockMarker;
 
     beforeEach(() => {
+        // Mock window.t for i18n
+        window.t = (key) => key;
+
         jest.clearAllMocks();
         localStorage.clear();
         

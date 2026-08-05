@@ -11,12 +11,14 @@
  *     → scheduleTimebomb() → setTimeout → executeTimebomb() → DParagon API
  */
 const crypto = require('crypto');
+const { DateTime, Duration } = require('luxon');
 
 // ==========================================
 // CONSTANTS
 // ==========================================
 const DEFAULT_LATE_REASON = 'Urusan Keluarga';
 const PRESENCE_PATH = '/attendance/presence';
+const ROLLOVER_THRESHOLD_MS = -Duration.fromObject({ hours: 1 }).as('milliseconds');
 
 // ==========================================
 // REGISTRY
@@ -38,16 +40,30 @@ const timebombRegistry = new Map();
  */
 function calculateDelay(targetTime, action = '') {
   const DELAY_EXPIRED = -1;
+  
+  if (!/^([01]\d|2[0-3]):([0-5]\d)$/.test(targetTime)) {
+    return DELAY_EXPIRED; // Junk input
+  }
+
   const [hours, minutes] = targetTime.split(':').map(Number);
-  const now = new Date();
-  const target = new Date();
-  target.setHours(hours, minutes, 0, 0);
+  
+  // Ambil waktu saat ini persis di zona waktu Jakarta (WIB)
+  const now = DateTime.now().setZone('Asia/Jakarta');
+  
+  // Set target waktu hari ini di zona waktu Jakarta
+  let target = now.set({ hour: hours, minute: minutes, second: 0, millisecond: 0 });
+  
+  let realDelay = target.diff(now).as('milliseconds');
 
-  const realDelay = target.getTime() - now.getTime();
-
-  // Tolak jika waktu aslinya sudah lewat atau tepat saat ini (0ms)
+  // Logic Past Time vs Tomorrow (Rollover)
   if (realDelay <= 0) {
-    return DELAY_EXPIRED; 
+    // Jika lewatnya kurang dari 1 jam, tolak sebagai "sudah lewat"
+    if (realDelay >= ROLLOVER_THRESHOLD_MS) {
+      return DELAY_EXPIRED;
+    }
+    // Jika lewatnya lebih dari 1 jam (misal 23:30 set ke 00:30 atau 18:00 set ke 07:00), berarti buat besok
+    target = target.plus({ days: 1 });
+    realDelay = target.diff(now).as('milliseconds');
   }
 
   let finalDelay = realDelay;

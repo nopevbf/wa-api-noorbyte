@@ -102,7 +102,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.error("[SOCKET] Time-Bomb error received:", data);
             
             // 1. Tampilkan Alert Error
-            showSystemAlert('TIME-BOMB FAILED', data.message, 'error');
+            showSystemAlert(window.t('TIMEBOMB_FAILED'), data.message, 'error');
             
             // 2. Reset Tombol Capture ke mode semula agar bisa coba lagi
             const btnCapture = document.getElementById('btnCapture');
@@ -187,10 +187,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.error("Gagal mengakses kamera:", err);
             const placeholderText = cameraPlaceholder.querySelector('span:nth-child(2)');
             if (placeholderText) {
-                placeholderText.innerText = "ACCESS DENIED / NO CAMERA";
-                placeholderText.classList.replace('text-slate-500', 'text-error');
+                placeholderText.innerText = window.t('ACCESS_DENIED') + " / NO CAMERA";
             }
-            showSystemAlert('HARDWARE ERROR', 'Akses modul optik ditolak atau perangkat tidak ditemukan.', 'error');
+            if (err.name === 'NotAllowedError') {
+                showSystemAlert(window.t('HARDWARE_ERROR'), 'Akses modul optik ditolak atau perangkat tidak ditemukan.', 'error');
+            }
         }
     }
 
@@ -214,12 +215,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             // VALIDASI: CEK LOKASI SUDAH DI-LOCK?
             // ===================================
             if (!isLocationLocked) {
-                showSystemAlert('SECURITY HALT', "Silakan klik 'Set Location' untuk mengunci koordinat GPS sebelum mengambil data visual!", 'error');
+                showSystemAlert(window.t('SECURITY_HALT'), window.t('ERROR_GPS_LOCK_PHOTO'), 'error');
                 return; // Hentikan proses, gak boleh foto!
             }
 
             if (!cameraFeed.srcObject && !isPreviewMode) {
-                showSystemAlert('HARDWARE ERROR', "Kamera belum aktif!", 'error');
+                showSystemAlert(window.t('HARDWARE_ERROR'), window.t('ERROR_CAMERA'), 'error');
                 return;
             }
 
@@ -268,7 +269,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // DYNAMIC BUTTON COLOR & TEXT
                 const btnColor = NEXT_ACTION === 'KELUAR' ? 'bg-amber-500 hover:bg-amber-600' : 'bg-red-600 hover:bg-red-700';
                 btnCapture.className = `w-full ${btnColor} text-white py-3.5 md:py-4 rounded-xl font-black text-sm md:text-lg uppercase tracking-widest flex items-center justify-center gap-3 active:scale-95 transition-all shadow-lg`;
-                btnCapture.innerHTML = `ABSEN ${NEXT_ACTION}`;
+                btnCapture.innerHTML = `${window.t('ABSEN')} ${NEXT_ACTION}`;
+                btnCapture.disabled = false;
 
                 isPreviewMode = true;
 
@@ -278,6 +280,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // ===================================
                 const toggleTimeBomb = document.getElementById('toggleTimeBomb');
                 const isTimeBombActive = toggleTimeBomb ? toggleTimeBomb.checked : false;
+                console.log(`[DEBUG] isTimeBombActive = ${isTimeBombActive}, toggleTimeBomb = ${toggleTimeBomb?.checked}, NEXT_ACTION = ${NEXT_ACTION}`);
 
                 if (isTimeBombActive) {
                     // --- MODE TERJADWAL (TIME-BOMB) ---
@@ -366,7 +369,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                             if (data.status) {
                                 // JIKA SERVER SUKSES NERIMA, UBAH WARNA TOMBOL JADI HIJAU
-                                btnCapture.innerHTML = `<span class="material-symbols-outlined text-xl">cloud_done</span> STANDBY DI SERVER`;
+                                btnCapture.innerHTML = `<span class="material-symbols-outlined text-xl">cloud_done</span> ${window.t('STANDBY_DI_SERVER')}`;
                                 btnCapture.className = "w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3.5 md:py-4 rounded-xl font-black text-sm md:text-lg uppercase tracking-widest flex items-center justify-center gap-3 active:scale-95 transition-all shadow-lg";
 
                                 // Simpan timer_key yang dikembalikan server untuk keperluan cancel
@@ -464,7 +467,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             // ... (Kode validasi token, GPS, dan payload di sini TETAP SAMA) ...
 
             if (!token) {
-                showSystemAlert('ACCESS DENIED', "Bearer Token otorisasi tidak ditemukan. Harap re-initiate bypass.", 'error');
+                showSystemAlert(window.t('ACCESS_DENIED'), window.t('ERROR_NO_TOKEN'), 'error');
                 return;
             }
 
@@ -472,12 +475,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             const lat = document.getElementById('inputLat').value;
             const lng = document.getElementById('inputLng').value;
             if (!lat || !lng) {
-                showSystemAlert('SECURITY HALT', "Silakan set & lock koordinat lokasi terlebih dahulu sebelum menginisiasi sinkronisasi.", 'error');
+                showSystemAlert(window.t('SECURITY_HALT'), window.t('ERROR_GPS_LOCK'), 'error');
                 return;
             }
 
             // 1. Ubah Tombol Jadi Loading
-            btnCapture.innerHTML = `<span class="material-symbols-outlined text-xl animate-spin">autorenew</span> MEMPROSES...`;
+            btnCapture.innerHTML = `<span class="material-symbols-outlined text-xl animate-spin">autorenew</span> ${window.t('PROCESSING')}`;
             btnCapture.disabled = true;
 
             // 2. Siapkan Payload Data
@@ -512,14 +515,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             const result = await response.json();
 
                         if (response.ok && result.status !== false) {
-                showSystemAlert('BYPASS SUCCESS', "Data kehadiran diterima. Memulai sinkronisasi log otomatis...", 'success');
+                showSystemAlert(window.t('BYPASS_SUCCESS'), window.t('SUCCESS_SYNC'), 'success');
                 if (isTimeBombMode) {
-                    btnCapture.innerHTML = `<span class="material-symbols-outlined text-xl">cloud_done</span> STANDBY DI SERVER`;
+                    btnCapture.innerHTML = `<span class="material-symbols-outlined text-xl">cloud_done</span> ${window.t('STANDBY_DI_SERVER')}`;
                     // Ensure it turns emerald whether it was red (MASUK) or amber (KELUAR)
                     btnCapture.classList.remove('bg-red-600', 'hover:bg-red-700', 'bg-amber-500', 'hover:bg-amber-600');
                     btnCapture.classList.add('bg-emerald-600', 'hover:bg-emerald-700');
                 } else {
-                    btnCapture.innerHTML = `<span class="material-symbols-outlined text-xl">check_circle</span> TERKIRIM`;
+                    btnCapture.innerHTML = `<span class="material-symbols-outlined text-xl">check_circle</span> ${window.t('TERKIRIM')}`;
                 }
                 btnRetake.classList.remove('hidden');
                 markAttendanceSuccessLocally();
@@ -1139,11 +1142,12 @@ function renderAttendanceStateUI() {
     } else if (btnCapture && !isTimeBombActive) {
         const btnColor = NEXT_ACTION === 'KELUAR' ? 'bg-amber-500 hover:bg-amber-600' : 'bg-red-600 hover:bg-red-700';
         btnCapture.className = `w-full ${btnColor} text-white py-3.5 md:py-4 rounded-xl font-black text-sm md:text-lg uppercase tracking-widest flex items-center justify-center gap-3 active:scale-95 transition-all shadow-lg`;
-        btnCapture.innerHTML = `ABSEN ${NEXT_ACTION}`;
+        btnCapture.innerHTML = `${window.t('ABSEN')} ${NEXT_ACTION}`;
     }
 }
 
 function initAttendanceState() {
+    isPreviewMode = false;
     const today = new Date().toISOString().split('T')[0];
     const lastCheckin = localStorage.getItem('last_checkin_date');
     

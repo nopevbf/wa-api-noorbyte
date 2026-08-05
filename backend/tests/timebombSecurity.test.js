@@ -72,10 +72,11 @@ describe('validateDpUrl', () => {
 // ==========================================
 describe('scheduleTimebomb — BVA edge cases', () => {
   it('should reject when delay is exactly 0ms (right now)', () => {
-    // Arrange: waktu persis sekarang
-    const now = new Date();
-    const hh = String(now.getHours()).padStart(2, '0');
-    const mm = String(now.getMinutes()).padStart(2, '0');
+    // Arrange: waktu persis sekarang di zona Jakarta
+    const { DateTime } = require('luxon');
+    const now = DateTime.now().setZone('Asia/Jakarta');
+    const hh = String(now.hour).padStart(2, '0');
+    const mm = String(now.minute).padStart(2, '0');
 
     const result = scheduleTimebomb({
       targetTime: `${hh}:${mm}`,
@@ -90,12 +91,9 @@ describe('scheduleTimebomb — BVA edge cases', () => {
   });
 
   it('should reject when targetTime is 1 minute in the past (BVA -1)', () => {
-    const now = new Date();
-    let m = now.getMinutes() - 1;
-    let h = now.getHours();
-    if (m < 0) { m = 59; h = h - 1; }
-    if (h < 0) h = 23;
-    const targetTime = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    const { DateTime } = require('luxon');
+    const now = DateTime.now().setZone('Asia/Jakarta').minus({ minutes: 1 });
+    const targetTime = `${String(now.hour).padStart(2, '0')}:${String(now.minute).padStart(2, '0')}`;
 
     const result = scheduleTimebomb({
       targetTime,
@@ -110,11 +108,9 @@ describe('scheduleTimebomb — BVA edge cases', () => {
 
   it('should accept when targetTime is 1 minute in the future (BVA +1)', () => {
     jest.useFakeTimers();
-    const now = new Date();
-    let m = now.getMinutes() + 1;
-    let h = now.getHours();
-    if (m >= 60) { m = m - 60; h = h + 1; }
-    const targetTime = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    const { DateTime } = require('luxon');
+    const now = DateTime.now().setZone('Asia/Jakarta').plus({ minutes: 1 });
+    const targetTime = `${String(now.hour).padStart(2, '0')}:${String(now.minute).padStart(2, '0')}`;
 
     const result = scheduleTimebomb({
       targetTime,
@@ -131,6 +127,20 @@ describe('scheduleTimebomb — BVA edge cases', () => {
     clearTimeout(timebombRegistry.get(result.timer_key)?.timerId);
     timebombRegistry.delete(result.timer_key);
     jest.useRealTimers();
+  });
+
+  it('should reject invalid or junk time strings', () => {
+    const payloads = ['25:00', 'abc', '10:00; drop table users;', '99:99'];
+    for (const targetTime of payloads) {
+      const result = scheduleTimebomb({
+        targetTime,
+        token: 'tok',
+        dpUrl: 'https://api.dparagon.com/v2',
+        apiKey: 'k',
+        payload: { latitude: -7, longitude: 110, image: 'img' }
+      });
+      expect(result.status).toBe(false);
+    }
   });
 });
 
