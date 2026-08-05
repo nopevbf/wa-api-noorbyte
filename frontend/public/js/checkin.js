@@ -266,13 +266,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (isTimeBombActive) {
                     // --- MODE TERJADWAL (TIME-BOMB) ---
                     const scheduleModal = document.getElementById('scheduleCheckinModal');
-                    const timeInput = document.getElementById('scheduleTimeInput');
+                    const hhInput = document.getElementById('scheduleTimeHH');
+                    const mmInput = document.getElementById('scheduleTimeMM');
 
                     // Isi default input dengan jam sekarang (format 24 jam: HH:MM)
                     const now = new Date();
-                    const hh = String(now.getHours()).padStart(2, '0');
-                    const mm = String(now.getMinutes()).padStart(2, '0');
-                    timeInput.value = `${hh}:${mm}`;
+                    hhInput.value = String(now.getHours()).padStart(2, '0');
+                    mmInput.value = String(now.getMinutes()).padStart(2, '0');
 
                     // Tampilkan Modal
                     scheduleModal.classList.remove('hidden');
@@ -286,9 +286,24 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                     // Logic Tombol Jadwalkan (KIRIM KE SERVER)
                     document.getElementById('btnConfirmSchedule').onclick = async () => {
-                        const targetTime = timeInput.value;
-                        if (!targetTime) return;
+                        let hStr = document.getElementById('scheduleTimeHH').value;
+                        let mStr = document.getElementById('scheduleTimeMM').value;
+                        
+                        if (!hStr || !mStr) {
+                            showSystemAlert("Error", "Jam dan menit wajib diisi.");
+                            return;
+                        }
 
+                        let h = parseInt(hStr);
+                        let m = parseInt(mStr);
+                        
+                        if (isNaN(h) || h < 0 || h > 23 || isNaN(m) || m < 0 || m > 59) {
+                            showSystemAlert("Error", "Format waktu tidak valid (HH: 0-23, MM: 0-59).");
+                            return;
+                        }
+
+                        const targetTime = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+                        
                         // Tutup modal
                         scheduleModal.classList.add('hidden');
                         scheduleModal.classList.remove('flex');

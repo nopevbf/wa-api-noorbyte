@@ -398,8 +398,15 @@
                         otomatis pada waktu yang ditentukan.
                     </p>
 
-                    <input type="time" id="scheduleTimeInput" required lang="en-GB"
-                        class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-error font-mono text-2xl text-center focus:ring-1 focus:ring-error focus:border-error focus:outline-none mb-5">
+                    <div class="flex items-center justify-center gap-4 mb-5">
+                        <input type="number" id="scheduleTimeHH" required min="0" max="23"
+                            class="w-24 bg-slate-950 border border-slate-800 rounded-lg p-3 text-error font-mono text-3xl text-center focus:ring-1 focus:ring-error focus:border-error focus:outline-none"
+                            placeholder="23">
+                        <span class="text-3xl text-error font-mono font-bold">:</span>
+                        <input type="number" id="scheduleTimeMM" required min="0" max="59"
+                            class="w-24 bg-slate-950 border border-slate-800 rounded-lg p-3 text-error font-mono text-3xl text-center focus:ring-1 focus:ring-error focus:border-error focus:outline-none"
+                            placeholder="59">
+                    </div>
 
                     <div class="flex gap-3">
                         <button id="btnCancelSchedule"
