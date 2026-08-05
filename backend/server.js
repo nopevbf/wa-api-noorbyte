@@ -111,6 +111,17 @@ function startServer(port) {
 
 startServer(PORT);
 
+// Graceful Shutdown - Registry Expiry for timebombs
+const { clearAllTimebombs } = require("./src/services/timebombService");
+function gracefulShutdown(signal) {
+  console.log(`\n[SYSTEM] Menerima sinyal ${signal}. Membersihkan memory...`);
+  clearAllTimebombs();
+  console.log(`[SYSTEM] Timebomb registry dibersihkan.`);
+  process.exit(0);
+}
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+
 const attendanceController = require("./src/controllers/attendanceController");
 
 app.get("/api/attendance/history", attendanceController.getHistory);
