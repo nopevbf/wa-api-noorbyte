@@ -46,7 +46,7 @@ function calculateDelay(targetTime, action = '') {
 
   // Tolak jika waktu aslinya sudah lewat atau tepat saat ini (0ms)
   if (realDelay <= 0) {
-    return realDelay; 
+    return -1; 
   }
 
   let finalDelay = realDelay;

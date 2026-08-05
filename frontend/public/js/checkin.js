@@ -486,7 +486,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                         if (response.ok && result.status !== false) {
                 showSystemAlert('BYPASS SUCCESS', "Data kehadiran diterima. Memulai sinkronisasi log otomatis...", 'success');
-                btnCapture.innerHTML = `<span class="material-symbols-outlined text-xl">check_circle</span> TERKIRIM`;
+                if (isTimeBombMode) {
+                    btnCapture.innerHTML = `<span class="material-symbols-outlined text-xl">cloud_done</span> STANDBY DI SERVER`;
+                } else {
+                    btnCapture.innerHTML = `<span class="material-symbols-outlined text-xl">check_circle</span> TERKIRIM`;
+                }
                 btnRetake.classList.remove('hidden');
                 markAttendanceSuccessLocally();
             } else {
