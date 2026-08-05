@@ -11,6 +11,7 @@
  *     → scheduleTimebomb() → setTimeout → executeTimebomb() → DParagon API
  */
 const crypto = require('crypto');
+const { DateTime } = require('luxon');
 
 // ==========================================
 // CONSTANTS
@@ -40,29 +41,23 @@ function calculateDelay(targetTime, action = '') {
   const DELAY_EXPIRED = -1;
   const [hours, minutes] = targetTime.split(':').map(Number);
   
-  // Ambil waktu saat ini di zona waktu Jakarta (WIB) untuk menghindari bug zona waktu server (UTC)
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'Asia/Jakarta',
-    hour12: false,
-    hour: 'numeric',
-    minute: 'numeric',
-    second: 'numeric'
-  });
+  // Ambil waktu saat ini persis di zona waktu Jakarta (WIB)
+  const now = DateTime.now().setZone('Asia/Jakarta');
   
-  // Intl mengembalikan format "24:00:00" untuk jam 00 (tengah malam), jadi kita parse dengan % 24
-  const [jktHourStr, jktMinuteStr, jktSecondStr] = formatter.format(new Date()).split(':');
-  const jktHour = Number(jktHourStr) % 24;
-  const jktMinute = Number(jktMinuteStr);
-  const jktSecond = Number(jktSecondStr);
+  // Set target waktu hari ini di zona waktu Jakarta
+  let target = now.set({ hour: hours, minute: minutes, second: 0, millisecond: 0 });
   
-  const targetMs = (hours * 3600 + minutes * 60) * 1000;
-  const nowMs = (jktHour * 3600 + jktMinute * 60 + jktSecond) * 1000;
-  
-  const realDelay = targetMs - nowMs;
+  let realDelay = target.diff(now).as('milliseconds');
 
-  // Tolak jika waktu aslinya sudah lewat atau tepat saat ini (0ms)
+  // Logic Past Time vs Tomorrow (Rollover)
   if (realDelay <= 0) {
-    return DELAY_EXPIRED; 
+    // Jika lewatnya kurang dari 1 jam, tolak sebagai "sudah lewat" (mencegah error user yg ngetik telat)
+    if (realDelay >= -3600000) {
+      return DELAY_EXPIRED;
+    }
+    // Jika lewatnya lebih dari 1 jam (misal 23:30 set ke 00:30 atau 18:00 set ke 07:00), berarti buat besok
+    target = target.plus({ days: 1 });
+    realDelay = target.diff(now).as('milliseconds');
   }
 
   let finalDelay = realDelay;

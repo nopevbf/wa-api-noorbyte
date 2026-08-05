@@ -4,13 +4,8 @@
  * Tests the scheduling, cancellation, delay calculation,
  * and execution logic for the Time-Bomb attendance feature.
  */
-const {
-  calculateDelay,
-  scheduleTimebomb,
-  cancelTimebomb,
-  executeTimebomb,
-  timebombRegistry
-} = require('../src/services/timebombService');
+const { scheduleTimebomb, cancelTimebomb, executeTimebomb, timebombRegistry, calculateDelay } = require('../src/services/timebombService');
+const { DateTime } = require('luxon');
 
 // Mock global fetch for executeTimebomb tests
 global.fetch = jest.fn();
@@ -27,15 +22,10 @@ beforeEach(() => {
 // ==========================================
 describe('calculateDelay', () => {
   it('should return positive delay for future time', () => {
-    // Arrange: target 30 menit dari sekarang
-    const now = new Date();
-    const futureHour = now.getHours();
-    const futureMinute = now.getMinutes() + 30;
-    const hh = String(futureHour).padStart(2, '0');
-    const mm = String(futureMinute % 60).padStart(2, '0');
-    // Jika menit overflow, tambah jam
-    const adjustedHH = futureMinute >= 60 ? String(futureHour + 1).padStart(2, '0') : hh;
-    const targetTime = `${adjustedHH}:${mm}`;
+    // Arrange: target 30 menit dari sekarang di Jakarta
+    const now = DateTime.now().setZone('Asia/Jakarta');
+    const future = now.plus({ minutes: 30 });
+    const targetTime = future.toFormat('HH:mm');
 
     // Act
     const delay = calculateDelay(targetTime);
@@ -46,12 +36,10 @@ describe('calculateDelay', () => {
   });
 
   it('should subtract 1 minute from delay if action is MASUK', () => {
-    // Arrange: target 30 menit dari sekarang
-    const now = new Date();
-    const futureMinute = now.getMinutes() + 30;
-    const hh = String(now.getHours() + (futureMinute >= 60 ? 1 : 0)).padStart(2, '0');
-    const mm = String(futureMinute % 60).padStart(2, '0');
-    const targetTime = `${hh}:${mm}`;
+    // Arrange: target 30 menit dari sekarang di Jakarta
+    const now = DateTime.now().setZone('Asia/Jakarta');
+    const future = now.plus({ minutes: 30 });
+    const targetTime = future.toFormat('HH:mm');
 
     // Act
     const delay = calculateDelay(targetTime, 'MASUK');
@@ -62,12 +50,10 @@ describe('calculateDelay', () => {
   });
 
   it('should return negative or zero for past time today', () => {
-    // Arrange: target 1 jam yang lalu
-    const now = new Date();
-    let pastHour = now.getHours() - 1;
-    if (pastHour < 0) pastHour = 0; // Edge: jika jam 0, skip
-    const mm = String(now.getMinutes()).padStart(2, '0');
-    const targetTime = `${String(pastHour).padStart(2, '0')}:${mm}`;
+    // Arrange: target 30 menit yang lalu
+    const now = DateTime.now().setZone('Asia/Jakarta');
+    const past = now.minus({ minutes: 30 });
+    const targetTime = past.toFormat('HH:mm');
 
     // Act
     const delay = calculateDelay(targetTime, 'KELUAR');
@@ -99,13 +85,12 @@ describe('scheduleTimebomb', () => {
   it('should schedule a timer and return timer_key for valid future time', () => {
     // Arrange
     jest.useFakeTimers();
-    const now = new Date();
-    const futureMinute = now.getMinutes() + 10;
-    const hh = String(now.getHours() + (futureMinute >= 60 ? 1 : 0)).padStart(2, '0');
-    const mm = String(futureMinute % 60).padStart(2, '0');
+    const now = DateTime.now().setZone('Asia/Jakarta');
+    const future = now.plus({ minutes: 10 });
+    const targetTime = future.toFormat('HH:mm');
 
     const params = {
-      targetTime: `${hh}:${mm}`,
+      targetTime: targetTime,
       token: 'test-bearer-token',
       dpUrl: 'https://api.dparagon.com/v2',
       apiKey: 'test-api-key-001',
@@ -124,15 +109,13 @@ describe('scheduleTimebomb', () => {
   });
 
   it('should reject when targetTime is in the past', () => {
-    // Arrange: 1 menit yang lalu
-    const now = new Date();
-    const past = new Date(now.getTime() - 60000); // exactly 1 minute ago
-    const formatter = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Jakarta', hour12: false, hour: 'numeric', minute: 'numeric' });
-    const [pastHourStr, mmStr] = formatter.format(past).split(':');
-    const pastHour = Number(pastHourStr) % 24;
+    // Arrange: 1 menit yang lalu di Jakarta
+    const now = DateTime.now().setZone('Asia/Jakarta');
+    const past = now.minus({ minutes: 1 });
+    const targetTime = past.toFormat('HH:mm');
 
     const params = {
-      targetTime: `${String(pastHour).padStart(2, '0')}:${String(mmStr).padStart(2, '0')}`,
+      targetTime: targetTime,
       action: 'KELUAR',
       token: 'test-token',
       dpUrl: 'https://api.dparagon.com/v2',
@@ -171,12 +154,11 @@ describe('scheduleTimebomb', () => {
   });
 
   it('should reject when targetTime is exactly now (0ms delay)', () => {
-    const formatter = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Jakarta', hour12: false, hour: 'numeric', minute: 'numeric' });
-    const [hhStr, mmStr] = formatter.format(new Date()).split(':');
-    const hh = String(Number(hhStr) % 24).padStart(2, '0');
+    const now = DateTime.now().setZone('Asia/Jakarta');
+    const targetTime = now.toFormat('HH:mm');
 
     const params = {
-      targetTime: `${hh}:${String(mmStr).padStart(2, '0')}`,
+      targetTime: targetTime,
       action: 'KELUAR',
       token: 'test-token',
       dpUrl: 'https://api.dparagon.com/v2',
@@ -204,13 +186,12 @@ describe('scheduleTimebomb', () => {
   });
 
   it('should reject when token is missing', () => {
-    const future = new Date(new Date().getTime() + 600000); // 10 minutes from now
-    const formatter = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Jakarta', hour12: false, hour: 'numeric', minute: 'numeric' });
-    const [hhStr, mmStr] = formatter.format(future).split(':');
-    const hh = String(Number(hhStr) % 24).padStart(2, '0');
+    const now = DateTime.now().setZone('Asia/Jakarta');
+    const future = now.plus({ minutes: 10 });
+    const targetTime = future.toFormat('HH:mm');
 
     const params = {
-      targetTime: `${hh}:${String(mmStr).padStart(2, '0')}`,
+      targetTime: targetTime,
       token: '', // empty!
       dpUrl: 'https://api.dparagon.com/v2',
       apiKey: 'key-005',
