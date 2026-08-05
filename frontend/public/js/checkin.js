@@ -80,11 +80,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                 btnCapture.disabled = false;
             }
             
-            // 3. Sembunyikan tombol cancel & munculkan tombol retake
+            // 3. Sembunyikan tombol cancel, retake, dan preview
             const cancelBtn = document.getElementById('btnCancelTimebomb');
             if (cancelBtn) cancelBtn.classList.add('hidden');
             const retakeBtn = document.getElementById('btnRetake');
-            if (retakeBtn) retakeBtn.classList.remove('hidden');
+            if (retakeBtn) retakeBtn.classList.add('hidden');
+            
+            // Reset state
+            isPreviewMode = false;
+            finalBase64Photo = null;
+            if (cameraPreview) {
+                cameraPreview.classList.add('hidden');
+                cameraPreview.src = '';
+            }
             
             // 4. UPDATE LOCAL STORAGE STATE
             markAttendanceSuccessLocally();
@@ -104,11 +112,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                 btnCapture.disabled = false;
             }
 
-            // 3. Sembunyikan tombol cancel & munculkan tombol retake
+            // 3. Sembunyikan tombol cancel, retake, dan preview
             const cancelBtn = document.getElementById('btnCancelTimebomb');
             if (cancelBtn) cancelBtn.classList.add('hidden');
             const retakeBtn = document.getElementById('btnRetake');
-            if (retakeBtn) retakeBtn.classList.remove('hidden');
+            if (retakeBtn) retakeBtn.classList.add('hidden');
+
+            // Reset state
+            isPreviewMode = false;
+            finalBase64Photo = null;
+            if (cameraPreview) {
+                cameraPreview.classList.add('hidden');
+                cameraPreview.src = '';
+            }
 
             localStorage.removeItem('active_timebomb_key');
         });
@@ -351,8 +367,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             if (data.status) {
                                 // JIKA SERVER SUKSES NERIMA, UBAH WARNA TOMBOL JADI HIJAU
                                 btnCapture.innerHTML = `<span class="material-symbols-outlined text-xl">cloud_done</span> STANDBY DI SERVER`;
-                                btnCapture.classList.remove('bg-red-600', 'hover:bg-red-700', 'bg-amber-500', 'hover:bg-amber-600');
-                                btnCapture.classList.add('bg-emerald-600', 'hover:bg-emerald-700');
+                                btnCapture.className = "w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3.5 md:py-4 rounded-xl font-black text-sm md:text-lg uppercase tracking-widest flex items-center justify-center gap-3 active:scale-95 transition-all shadow-lg";
 
                                 // Simpan timer_key yang dikembalikan server untuk keperluan cancel
                                 if (data.timer_key) localStorage.setItem('active_timebomb_key', data.timer_key);
@@ -404,15 +419,27 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const data = await res.json();
 
                 if (data.status) {
-                    // Bersihkan key dari localStorage
-                    localStorage.removeItem('active_timebomb_key');
-                    // Reset tombol capture ke mode awal
-                    btnCapture.innerHTML = `<span class="material-symbols-outlined text-xl md:text-2xl">photo_camera</span> Ambil & Kirim`;
-                    btnCapture.className = "w-full bg-red-600 hover:bg-red-700 text-white py-3.5 md:py-4 rounded-xl font-black text-sm md:text-lg uppercase tracking-widest flex items-center justify-center gap-3 active:scale-95 transition-all shadow-lg";
-                    btnCapture.disabled = false;
-                    btnRetake.classList.remove('hidden');
-                    btnCancelTimebomb.classList.add('hidden');
-                    showSystemAlert('TIMER CANCELLED', data.message, 'success');
+                     // Bersihkan key dari localStorage
+                     localStorage.removeItem('active_timebomb_key');
+                     
+                     // Reset tombol capture ke mode awal (selalu merah Ambil & Kirim)
+                     btnCapture.innerHTML = `<span class="material-symbols-outlined text-xl md:text-2xl">photo_camera</span> Ambil & Kirim`;
+                     btnCapture.className = "w-full bg-red-600 hover:bg-red-700 text-white py-3.5 md:py-4 rounded-xl font-black text-sm md:text-lg uppercase tracking-widest flex items-center justify-center gap-3 active:scale-95 transition-all shadow-lg";
+                     btnCapture.disabled = false;
+                     
+                     // Sembunyikan cancel, retake, dan preview karena mode awal
+                     if (btnRetake) btnRetake.classList.add('hidden');
+                     btnCancelTimebomb.classList.add('hidden');
+                     
+                     // Reset state
+                     isPreviewMode = false;
+                     finalBase64Photo = null;
+                     if (cameraPreview) {
+                         cameraPreview.classList.add('hidden');
+                         cameraPreview.src = '';
+                     }
+                     
+                     showSystemAlert('TIMER CANCELLED', data.message, 'success');
                 } else {
                     showSystemAlert('CANCEL GAGAL', data.message, 'error');
                     btnCancelTimebomb.disabled = false;
@@ -805,6 +832,220 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ==========================================
     const inputLat = document.getElementById('inputLat');
     const inputLng = document.getElementById('inputLng');
+
+    // ==========================================
+    // LOGIC MAP INTEGRATION (AMBIL KOORDINAT DARI MAPS)
+    // ponytail: use native Leaflet map without any complex abstractions/wrappers for lightweight implementation.
+    // ==========================================
+    const btnToggleMap = document.getElementById('btnToggleMap');
+    const mapSearchArea = document.getElementById('mapSearchArea');
+    const mapSearchInput = document.getElementById('mapSearchInput');
+    const mapSearchSuggestions = document.getElementById('mapSearchSuggestions');
+    const btnMapSearchClear = document.getElementById('btnMapSearchClear');
+    const btnMapSearch = document.getElementById('btnMapSearch');
+    const mapContainer = document.getElementById('mapContainer');
+    let mapInstance = null;
+    let mapMarker = null;
+
+    function initMap() {
+        if (typeof L === 'undefined') {
+            console.warn('Leaflet library (L) is not loaded yet.');
+            return;
+        }
+
+        let latVal = parseFloat(inputLat.value) || -7.75723;
+        let lngVal = parseFloat(inputLng.value) || 110.41448;
+
+        // Inisialisasi Peta
+        mapInstance = L.map('map').setView([latVal, lngVal], 15);
+
+        // Tile layer CartoDB Dark Matter (Estetika Gelap Premium)
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; CartoDB &copy; OpenStreetMap'
+        }).addTo(mapInstance);
+
+        // Marker draggable
+        mapMarker = L.marker([latVal, lngVal], { draggable: true }).addTo(mapInstance);
+
+        // Event drag marker -> update input Lat/Lng
+        mapMarker.on('dragend', () => {
+            const position = mapMarker.getLatLng();
+            inputLat.value = position.lat.toFixed(6);
+            inputLng.value = position.lng.toFixed(6);
+            if (typeof updateJailbreakActivity === 'function') updateJailbreakActivity();
+        });
+
+        // Event klik peta -> pindahkan marker & update input Lat/Lng
+        mapInstance.on('click', (e) => {
+            if (isLocationLocked) return;
+            const position = e.latlng;
+            mapMarker.setLatLng(position);
+            inputLat.value = position.lat.toFixed(6);
+            inputLng.value = position.lng.toFixed(6);
+            if (typeof updateJailbreakActivity === 'function') updateJailbreakActivity();
+        });
+    }
+
+    async function searchLocation() {
+        if (isLocationLocked) return;
+        const query = mapSearchInput.value.trim();
+        if (!query) return;
+
+        btnMapSearch.disabled = true;
+        btnMapSearch.innerHTML = `<span class="material-symbols-outlined text-base animate-spin">autorenew</span>`;
+
+        try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
+            const data = await res.json();
+
+            if (data && data.length > 0) {
+                const first = data[0];
+                const lat = parseFloat(first.lat);
+                const lon = parseFloat(first.lon);
+
+                if (mapInstance && mapMarker) {
+                    mapInstance.setView([lat, lon], 15);
+                    mapMarker.setLatLng([lat, lon]);
+                }
+                
+                inputLat.value = lat.toFixed(6);
+                inputLng.value = lon.toFixed(6);
+                if (typeof updateJailbreakActivity === 'function') updateJailbreakActivity();
+            } else {
+                if (typeof showToast === 'function') {
+                    showToast("Lokasi tidak ditemukan", "warning");
+                } else if (typeof showSystemAlert === 'function') {
+                    showSystemAlert("PENCARIAN GAGAL", "Lokasi tidak ditemukan.", "error");
+                }
+            }
+        } catch (err) {
+            console.error("Gagal melakukan pencarian:", err);
+        } finally {
+            btnMapSearch.disabled = false;
+            btnMapSearch.innerHTML = `<span class="material-symbols-outlined text-base">search</span>`;
+        }
+    }
+
+    if (btnToggleMap && mapContainer) {
+        btnToggleMap.addEventListener('click', () => {
+            if (typeof L === 'undefined') {
+                console.warn('Leaflet library (L) is missing.');
+                if (typeof showSystemAlert === 'function') {
+                    showSystemAlert('MAP ERROR', 'Pustaka Leaflet gagal dimuat. Harap periksa koneksi internet Anda.', 'error');
+                }
+                return;
+            }
+
+            const isHidden = mapContainer.classList.contains('hidden');
+            if (isHidden) {
+                mapContainer.classList.remove('hidden');
+                if (mapSearchArea) mapSearchArea.classList.remove('hidden');
+                btnToggleMap.innerHTML = `<span class="material-symbols-outlined text-base">close</span><span>Tutup Peta</span>`;
+                
+                if (!mapInstance) {
+                    initMap();
+                } else {
+                    let latVal = parseFloat(inputLat.value) || -7.75723;
+                    let lngVal = parseFloat(inputLng.value) || 110.41448;
+                    mapMarker.setLatLng([latVal, lngVal]);
+                    mapInstance.setView([latVal, lngVal], 15);
+                    mapInstance.invalidateSize();
+                }
+            } else {
+                mapContainer.classList.add('hidden');
+                if (mapSearchArea) {
+                    mapSearchArea.classList.add('hidden');
+                    mapSearchInput.value = ''; // Bersihkan pencarian saat ditutup
+                }
+                if (btnMapSearchClear) {
+                    btnMapSearchClear.classList.add('hidden');
+                }
+                if (mapSearchSuggestions) {
+                    mapSearchSuggestions.innerHTML = '';
+                }
+                btnToggleMap.innerHTML = `<span class="material-symbols-outlined text-base">map</span><span>Pilih dari Peta</span>`;
+            }
+        });
+    }
+
+    if (btnMapSearch) {
+        btnMapSearch.addEventListener('click', searchLocation);
+    }
+    if (btnMapSearchClear) {
+        btnMapSearchClear.addEventListener('click', () => {
+            mapSearchInput.value = '';
+            btnMapSearchClear.classList.add('hidden');
+            if (mapSearchSuggestions) {
+                mapSearchSuggestions.innerHTML = '';
+            }
+            mapSearchInput.focus();
+        });
+    }
+    if (mapSearchInput) {
+        mapSearchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                searchLocation();
+            }
+        });
+
+        // ==========================================
+        // DEBOUNCE AUTOCOMPLETE SUGGESTIONS
+        // ponytail: native datalist typeahead with a small debounce helper
+        // ==========================================
+        let suggestionTimeout = null;
+        mapSearchInput.addEventListener('input', () => {
+            if (isLocationLocked) return;
+
+            // Tampilkan / sembunyikan tombol clear search secara dinamis
+            if (mapSearchInput.value.length > 0) {
+                if (btnMapSearchClear) btnMapSearchClear.classList.remove('hidden');
+            } else {
+                if (btnMapSearchClear) btnMapSearchClear.classList.add('hidden');
+            }
+
+            clearTimeout(suggestionTimeout);
+            
+            const query = mapSearchInput.value.trim();
+            if (query.length < 3) {
+                if (mapSearchSuggestions) mapSearchSuggestions.innerHTML = '';
+                return;
+            }
+
+            suggestionTimeout = setTimeout(async () => {
+                try {
+                    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`);
+                    const data = await res.json();
+                    
+                    if (mapSearchSuggestions) {
+                        mapSearchSuggestions.innerHTML = '';
+                        data.forEach(item => {
+                            const option = document.createElement('option');
+                            option.value = item.display_name;
+                            mapSearchSuggestions.appendChild(option);
+                        });
+                    }
+                } catch (err) {
+                    console.error("Gagal mengambil rekomendasi lokasi:", err);
+                }
+            }, 350);
+        });
+    }
+
+    // Sinkronisasi manual dari input perubahan teks ke Peta
+    const syncInputToMap = () => {
+        if (mapInstance && mapMarker && !isLocationLocked) {
+            let latVal = parseFloat(inputLat.value);
+            let lngVal = parseFloat(inputLng.value);
+            if (!isNaN(latVal) && !isNaN(lngVal)) {
+                mapMarker.setLatLng([latVal, lngVal]);
+                mapInstance.setView([latVal, lngVal]);
+            }
+        }
+    };
+    if (inputLat) inputLat.addEventListener('input', syncInputToMap);
+    if (inputLng) inputLng.addEventListener('input', syncInputToMap);
+
     const btnSetLocation = document.getElementById('btnSetLocation');
     const iconLocation = document.getElementById('iconLocation');
     const textLocation = document.getElementById('textLocation');
