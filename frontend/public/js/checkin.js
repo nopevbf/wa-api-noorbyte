@@ -351,8 +351,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                             if (data.status) {
                                 // JIKA SERVER SUKSES NERIMA, UBAH WARNA TOMBOL JADI HIJAU
                                 btnCapture.innerHTML = `<span class="material-symbols-outlined text-xl">cloud_done</span> STANDBY DI SERVER`;
-                                btnCapture.classList.replace('bg-red-600', 'bg-emerald-600');
-                                btnCapture.classList.replace('hover:bg-red-700', 'hover:bg-emerald-700');
+                                btnCapture.classList.remove('bg-red-600', 'hover:bg-red-700', 'bg-amber-500', 'hover:bg-amber-600');
+                                btnCapture.classList.add('bg-emerald-600', 'hover:bg-emerald-700');
 
                                 // Simpan timer_key yang dikembalikan server untuk keperluan cancel
                                 if (data.timer_key) localStorage.setItem('active_timebomb_key', data.timer_key);

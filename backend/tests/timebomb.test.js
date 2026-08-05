@@ -124,11 +124,11 @@ describe('scheduleTimebomb', () => {
   });
 
   it('should reject when targetTime is in the past', () => {
-    // Arrange: 1 jam yang lalu
+    // Arrange: 1 menit yang lalu
     const now = new Date();
-    let pastHour = now.getHours() - 1;
-    if (pastHour < 0) pastHour = 23; // wrap around
-    const mm = String(now.getMinutes()).padStart(2, '0');
+    const past = new Date(now.getTime() - 60000); // exactly 1 minute ago
+    const pastHour = past.getHours();
+    const mm = String(past.getMinutes()).padStart(2, '0');
 
     const params = {
       targetTime: `${String(pastHour).padStart(2, '0')}:${mm}`,

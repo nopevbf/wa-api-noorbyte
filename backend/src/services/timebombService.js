@@ -29,12 +29,12 @@ const timebombRegistry = new Map();
 // ==========================================
 
 /**
- * Calculate delay in milliseconds between now and target time (HH:MM format).
- * Returns negative value if target time is in the past.
+ * Menghitung waktu tunda (delay) dalam milidetik antara waktu saat ini dan waktu target.
+ * Mengurangi buffer 1 menit khusus untuk check-in (MASUK).
  * 
- * @param {string} targetTime - "HH:MM" format (24-hour)
- * @param {string} action - "MASUK" or "KELUAR"
- * @returns {number} delay in milliseconds
+ * @param {string} targetTime - Format "HH:MM" (24-jam)
+ * @param {string} action - "MASUK" atau "KELUAR"
+ * @returns {number} Delay dalam milidetik, atau DELAY_EXPIRED (-1) jika target sudah lewat.
  */
 function calculateDelay(targetTime, action = '') {
   const DELAY_EXPIRED = -1;
