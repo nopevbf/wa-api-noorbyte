@@ -127,11 +127,12 @@ describe('scheduleTimebomb', () => {
     // Arrange: 1 menit yang lalu
     const now = new Date();
     const past = new Date(now.getTime() - 60000); // exactly 1 minute ago
-    const pastHour = past.getHours();
-    const mm = String(past.getMinutes()).padStart(2, '0');
+    const formatter = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Jakarta', hour12: false, hour: 'numeric', minute: 'numeric' });
+    const [pastHourStr, mmStr] = formatter.format(past).split(':');
+    const pastHour = Number(pastHourStr) % 24;
 
     const params = {
-      targetTime: `${String(pastHour).padStart(2, '0')}:${mm}`,
+      targetTime: `${String(pastHour).padStart(2, '0')}:${String(mmStr).padStart(2, '0')}`,
       action: 'KELUAR',
       token: 'test-token',
       dpUrl: 'https://api.dparagon.com/v2',
@@ -170,12 +171,12 @@ describe('scheduleTimebomb', () => {
   });
 
   it('should reject when targetTime is exactly now (0ms delay)', () => {
-    const now = new Date();
-    const hh = String(now.getHours()).padStart(2, '0');
-    const mm = String(now.getMinutes()).padStart(2, '0');
+    const formatter = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Jakarta', hour12: false, hour: 'numeric', minute: 'numeric' });
+    const [hhStr, mmStr] = formatter.format(new Date()).split(':');
+    const hh = String(Number(hhStr) % 24).padStart(2, '0');
 
     const params = {
-      targetTime: `${hh}:${mm}`,
+      targetTime: `${hh}:${String(mmStr).padStart(2, '0')}`,
       action: 'KELUAR',
       token: 'test-token',
       dpUrl: 'https://api.dparagon.com/v2',
@@ -203,16 +204,16 @@ describe('scheduleTimebomb', () => {
   });
 
   it('should reject when token is missing', () => {
-    const now = new Date();
-    const futureMinute = now.getMinutes() + 10;
-    const hh = String(now.getHours() + (futureMinute >= 60 ? 1 : 0)).padStart(2, '0');
-    const mm = String(futureMinute % 60).padStart(2, '0');
+    const future = new Date(new Date().getTime() + 600000); // 10 minutes from now
+    const formatter = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Jakarta', hour12: false, hour: 'numeric', minute: 'numeric' });
+    const [hhStr, mmStr] = formatter.format(future).split(':');
+    const hh = String(Number(hhStr) % 24).padStart(2, '0');
 
     const params = {
-      targetTime: `${hh}:${mm}`,
+      targetTime: `${hh}:${String(mmStr).padStart(2, '0')}`,
       token: '', // empty!
       dpUrl: 'https://api.dparagon.com/v2',
-      apiKey: 'key-003',
+      apiKey: 'key-005',
       payload: { latitude: -7.75, longitude: 110.41, image: 'img' }
     };
 

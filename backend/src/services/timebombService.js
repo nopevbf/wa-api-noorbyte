@@ -39,11 +39,26 @@ const timebombRegistry = new Map();
 function calculateDelay(targetTime, action = '') {
   const DELAY_EXPIRED = -1;
   const [hours, minutes] = targetTime.split(':').map(Number);
-  const now = new Date();
-  const target = new Date();
-  target.setHours(hours, minutes, 0, 0);
-
-  const realDelay = target.getTime() - now.getTime();
+  
+  // Ambil waktu saat ini di zona waktu Jakarta (WIB) untuk menghindari bug zona waktu server (UTC)
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Jakarta',
+    hour12: false,
+    hour: 'numeric',
+    minute: 'numeric',
+    second: 'numeric'
+  });
+  
+  // Intl mengembalikan format "24:00:00" untuk jam 00 (tengah malam), jadi kita parse dengan % 24
+  const [jktHourStr, jktMinuteStr, jktSecondStr] = formatter.format(new Date()).split(':');
+  const jktHour = Number(jktHourStr) % 24;
+  const jktMinute = Number(jktMinuteStr);
+  const jktSecond = Number(jktSecondStr);
+  
+  const targetMs = (hours * 3600 + minutes * 60) * 1000;
+  const nowMs = (jktHour * 3600 + jktMinute * 60 + jktSecond) * 1000;
+  
+  const realDelay = targetMs - nowMs;
 
   // Tolak jika waktu aslinya sudah lewat atau tepat saat ini (0ms)
   if (realDelay <= 0) {
