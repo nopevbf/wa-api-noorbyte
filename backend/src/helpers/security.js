@@ -50,9 +50,7 @@ try {
     validateEncryptionKey();
 } catch (e) {
     logger.error("FATAL: Security initialization failed", { error: e.message });
-    if (process.env.NODE_ENV === 'production') {
-        process.exit(1);
-    }
+    process.exit(1);
 }
 
 class DecryptionError extends Error {
