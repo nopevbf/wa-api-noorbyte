@@ -1021,17 +1021,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (isFetchingHistory || isHistoryEnd) return;
             if (historyContainer.scrollTop + historyContainer.clientHeight >= historyContainer.scrollHeight - 2) {
                 // Langsung load kalau pakai mouse mentok bawah
-                loadHistoryData();
-            }
-        });
-    }
+inputLng.readOnly = false;
 
-    // Event Klik "View Full Log"
-    if (btnViewFullLog) {
+                inputLat.classList.remove('cursor-not-allowed', 'opacity-60', 'bg-slate-950/50');
+                inputLng.classList.remove('cursor-not-allowed', 'opacity-60', 'bg-slate-950/50');
+
+                iconLocation.innerText = 'my_location';
+                textLocation.innerText = 'Set Location';
+
                 btnSetLocation.className = "w-full bg-slate-800 hover:bg-slate-700 hover:border-error/50 text-slate-200 border border-slate-700 py-3 rounded-lg font-bold text-xs md:text-sm flex items-center justify-center gap-2 transition-all active:scale-95 shadow-sm";
             }
         });
     }
+
 
 
     // ==========================================
