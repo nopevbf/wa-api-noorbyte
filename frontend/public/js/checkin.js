@@ -2,7 +2,8 @@
 // KONFIGURASI GLOBAL
 // ==========================================
 const API_URL = "/api";
-let NEXT_ACTION = "MASUK"; // <-- Tambahin baris ini buat nyimpen status!
+let NEXT_ACTION = "MASUK";
+let isPreviewMode = false; // TDZ Fix: Diangkat ke scope terluas
 
 // ==========================================
 // FUNGSI GLOBAL SYSTEM ALERT (PENGGANTI ALERT BROWSER)
@@ -141,7 +142,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const cameraPreview = document.getElementById('cameraPreview');
     const btnRetake = document.getElementById('btnRetake');
 
-    let isPreviewMode = false;
     let finalBase64Photo = null;
     let isLocationLocked = false;
 
@@ -840,203 +840,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // ==========================================
-    // LOGIC RIWAYAT ABSEN (PULL-UP TO LOAD MORE)
-    // ==========================================
-    const btnViewFullLog = document.getElementById('btnViewFullLog');
-    const historyModal = document.getElementById('historyLogModal');
-    const historyBox = document.getElementById('historyLogBox');
-    const btnCloseHistory = document.getElementById('btnCloseHistory');
-    const historyContainer = document.getElementById('historyListContainer');
-    const loadingIndicator = document.getElementById('historyLoadingIndicator');
-    const endIndicator = document.getElementById('historyEndIndicator');
-
-    let historyPage = 1;
-    let isFetchingHistory = false;
-    let isHistoryEnd = false;
-
-    // --- VARIABEL UNTUK EFEK BOUNCE TARIK ---
-    let startY = 0;
-    let currentY = 0;
-    const PULL_THRESHOLD = 60; // Seberapa jauh harus ditarik sebelum meledak (load)
-
-    async function loadHistoryData() {
-        if (isFetchingHistory || isHistoryEnd) return;
-
-        isFetchingHistory = true;
-        // Ubah teks loading jadi mode memproses
-        loadingIndicator.innerHTML = `
-            <span class="material-symbols-outlined animate-spin text-emerald-500 text-2xl">autorenew</span>
-            <p class="text-[9px] font-mono text-slate-400 uppercase mt-1 tracking-widest">Decrypting Page ${historyPage}...</p>
-        `;
-        loadingIndicator.classList.remove('hidden');
-
-        try {
-            const token = localStorage.getItem('access_token') || localStorage.getItem('dparagon_token');
-            const fullName = localStorage.getItem('full_name') || '';
-
-            // Tembak API dengan page yang sesuai (Gak usah pake limit lagi)
-            const response = await fetch(`${API_URL}/attendance/history?page=${historyPage}&name=${encodeURIComponent(fullName)}`, {
-                method: 'GET',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-
-            const result = await response.json();
-            const data = result.data || [];
-
-            if (data.length === 0) {
-                isHistoryEnd = true;
-                endIndicator.classList.remove('hidden');
-            } else {
-                renderHistoryItems(data); // Tambahkan data ke bawah (gak ngehapus page 1)
-                historyPage++; // Siapkan untuk tarikan berikutnya
-
-                // Asumsi: Kalau data yang balik kurang dari 10 (atau jumlah baris standar DParagon), berarti itu halaman terakhir
-                if (data.length < 5) {
-                    isHistoryEnd = true;
-                    endIndicator.classList.remove('hidden');
-                }
-            }
-        } catch (error) {
-            console.error("API Fetch Error:", error);
-            showSystemAlert('API ERROR', 'Gagal memuat log dari server Node.', 'error');
-        } finally {
-            isFetchingHistory = false;
-            loadingIndicator.classList.add('hidden');
-            loadingIndicator.style.transform = `translateY(0px)`; // Kembalikan posisi bounce
-        }
-    }
-
-    function renderHistoryItems(items) {
-        items.forEach(item => {
-            const isCheckin = item.status.toLowerCase() === 'checkin';
-            const statusColor = isCheckin ? 'text-emerald-400 bg-emerald-400/10 border-emerald-500/30' : 'text-orange-400 bg-orange-400/10 border-orange-500/30';
-            const iconName = isCheckin ? 'login' : 'logout';
-
-            let dateStr = "Unknown Date";
-            let timeStr = "--:-- WIB";
-
-            if (item.raw_time) {
-                const parts = item.raw_time.split('\n');
-                if (parts.length >= 2) {
-                    dateStr = parts[0].trim();
-                    timeStr = parts[1].trim();
-                } else {
-                    const timeMatch = item.raw_time.match(/\d{2}:\d{2}:\d{2}/);
-                    if (timeMatch) {
-                        dateStr = item.raw_time.substring(0, timeMatch.index).trim();
-                        timeStr = item.raw_time.substring(timeMatch.index).trim();
-                    } else {
-                        timeStr = item.raw_time.trim();
-                    }
-                }
-            }
-
-            const shiftText = item.shift_info && item.shift_info !== "-" ? item.shift_info : "Regular Shift";
-
-            const html = `
-                <div class="flex items-center gap-4 p-3 bg-slate-950/80 border border-slate-800 rounded-xl hover:border-slate-700 transition-colors shadow-sm">
-                    <div class="w-14 h-14 rounded-lg overflow-hidden border border-slate-700 shrink-0 bg-slate-900 relative">
-                        <img src="${item.image_url || item.image || item.photo}" class="w-full h-full object-cover">
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <div class="flex items-center justify-between mb-1">
-                            <span class="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded border ${statusColor} flex items-center gap-1 w-max">
-                                <span class="material-symbols-outlined text-[11px]">${iconName}</span>
-                                ${item.status}
-                            </span>
-                        </div>
-                        <div class="flex flex-col">
-                            <span class="text-sm text-slate-200 font-bold tracking-wide truncate">${shiftText}</span>
-                            <span class="text-[10px] font-mono text-slate-500 mt-0.5">${dateStr} • ${timeStr}</span>
-                        </div>
-                    </div>
-                </div>
-            `;
-            historyContainer.insertAdjacentHTML('beforeend', html);
-        });
-    }
-
-    // ==========================================
-    // MAGIC TOUCH: DETEKSI PULL UP (MOBILE)
-    // ==========================================
-    if (historyContainer) {
-        historyContainer.addEventListener('touchstart', (e) => {
-            // Cek apakah scroll sudah mentok di bawah
-            if (historyContainer.scrollTop + historyContainer.clientHeight >= historyContainer.scrollHeight - 5) {
-                startY = e.touches[0].clientY;
-            } else {
-                startY = 0;
-            }
-        });
-
-        historyContainer.addEventListener('touchmove', (e) => {
-            if (!startY || isFetchingHistory || isHistoryEnd) return;
-
-            currentY = e.touches[0].clientY;
-            const pullDistance = startY - currentY;
-
-            // Jika ditarik ke atas (pullDistance positif)
-            if (pullDistance > 0) {
-                e.preventDefault(); // Cegah scroll bawaan browser
-                loadingIndicator.classList.remove('hidden');
-
-                // Efek mentul ke atas pelan-pelan
-                const translateY = Math.min(pullDistance, PULL_THRESHOLD);
-                loadingIndicator.style.transform = `translateY(-${translateY}px)`;
-
-                if (pullDistance >= PULL_THRESHOLD) {
-                    loadingIndicator.innerHTML = `
-                        <span class="material-symbols-outlined text-emerald-500 text-3xl animate-bounce">arrow_upward</span>
-                        <p class="text-[10px] font-bold text-emerald-500 uppercase mt-1 tracking-widest">Lepas untuk memuat...</p>
-                    `;
-                } else {
-                    loadingIndicator.innerHTML = `
-                        <span class="material-symbols-outlined text-slate-500 text-2xl">drag_handle</span>
-                        <p class="text-[9px] font-mono text-slate-500 uppercase mt-1 tracking-widest">Tarik ke atas...</p>
-                    `;
-                }
-            }
-        });
-
-        historyContainer.addEventListener('touchend', () => {
-            if (!startY || !currentY || isFetchingHistory || isHistoryEnd) return;
-
-            const pullDistance = startY - currentY;
-            loadingIndicator.style.transform = `translateY(0px)`; // Kembalikan ke dasar
-
-            if (pullDistance >= PULL_THRESHOLD) {
-                // Eksekusi load data kalau tarikannya cukup kuat!
-                loadHistoryData();
-            } else {
-                loadingIndicator.classList.add('hidden'); // Sembunyikan kalau tarikan nanggung
-            }
-
-            // Reset
-            startY = 0;
-            currentY = 0;
-        });
-
-        // Fallback untuk Desktop (Scroll pakai Mouse)
-        historyContainer.addEventListener('scroll', () => {
-            if (isFetchingHistory || isHistoryEnd) return;
-            if (historyContainer.scrollTop + historyContainer.clientHeight >= historyContainer.scrollHeight - 2) {
-                // Langsung load kalau pakai mouse mentok bawah
-inputLng.readOnly = false;
-
-                inputLat.classList.remove('cursor-not-allowed', 'opacity-60', 'bg-slate-950/50');
-                inputLng.classList.remove('cursor-not-allowed', 'opacity-60', 'bg-slate-950/50');
-
-                iconLocation.innerText = 'my_location';
-                textLocation.innerText = 'Set Location';
-
-                btnSetLocation.className = "w-full bg-slate-800 hover:bg-slate-700 hover:border-error/50 text-slate-200 border border-slate-700 py-3 rounded-lg font-bold text-xs md:text-sm flex items-center justify-center gap-2 transition-all active:scale-95 shadow-sm";
-            }
-        });
-    }
-
-
-
-    // ==========================================
     // LOGIC SWITCH ACTION MANUAL
     // ==========================================
     const btnSwitchAction = document.getElementById('btnSwitchAction');
@@ -1083,7 +886,7 @@ function renderAttendanceStateUI() {
     // Ubah Button Capture (jika tidak sedang dalam TimeBomb)
     const btnCapture = document.getElementById('btnCapture');
     const isTimeBombActive = document.getElementById('toggleTimeBomb')?.checked;
-    if (btnCapture && !isTimeBombActive && btnCapture.innerText.includes('Ambil & Kirim')) {
+    if (btnCapture && !isTimeBombActive && btnCapture.innerText?.includes('Ambil & Kirim')) {
         // Biarkan 'Ambil & Kirim'
     } else if (btnCapture && !isTimeBombActive) {
         const btnColor = NEXT_ACTION === 'KELUAR' ? 'bg-amber-500 hover:bg-amber-600' : 'bg-red-600 hover:bg-red-700';
