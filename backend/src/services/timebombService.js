@@ -29,14 +29,15 @@ const timebombRegistry = new Map();
 // ==========================================
 
 /**
- * Calculate delay in milliseconds between now and target time (HH:MM format).
- * Returns negative value if target time is in the past.
+ * Calculates the delay in milliseconds between the current time and the target time.
+ * Deducts a 1-minute buffer specifically for check-in (MASUK) actions to ensure timely execution.
  * 
- * @param {string} targetTime - "HH:MM" format (24-hour)
- * @param {string} action - "MASUK" or "KELUAR"
- * @returns {number} delay in milliseconds
+ * @param {string} targetTime - Time in "HH:MM" format (24-hour)
+ * @param {string} action - The action type: "MASUK" or "KELUAR"
+ * @returns {number} Delay in milliseconds, or DELAY_EXPIRED (-1) if the target time is in the past.
  */
 function calculateDelay(targetTime, action = '') {
+  const DELAY_EXPIRED = -1;
   const [hours, minutes] = targetTime.split(':').map(Number);
   const now = new Date();
   const target = new Date();
@@ -46,7 +47,7 @@ function calculateDelay(targetTime, action = '') {
 
   // Tolak jika waktu aslinya sudah lewat atau tepat saat ini (0ms)
   if (realDelay <= 0) {
-    return realDelay; 
+    return DELAY_EXPIRED; 
   }
 
   let finalDelay = realDelay;
@@ -63,12 +64,16 @@ function calculateDelay(targetTime, action = '') {
 /**
  * Validate the required fields for scheduling a time-bomb.
  * 
- * @param {Object} params - { token, payload }
+ * @param {Object} params - { token, payload, targetTime }
  * @returns {{ valid: boolean, error?: string }}
  */
-function validateTimebombParams({ token, payload }) {
+function validateTimebombParams({ token, payload, targetTime }) {
   if (!token) {
     return { valid: false, error: 'Token otorisasi tidak boleh kosong.' };
+  }
+
+  if (targetTime && !/^([01]\d|2[0-3]):([0-5]\d)$/.test(targetTime)) {
+    return { valid: false, error: 'Format targetTime tidak valid. Gunakan format HH:MM (24-jam).' };
   }
 
   if (!payload ||
@@ -139,7 +144,7 @@ function validateDpUrl(url) {
  */
 function scheduleTimebomb({ targetTime, action, token, dpUrl, apiKey, payload }) {
   // 1. Validate inputs
-  const validation = validateTimebombParams({ token, payload });
+  const validation = validateTimebombParams({ token, payload, targetTime });
   if (!validation.valid) {
     return { status: false, message: validation.error };
   }

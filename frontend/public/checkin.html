@@ -160,19 +160,29 @@
                             </div>
 
                             <section
-                                class="bg-slate-900/50 backdrop-blur-md border border-slate-800 p-5 md:p-6 rounded-xl">
+                                class="bg-slate-900/50 backdrop-blur-md border border-slate-800 p-5 md:p-6 rounded-xl group">
                                 <h3
                                     class="text-slate-100 font-bold text-xs md:text-sm mb-4 uppercase tracking-widest flex items-center justify-between">
-                                    <span>Riwayat Absen Masuk</span>
-                                    <span class="material-symbols-outlined text-slate-500 text-sm">history</span>
+                                    <span>Manual Override</span>
+                                    <span class="material-symbols-outlined text-slate-500 text-sm">tune</span>
                                 </h3>
-
-                                <div id="dashboardRecentLogs" class="space-y-3">
+                                
+                                <div class="flex items-center justify-between gap-4 p-3 bg-slate-950 border border-slate-800 rounded-xl relative group-hover:border-slate-700 transition-colors" title="Fitur untuk mengganti status absen secara manual">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded-lg bg-slate-800/80 border border-slate-700 flex items-center justify-center shrink-0">
+                                            <span class="material-symbols-outlined text-slate-400 text-lg">swap_horiz</span>
+                                        </div>
+                                        <div>
+                                            <h4 class="text-xs font-bold text-slate-200 uppercase tracking-widest mb-0.5">Switch Action</h4>
+                                            <p class="text-[9px] text-slate-500 leading-tight pr-2">Ubah MASUK/KELUAR secara manual jika salah mendeteksi perangkat.</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <button id="btnSwitchAction"
+                                        class="shrink-0 bg-slate-800 hover:bg-red-600 text-slate-300 hover:text-white p-2.5 rounded-lg border border-slate-700 hover:border-red-500 transition-all active:scale-95 shadow-sm">
+                                        <span class="material-symbols-outlined text-xl block">sync_alt</span>
+                                    </button>
                                 </div>
-
-                                <button id="btnViewFullLog"
-                                    class="w-full mt-4 py-2 text-[9px] md:text-[10px] font-bold text-slate-500 hover:text-red-500 transition-colors uppercase tracking-widest">View
-                                    Full Log</button>
                             </section>
 
                         </div>
@@ -255,7 +265,7 @@
                                                 DELAYED EXECUTION</p>
                                         </div>
                                     </div>
-                                    <label class="relative inline-flex items-center cursor-pointer">
+                                    <label for="toggleTimeBomb" class="relative inline-flex items-center cursor-pointer">
                                         <input type="checkbox" id="toggleTimeBomb" class="sr-only peer">
                                         <div
                                             class="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-300 after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-red-600 peer-checked:after:bg-white shadow-[0_0_10px_rgba(239,68,68,0)] peer-checked:shadow-[0_0_15px_rgba(239,68,68,0.4)] transition-all border border-slate-700">
@@ -424,6 +434,17 @@
                         otomatis pada waktu yang ditentukan.
                     </p>
 
+                    <style>
+                        /* Hide number input spinners */
+                        input[type="number"]::-webkit-inner-spin-button,
+                        input[type="number"]::-webkit-outer-spin-button {
+                            -webkit-appearance: none;
+                            margin: 0;
+                        }
+                        input[type="number"] {
+                            -moz-appearance: textfield;
+                        }
+                    </style>
                     <div class="flex items-center justify-center gap-4 mb-5">
                         <input type="number" id="scheduleTimeHH" required min="0" max="23"
                             class="w-24 bg-slate-950 border border-slate-800 rounded-lg p-3 text-error font-mono text-3xl text-center focus:ring-1 focus:ring-error focus:border-error focus:outline-none"
@@ -468,39 +489,6 @@
                     class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 py-3 rounded-lg text-xs font-bold uppercase tracking-widest transition-all active:scale-95 shadow-sm">
                     Mengerti
                 </button>
-            </div>
-        </div>
-
-        <div id="historyLogModal"
-            class="fixed inset-0 z-[130] hidden items-center justify-center p-4 bg-slate-950/90 backdrop-blur-sm transition-all duration-300 opacity-0">
-            <div id="historyLogBox"
-                class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md h-[80vh] flex flex-col shadow-[0_0_40px_rgba(0,0,0,0.8)] relative transform scale-95 transition-all duration-300 overflow-hidden">
-
-                <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-950/80 z-10">
-                    <div class="flex items-center gap-3 text-slate-200">
-                        <span class="material-symbols-outlined text-emerald-500 animate-pulse">history</span>
-                        <div>
-                            <h3 class="font-black text-sm uppercase tracking-widest leading-none">System Access Log</h3>
-                            <p class="text-[9px] font-mono text-slate-500 mt-1 tracking-widest">USER ACTIVITY RECORD</p>
-                        </div>
-                    </div>
-                    <button id="btnCloseHistory" class="text-slate-500 hover:text-error transition-colors p-1">
-                        <span class="material-symbols-outlined text-xl">close</span>
-                    </button>
-                </div>
-
-                <div id="historyListContainer" class="flex-1 overflow-y-auto p-4 space-y-3 relative">
-                </div>
-
-                <div id="historyLoadingIndicator"
-                    class="hidden py-4 text-center border-t border-slate-800 bg-slate-950/50">
-                    <span class="material-symbols-outlined animate-spin text-emerald-500 text-2xl">autorenew</span>
-                    <p class="text-[9px] font-mono text-slate-400 uppercase mt-1 tracking-widest">Decrypting Data...</p>
-                </div>
-
-                <div id="historyEndIndicator" class="hidden py-4 text-center border-t border-slate-800 bg-slate-950/80">
-                    <p class="text-[10px] font-black text-error uppercase tracking-[0.2em]">— BATAS AKHIR RIWAYAT —</p>
-                </div>
             </div>
         </div>
 

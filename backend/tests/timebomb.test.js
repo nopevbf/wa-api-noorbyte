@@ -124,11 +124,11 @@ describe('scheduleTimebomb', () => {
   });
 
   it('should reject when targetTime is in the past', () => {
-    // Arrange: 1 jam yang lalu
+    // Arrange: 1 menit yang lalu
     const now = new Date();
-    let pastHour = now.getHours() - 1;
-    if (pastHour < 0) pastHour = 23; // wrap around
-    const mm = String(now.getMinutes()).padStart(2, '0');
+    const past = new Date(now.getTime() - 60000); // exactly 1 minute ago
+    const pastHour = past.getHours();
+    const mm = String(past.getMinutes()).padStart(2, '0');
 
     const params = {
       targetTime: `${String(pastHour).padStart(2, '0')}:${mm}`,
@@ -167,6 +167,39 @@ describe('scheduleTimebomb', () => {
     // Assert
     expect(result.status).toBe(false);
     expect(result.message).toMatch(/payload|latitude/i);
+  });
+
+  it('should reject when targetTime is exactly now (0ms delay)', () => {
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
+
+    const params = {
+      targetTime: `${hh}:${mm}`,
+      action: 'KELUAR',
+      token: 'test-token',
+      dpUrl: 'https://api.dparagon.com/v2',
+      apiKey: 'key-003',
+      payload: { latitude: -7.75, longitude: 110.41, image: 'img' }
+    };
+
+    const result = scheduleTimebomb(params);
+    expect(result.status).toBe(false);
+  });
+
+  it('should reject when targetTime has an invalid format (e.g. "25:61")', () => {
+    const params = {
+      targetTime: '25:61',
+      action: 'KELUAR',
+      token: 'test-token',
+      dpUrl: 'https://api.dparagon.com/v2',
+      apiKey: 'key-004',
+      payload: { latitude: -7.75, longitude: 110.41, image: 'img' }
+    };
+
+    const result = scheduleTimebomb(params);
+    expect(result.status).toBe(false);
+    expect(result.message).toMatch(/Format targetTime tidak valid/i);
   });
 
   it('should reject when token is missing', () => {
