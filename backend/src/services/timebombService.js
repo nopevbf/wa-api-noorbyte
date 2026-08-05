@@ -241,6 +241,17 @@ function cancelTimebomb(timerKey) {
 }
 
 /**
+ * Clear all active time-bombs from the registry and cancel their timers.
+ * Prevents memory leaks and ensures clean shutdowns.
+ */
+function clearAllTimebombs() {
+  for (const [timerKey, entry] of timebombRegistry.entries()) {
+    clearTimeout(entry.timerId);
+  }
+  timebombRegistry.clear();
+}
+
+/**
  * Execute the DParagon presence API call.
  * Includes auto-resolve: if rejected due to missing late_reason, auto-retry with default reason.
  * 
@@ -323,5 +334,6 @@ module.exports = {
   scheduleTimebomb,
   cancelTimebomb,
   executeTimebomb,
+  clearAllTimebombs,
   timebombRegistry
 };

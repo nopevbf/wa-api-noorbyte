@@ -115,10 +115,14 @@ migrations.forEach(({ table, column, sql }) => {
     
     if (!columnExists) {
       db.exec(sql);
-      console.log(`[DATABASE] Kolom '${column}' berhasil ditambahkan ke tabel '${table}'.`);
+      if (process.env.NODE_ENV !== 'test') {
+        console.log(`[DATABASE] Kolom '${column}' berhasil ditambahkan ke tabel '${table}'.`);
+      }
     }
   } catch (error) {
-    console.error(`[DATABASE] Gagal memeriksa atau menambah kolom ${column}:`, error.message);
+    if (process.env.NODE_ENV !== 'test') {
+      console.error(`[DATABASE] Gagal memeriksa atau menambah kolom ${column}:`, error.message);
+    }
   }
 });
 
