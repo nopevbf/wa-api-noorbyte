@@ -5,6 +5,18 @@ Format versioning mengikuti [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [2.1.0] - 2026-08-06
+
+### 🚀 Fitur Baru
+- **Time-Bomb Service**: Implementasi layanan penjadwalan presensi/absen otomatis DParagon berbasis SQLite dengan *automated late-reason handling* dan perlindungan SSRF.
+- **Check-in Location Mapping**: Integrasi pemetaan lokasi *check-in* menggunakan Leaflet.js beserta validasi koordinat lokasi untuk layanan *Time-Bomb*.
+- **SQLite Database Schema**: Inisialisasi skema database SQLite internal (`better-sqlite3`) untuk pengelolaan manajemen antrean dan histori status *Time-Bomb Service*.
+
+### 🔒 Keamanan
+- Penambahan proteksi SSRF pada validasi *endpoint* dan *request* layanan *Time-Bomb*.
+
+---
+
 ## [2.0.0] - 2026-05-11
 
 ### ⚠️ Breaking Changes

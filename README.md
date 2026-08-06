@@ -1,4 +1,4 @@
-# WhatsApp API (wa-api-noorbyte) - v2.0.0
+# WhatsApp API (wa-api-noorbyte) - v2.1.0
 
 Proyek ini adalah API backend terintegrasi WhatsApp menggunakan `whiskeysockets/baileys` dengan antarmuka frontend (UI) modern yang terpadu dalam satu layanan Node.js.
 
@@ -6,6 +6,7 @@ Proyek ini adalah API backend terintegrasi WhatsApp menggunakan `whiskeysockets/
 
 - **Koneksi WhatsApp Multi-Device**: Pengaturan node session terpusat memanfaatkan Baileys.
 - **Unified Architecture**: Backend server (`express`) melayani API sekaligus aset statis Frontend di port yang sama.
+- **Time-Bomb & Scheduled Attendance**: Layanan penjadwalan presensi otomatis (DParagon) berbasis SQLite dengan *automated late-reason handling*, integrasi peta lokasi Leaflet.js, dan proteksi SSRF.
 - **Environment API Endpoint Toggling**: Mendukung `.env` (*development* & *production*) untuk API DParagon.
 - **Check-in Automasi**: Sistem otomasi check-in kehadiran dengan headless scraping `puppeteer`.
 - **Cloudflare Bypass & Proxy Support**: Penanganan otomatis Cloudflare Challenge dan dukungan SOCKS5 Proxy.
@@ -65,7 +66,10 @@ wa-api-noorbyte/
 
 Untuk riwayat perubahan versi selengkapnya, silakan lihat file [CHANGELOG.md](CHANGELOG.md).
 
-### v2.0.0 (Latest)
+### v2.1.0 (Latest)
+- **Time-Bomb Attendance & Location Mapping**: Layanan *Time-Bomb Service* untuk penjadwalan presensi otomatis DParagon berbasis SQLite (`better-sqlite3`), pemetaan lokasi *check-in* berbasis Leaflet.js, *automated late-reason handling*, dan penguatan proteksi SSRF.
+
+### v2.0.0
 - **Keamanan & Stabilitas**: Autentikasi `Authorization` header yang ketat, pencegahan *command injection*, finalisasi modular *backend*, penerapan exception handler terpusat, dan pola *defensive programming* pada LCR Engine.
 - **Perbaikan UI & Bug**: Perbaikan bug *crash* saat automasi, pencegahan duplikasi kiriman WhatsApp manual, resolusi bug *z-index* UI kalender, dan perbaikan UX tampilan *Execution Log* yang lebih rapi.
 
