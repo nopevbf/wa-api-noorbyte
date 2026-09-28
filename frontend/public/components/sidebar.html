@@ -1,4 +1,4 @@
-﻿<aside id="app-sidebar"
+<aside id="app-sidebar"
   class="w-64 h-full border-r border-slate-200/60 dark:border-slate-800/60 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md flex flex-col fixed inset-y-0 left-0 z-50 transform -translate-x-full lg:translate-x-0 lg:static transition-transform duration-300 ease-in-out">
   <div class="p-6 flex flex-col gap-6 flex-1">
     <div class="flex items-center gap-3">
@@ -18,24 +18,24 @@
       </button>
     </div>
     <nav id="sidebar-nav" class="flex flex-col gap-1.5">
-      <a href="/dashboard" data-path="/dashboard"
+      <a href="/dashboard" data-path="/dashboard" data-maintenance="true"
         class="nav-link flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100/80 dark:hover:bg-slate-800/80 transition-all duration-200">
         <span class="material-symbols-outlined text-xl icon">dashboard</span>
         <span class="text-sm font-semibold">Dashboard</span>
       </a>
-      <a href="/devices" data-path="/devices"
+      <a href="/devices" data-path="/devices" data-maintenance="true"
         class="nav-link flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100/80 dark:hover:bg-slate-800/80 transition-all duration-200">
         <span class="material-symbols-outlined text-xl icon">important_devices</span>
         <span class="text-sm font-semibold">Devices</span>
       </a>
-      <a href="/groups" data-path="/groups"
+      <a href="/groups" data-path="/groups" data-maintenance="true"
         class="nav-link flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100/80 dark:hover:bg-slate-800/80 transition-all duration-200">
         <span class="material-symbols-outlined icon text-xl">group</span>
         <span class="text-sm font-semibold">WhatsApp Groups</span>
       </a>
       <!-- Menu Send Messages dengan Sub-menu -->
       <div class="flex flex-col gap-1">
-        <button id="btn-send-messages"
+        <button id="btn-send-messages" data-maintenance="true"
           class="nav-parent flex items-center justify-between w-full px-3.5 py-2.5 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100/80 dark:hover:bg-slate-800/80 transition-all duration-200 group">
           <div class="flex items-center gap-3">
             <span class="material-symbols-outlined text-xl icon">send</span>
@@ -44,23 +44,23 @@
           <span id="arrow-send-messages" class="material-symbols-outlined text-lg transition-transform duration-300">expand_more</span>
         </button>
         <div id="submenu-send-messages" class="hidden flex-col gap-1 pl-10 overflow-hidden transition-all duration-300">
-          <a href="/tester" data-path="/tester"
+          <a href="/tester" data-path="/tester" data-maintenance="true"
             class="nav-link flex items-center gap-3 py-2 text-slate-500 dark:text-slate-400 hover:text-primary transition-colors">
             <span class="text-xs font-bold uppercase tracking-widest">Send Test Message</span>
           </a>
-          <a href="/auto-reply" data-path="/auto-reply"
+          <a href="/auto-reply" data-path="/auto-reply" data-maintenance="true"
             class="nav-link flex items-center gap-3 py-2 text-slate-500 dark:text-slate-400 hover:text-primary transition-colors">
             <span class="text-xs font-bold uppercase tracking-widest">Auto Reply - AI</span>
           </a>
         </div>
       </div>
-      <a href="/automation" data-path="/automation"
+      <a href="/automation" data-path="/automation" data-maintenance="true"
         class="nav-link flex items-center gap-3 px-3.5 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-100/80 dark:hover:bg-slate-800/80 rounded-xl transition-all duration-200">
         <span class="material-symbols-outlined icon"
           style="font-variation-settings: &quot;FILL&quot; 1">assessment</span>
         <span class="text-sm font-semibold">Daily Reports</span>
       </a>
-      <a href="/pulse" data-path="/pulse"
+      <a href="/pulse" data-path="/pulse" data-maintenance="true"
         class="nav-link flex items-center gap-3 px-3.5 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-100/80 dark:hover:bg-slate-800/80 rounded-xl transition-all duration-200">
         <span class="material-symbols-outlined text-xl icon" style="font-variation-settings: &quot;FILL&quot; 1">bolt</span>
         <span class="text-sm font-semibold">Pulse Automation</span>

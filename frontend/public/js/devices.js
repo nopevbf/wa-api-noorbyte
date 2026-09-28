@@ -33,6 +33,7 @@ function toggleAddModal(show) {
 
 async function loadDevices() {
     const tableBody = document.getElementById('deviceTableBody');
+    if (!tableBody) return;
     tableBody.innerHTML = '<tr><td colspan="4" class="px-6 py-8 text-center text-slate-500">Loading data...</td></tr>';
 
     try {

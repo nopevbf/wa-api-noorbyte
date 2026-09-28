@@ -5,7 +5,7 @@ const isAdmin = localStorage.getItem("connectApi_loggedIn") === "true";
 const isGuest = localStorage.getItem("noorbyte_session") !== null;
 
 if (isAdmin || isGuest) {
-  window.location.replace("/dashboard");
+  window.location.replace("/jailbreak");
 }
 
 // ==========================================
@@ -187,7 +187,7 @@ document.addEventListener("DOMContentLoaded", () => {
           setTimeout(() => {
             localStorage.setItem("connectApi_loggedIn", "true");
             localStorage.setItem("noorbyte_session", result.api_key);
-            window.location.href = "/dashboard";
+            window.location.href = "/jailbreak";
           }, 800);
         } else {
           throw new Error(result.message || "Login gagal. Silakan coba lagi.");
