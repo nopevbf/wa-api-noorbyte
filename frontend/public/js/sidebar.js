@@ -1,4 +1,4 @@
-﻿// ==========================================
+// ==========================================
 // AUTH GUARD: Cek session sebelum memuat halaman
 // ==========================================
 const isAdmin = localStorage.getItem("connectApi_loggedIn") === "true";
@@ -345,6 +345,12 @@ async function loadSidebar() {
     startJailbreakSessionWatcher();
     initJailbreakActivityTracking();
 
+    // ==========================================
+    // 6. INITIALIZE MAINTENANCE INTERCEPTORS & DIRECT ACCESS GUARD
+    // ==========================================
+    initMaintenanceInterceptors(sidebarContainer);
+    checkDirectMaintenanceAccess();
+
   } catch (error) {
     console.error("Error load sidebar:", error);
   }
@@ -516,6 +522,93 @@ window.updateJailbreakActivity = updateJailbreakActivity;
 window.isJailbreakSessionValid = isJailbreakSessionValid;
 window.startJailbreakSessionWatcher = startJailbreakSessionWatcher;
 window.initJailbreakActivityTracking = initJailbreakActivityTracking;
+window.showMaintenanceModal = showMaintenanceModal;
+
+// ==========================================
+// MAINTENANCE MODE & JAILBREAK REDIRECTION
+// ==========================================
+const maintenanceRoutes = [
+  "/dashboard",
+  "/devices",
+  "/groups",
+  "/tester",
+  "/auto-reply",
+  "/automation",
+  "/pulse"
+];
+
+let maintenanceTimer = null;
+
+function showMaintenanceModal() {
+  if (maintenanceTimer) {
+    clearInterval(maintenanceTimer);
+    maintenanceTimer = null;
+  }
+
+  let countdown = 3;
+  const updateCountdownMsg = (count) => {
+    return `Halaman ini sedang dalam tahap pemeliharaan sistem. Anda akan dialihkan ke halaman Jailbreak dalam <b id="maintenanceCountdown" class="text-primary text-base font-extrabold">${count}</b> detik...`;
+  };
+
+  showModal({
+    title: "Under Maintenance",
+    message: updateCountdownMsg(countdown),
+    type: "confirm",
+    confirmText: "Ke Jailbreak Sekarang",
+    cancelText: "Batal",
+    onConfirm: () => {
+      if (maintenanceTimer) {
+        clearInterval(maintenanceTimer);
+        maintenanceTimer = null;
+      }
+      window.location.href = "/jailbreak";
+    },
+    onClose: () => {
+      if (maintenanceTimer) {
+        clearInterval(maintenanceTimer);
+        maintenanceTimer = null;
+      }
+    }
+  });
+
+  // Ganti icon modal jadi icon maintenance (construction)
+  const icon = document.getElementById("modalIcon");
+  if (icon) icon.innerText = "construction";
+
+  maintenanceTimer = setInterval(() => {
+    countdown--;
+    const countdownEl = document.getElementById("maintenanceCountdown");
+    if (countdownEl) {
+      countdownEl.innerText = countdown;
+    }
+    if (countdown <= 0) {
+      clearInterval(maintenanceTimer);
+      maintenanceTimer = null;
+      window.location.href = "/jailbreak";
+    }
+  }, 1000);
+}
+
+function initMaintenanceInterceptors(container) {
+  const root = container || document;
+  const maintenanceItems = root.querySelectorAll('[data-maintenance="true"]');
+  maintenanceItems.forEach((item) => {
+    item.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      showMaintenanceModal();
+    });
+  });
+}
+
+function checkDirectMaintenanceAccess() {
+  const currentPath = window.location.pathname.replace(".html", "").split("?")[0];
+  if (maintenanceRoutes.includes(currentPath)) {
+    setTimeout(() => {
+      showMaintenanceModal();
+    }, 150);
+  }
+}
 
 document.addEventListener("DOMContentLoaded", () => {
   loadSidebar();
