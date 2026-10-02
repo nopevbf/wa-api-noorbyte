@@ -1,62 +1,64 @@
 /**
  * firebase.js — Firebase Admin & Firestore Cloud Initialization
+ * Compatible with modern modular Firebase Admin SDK (v12 / v13 / v14)
  */
-let admin = null;
+let initializeApp, cert, getApps, getFirestore;
 let db = null;
 
 try {
-  admin = require('firebase-admin');
+  const appModule = require('firebase-admin/app');
+  const firestoreModule = require('firebase-admin/firestore');
+  initializeApp = appModule.initializeApp;
+  cert = appModule.cert;
+  getApps = appModule.getApps;
+  getFirestore = firestoreModule.getFirestore;
 } catch (e) {
-  // Graceful fallback jika firebase-admin belum di-npm install
-  console.warn('[FIREBASE] firebase-admin package belum terinstall.');
+  console.warn('[FIREBASE] firebase-admin package belum terinstall atau gagal dimuat.');
 }
 
 function getFirestoreDb() {
   if (db) return db;
 
-  if (!admin) {
+  if (!initializeApp || !getFirestore || !getApps) {
     return null;
   }
 
-  if (!admin.apps.length) {
-    const projectId = process.env.FIREBASE_PROJECT_ID;
-    const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-    let privateKey = process.env.FIREBASE_PRIVATE_KEY;
-
-    if (privateKey) {
-      // Hapus tanda kutip luar jika ada
-      if (
-        (privateKey.startsWith('"') && privateKey.endsWith('"')) ||
-        (privateKey.startsWith("'") && privateKey.endsWith("'"))
-      ) {
-        privateKey = privateKey.slice(1, -1);
-      }
-      privateKey = privateKey.replace(/\\n/g, '\n');
-    }
-
-    if (projectId && clientEmail && privateKey) {
-      admin.initializeApp({
-        credential: admin.credential.cert({
-          projectId,
-          clientEmail,
-          privateKey
-        })
-      });
-      console.log('✅ [FIREBASE] Firebase Admin SDK berhasil diinisialisasi.');
-    } else {
-      console.warn('⚠️ [FIREBASE] Kredensial Firebase ENV belum lengkap. Menggunakan default credentials.');
-      try {
-        admin.initializeApp();
-      } catch (err) {
-        console.warn('⚠️ [FIREBASE] Inisialisasi default gagal:', err.message);
-      }
-    }
-  }
-
   try {
-    db = admin.firestore();
+    const apps = getApps();
+    if (!apps || apps.length === 0) {
+      const projectId = process.env.FIREBASE_PROJECT_ID;
+      const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+      let privateKey = process.env.FIREBASE_PRIVATE_KEY;
+
+      if (privateKey) {
+        if (
+          (privateKey.startsWith('"') && privateKey.endsWith('"')) ||
+          (privateKey.startsWith("'") && privateKey.endsWith("'"))
+        ) {
+          privateKey = privateKey.slice(1, -1);
+        }
+        privateKey = privateKey.replace(/\\n/g, '\n');
+      }
+
+      if (projectId && clientEmail && privateKey) {
+        initializeApp({
+          credential: cert({
+            projectId,
+            clientEmail,
+            privateKey
+          })
+        });
+        console.log('✅ [FIREBASE] Firebase Admin SDK berhasil diinisialisasi.');
+      } else {
+        console.warn('⚠️ [FIREBASE] Kredensial Firebase ENV belum lengkap.');
+        return null;
+      }
+    }
+
+    db = getFirestore();
   } catch (err) {
-    console.error('❌ [FIREBASE] Gagal mendapatkan instance Firestore:', err.message);
+    console.error('❌ [FIREBASE] Inisialisasi Firestore gagal:', err.message);
+    db = null;
   }
 
   return db;
