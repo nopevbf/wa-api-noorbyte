@@ -268,3 +268,18 @@ input[readonly]:focus {
     /* Tetap border-slate-800 */
     box-shadow: none !important;
 }
+
+/* ==========================================
+   5. LEAFLET MAP DARK THEME (ZERO API KEY)
+   ========================================== */
+#map {
+    background-color: #020617;
+}
+
+#map .leaflet-tile {
+    filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+}
+
+#map .leaflet-container {
+    background-color: #020617;
+}

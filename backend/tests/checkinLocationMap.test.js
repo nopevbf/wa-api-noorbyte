@@ -340,4 +340,26 @@ describe('Location Map Integration on Checkin Page', () => {
         expect(btnMapSearchClear.classList.contains('hidden')).toBe(true);
         expect(mapSearchSuggestions.innerHTML).toBe('');
     });
+
+    // 9. REGRESSION TEST (BUG-CHK-MAP-001): TileLayer must use free OpenStreetMap tiles without API key
+    test('Regression Test (BUG-CHK-MAP-001): Should initialize tileLayer with free OpenStreetMap tiles and not CartoDB', async () => {
+        require('../../frontend/public/js/checkin.js');
+        document.dispatchEvent(new Event('DOMContentLoaded'));
+        await new Promise(resolve => setTimeout(resolve, 10));
+
+        const btnToggleMap = document.getElementById('btnToggleMap');
+        btnToggleMap.click();
+
+        expect(window.L.tileLayer).toHaveBeenCalled();
+        const tileLayerArgs = window.L.tileLayer.mock.calls[0];
+        const tileUrl = tileLayerArgs[0];
+        const tileOptions = tileLayerArgs[1];
+
+        // Must NOT use cartocdn which displays "API KEY REQUIRED"
+        expect(tileUrl).not.toContain('cartocdn.com');
+        // Must use OpenStreetMap standard tiles
+        expect(tileUrl).toBe('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
+        expect(tileOptions.attribution).toContain('OpenStreetMap');
+    });
 });
+

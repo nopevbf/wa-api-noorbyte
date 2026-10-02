@@ -881,9 +881,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Inisialisasi Peta
         mapInstance = L.map('map').setView([latVal, lngVal], 15);
 
-        // Tile layer CartoDB Dark Matter (Estetika Gelap Premium)
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; CartoDB &copy; OpenStreetMap'
+        // Tile layer OpenStreetMap (Bebas API Key, styling dark mode via CSS filter)
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors'
         }).addTo(mapInstance);
 
         // Marker draggable
