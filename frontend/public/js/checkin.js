@@ -61,73 +61,84 @@ document.addEventListener('DOMContentLoaded', async () => {
     let defaultDparagonApiUrl = "";
 
     // ===================================
-    // SOCKET.IO: LISTEN FOR TIMEBOMB SUCCESS
+    // SOCKET.IO & POLLING: LISTEN FOR TIMEBOMB SUCCESS
     // ===================================
-    const socket = io();
+    const socket = (typeof io === 'function') ? io() : null;
     const myApiKey = localStorage.getItem('noorbyte_session');
-    if (myApiKey) {
+
+    function handleTimebombSuccess(message) {
+        showSystemAlert('TIME-BOMB SUCCESS', message || 'Presensi berhasil dicatat.', 'success');
+        const btnCapture = document.getElementById('btnCapture');
+        if (btnCapture) {
+            btnCapture.innerHTML = `<span class="material-symbols-outlined text-xl md:text-2xl">photo_camera</span> Ambil & Kirim`;
+            btnCapture.className = "w-full bg-red-600 hover:bg-red-700 text-white py-3.5 md:py-4 rounded-xl font-black text-sm md:text-lg uppercase tracking-widest flex items-center justify-center gap-3 active:scale-95 transition-all shadow-lg";
+            btnCapture.disabled = false;
+        }
+        const cancelBtn = document.getElementById('btnCancelTimebomb');
+        if (cancelBtn) cancelBtn.classList.add('hidden');
+        const retakeBtn = document.getElementById('btnRetake');
+        if (retakeBtn) retakeBtn.classList.add('hidden');
+        isPreviewMode = false;
+        finalBase64Photo = null;
+        if (cameraPreview) {
+            cameraPreview.classList.add('hidden');
+            cameraPreview.src = '';
+        }
+        localStorage.removeItem('active_timebomb_key');
+        markAttendanceSuccessLocally();
+    }
+
+    function handleTimebombError(message) {
+        showSystemAlert(window.t('TIMEBOMB_FAILED'), message || 'Eksekusi presensi gagal.', 'error');
+        const btnCapture = document.getElementById('btnCapture');
+        if (btnCapture) {
+            btnCapture.innerHTML = `<span class="material-symbols-outlined text-xl md:text-2xl">photo_camera</span> Ambil & Kirim`;
+            btnCapture.className = "w-full bg-red-600 hover:bg-red-700 text-white py-3.5 md:py-4 rounded-xl font-black text-sm md:text-lg uppercase tracking-widest flex items-center justify-center gap-3 active:scale-95 transition-all shadow-lg";
+            btnCapture.disabled = false;
+        }
+        const cancelBtn = document.getElementById('btnCancelTimebomb');
+        if (cancelBtn) cancelBtn.classList.add('hidden');
+        const retakeBtn = document.getElementById('btnRetake');
+        if (retakeBtn) retakeBtn.classList.add('hidden');
+        isPreviewMode = false;
+        finalBase64Photo = null;
+        if (cameraPreview) {
+            cameraPreview.classList.add('hidden');
+            cameraPreview.src = '';
+        }
+        localStorage.removeItem('active_timebomb_key');
+    }
+
+    if (socket && myApiKey) {
         socket.on(`timebomb-success-${myApiKey}`, (data) => {
             console.log("[SOCKET] Time-Bomb success received:", data);
-            
-            // 1. Tampilkan Alert Sukses
-            showSystemAlert('TIME-BOMB SUCCESS', data.message, 'success');
-            
-            // 2. Reset Tombol Capture (jika sedang mode standby)
-            const btnCapture = document.getElementById('btnCapture');
-            if (btnCapture) {
-                btnCapture.innerHTML = `<span class="material-symbols-outlined text-xl md:text-2xl">photo_camera</span> Ambil & Kirim`;
-                btnCapture.className = "w-full bg-red-600 hover:bg-red-700 text-white py-3.5 md:py-4 rounded-xl font-black text-sm md:text-lg uppercase tracking-widest flex items-center justify-center gap-3 active:scale-95 transition-all shadow-lg";
-                btnCapture.disabled = false;
-            }
-            
-            // 3. Sembunyikan tombol cancel, retake, dan preview
-            const cancelBtn = document.getElementById('btnCancelTimebomb');
-            if (cancelBtn) cancelBtn.classList.add('hidden');
-            const retakeBtn = document.getElementById('btnRetake');
-            if (retakeBtn) retakeBtn.classList.add('hidden');
-            
-            // Reset state
-            isPreviewMode = false;
-            finalBase64Photo = null;
-            if (cameraPreview) {
-                cameraPreview.classList.add('hidden');
-                cameraPreview.src = '';
-            }
-            
-            // 4. UPDATE LOCAL STORAGE STATE
-            markAttendanceSuccessLocally();
+            handleTimebombSuccess(data.message);
         });
 
         socket.on(`timebomb-error-${myApiKey}`, (data) => {
             console.error("[SOCKET] Time-Bomb error received:", data);
-            
-            // 1. Tampilkan Alert Error
-            showSystemAlert(window.t('TIMEBOMB_FAILED'), data.message, 'error');
-            
-            // 2. Reset Tombol Capture ke mode semula agar bisa coba lagi
-            const btnCapture = document.getElementById('btnCapture');
-            if (btnCapture) {
-                btnCapture.innerHTML = `<span class="material-symbols-outlined text-xl md:text-2xl">photo_camera</span> Ambil & Kirim`;
-                btnCapture.className = "w-full bg-red-600 hover:bg-red-700 text-white py-3.5 md:py-4 rounded-xl font-black text-sm md:text-lg uppercase tracking-widest flex items-center justify-center gap-3 active:scale-95 transition-all shadow-lg";
-                btnCapture.disabled = false;
-            }
-
-            // 3. Sembunyikan tombol cancel, retake, dan preview
-            const cancelBtn = document.getElementById('btnCancelTimebomb');
-            if (cancelBtn) cancelBtn.classList.add('hidden');
-            const retakeBtn = document.getElementById('btnRetake');
-            if (retakeBtn) retakeBtn.classList.add('hidden');
-
-            // Reset state
-            isPreviewMode = false;
-            finalBase64Photo = null;
-            if (cameraPreview) {
-                cameraPreview.classList.add('hidden');
-                cameraPreview.src = '';
-            }
-
-            localStorage.removeItem('active_timebomb_key');
+            handleTimebombError(data.message);
         });
+    }
+
+    // Polling fallback untuk arsitektur serverless (Vercel)
+    setInterval(async () => {
+        const activeTimerKey = localStorage.getItem('active_timebomb_key');
+        if (!activeTimerKey) return;
+
+        try {
+            const res = await fetch(`/api/attendance/status?timer_key=${encodeURIComponent(activeTimerKey)}`);
+            if (!res.ok) return;
+            const data = await res.json();
+            if (data.status && data.jobStatus === 'SUCCESS') {
+                handleTimebombSuccess(data.message);
+            } else if (data.status && data.jobStatus === 'FAILED') {
+                handleTimebombError(data.message);
+            }
+        } catch (e) {
+            // Silently ignore polling errors
+        }
+    }, 5000);
     }
 
     // ===================================
