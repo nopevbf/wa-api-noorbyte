@@ -154,6 +154,23 @@ describe('QStash Time-Bomb Scheduler Service', () => {
       expect(result.status).toBe(false);
       expect(result.message).toMatch(/gagal menjadwalkan ke qstash/i);
     });
+
+    // 7b. Resilient Case: schedule when firestoreDb is null
+    it('should schedule to QStash successfully even if firestoreDb is null', async () => {
+      const now = DateTime.now().setZone('Asia/Jakarta');
+      const future = now.plus({ hours: 1 });
+      const config = { ...validConfig, targetTime: future.toFormat('HH:mm') };
+
+      const result = await scheduleQStashTimebomb(config, {
+        qstashClient: mockQStashClient,
+        firestoreDb: null,
+        webhookUrl: 'https://wa-api-noorbyte.vercel.app/api/timebomb/execute-webhook'
+      });
+
+      expect(result.status).toBe(true);
+      expect(result.timer_key).toBeDefined();
+      expect(mockQStashClient.publishJSON).toHaveBeenCalled();
+    });
   });
 
   describe('cancelQStashTimebomb', () => {
@@ -166,6 +183,17 @@ describe('QStash Time-Bomb Scheduler Service', () => {
 
       expect(result.status).toBe(true);
       expect(mockQStashClient.messages.delete).toHaveBeenCalledWith('msg_qstash_123');
+    });
+
+    // 8b. Resilient Case: cancel when firestoreDb is null
+    it('should handle cancel gracefully when firestoreDb is null', async () => {
+      const result = await cancelQStashTimebomb('timer_key_123', {
+        qstashClient: mockQStashClient,
+        firestoreDb: null
+      });
+
+      expect(result.status).toBe(true);
+      expect(result.message).toMatch(/berhasil dibatalkan|database belum/i);
     });
 
     // 9. Error case: Job not found

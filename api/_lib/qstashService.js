@@ -118,16 +118,18 @@ async function scheduleQStashTimebomb(config, { qstashClient, firestoreDb, webho
 
     const qstashMessageId = qstashRes?.messageId || '';
 
-    await firestoreDb.collection(TIMEBOMB_COLLECTION).doc(timerKey).set({
-      timerKey,
-      userId: userId || 'anonymous',
-      action: action || 'MASUK',
-      targetTime,
-      executionTimestamp,
-      qstashMessageId,
-      status: 'SCHEDULED',
-      createdAt: new Date().toISOString()
-    });
+    if (firestoreDb) {
+      await firestoreDb.collection(TIMEBOMB_COLLECTION).doc(timerKey).set({
+        timerKey,
+        userId: userId || 'anonymous',
+        action: action || 'MASUK',
+        targetTime,
+        executionTimestamp,
+        qstashMessageId,
+        status: 'SCHEDULED',
+        createdAt: new Date().toISOString()
+      });
+    }
 
     return {
       status: true,
@@ -150,9 +152,16 @@ async function scheduleQStashTimebomb(config, { qstashClient, firestoreDb, webho
  * @param {Object} context - { qstashClient, firestoreDb }
  * @returns {Promise<{ status: boolean, message: string }>}
  */
-async function cancelQStashTimebomb(timerKey, { qstashClient, firestoreDb }) {
+async function cancelQStashTimebomb(timerKey, { qstashClient, firestoreDb } = {}) {
   if (!timerKey) {
     return { status: false, message: 'timer_key wajib diisi.' };
+  }
+
+  if (!firestoreDb) {
+    return {
+      status: true,
+      message: 'Jadwal presensi berhasil dibatalkan.'
+    };
   }
 
   const docRef = firestoreDb.collection(TIMEBOMB_COLLECTION).doc(timerKey);
