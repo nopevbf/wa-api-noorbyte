@@ -1,13 +1,6 @@
 {
   "version": 2,
   "cleanUrls": true,
-  "rewrites": [
-    { "source": "/", "destination": "/jailbreak.html" },
-    { "source": "/jailbreak", "destination": "/jailbreak.html" },
-    { "source": "/jailbreak/checkin", "destination": "/checkin.html" },
-    { "source": "/api/attendance/schedule-timebomb", "destination": "/api/attendance/schedule" },
-    { "source": "/api/attendance/cancel-timebomb", "destination": "/api/attendance/cancel" }
-  ],
   "headers": [
     {
       "source": "/api/(.*)",
