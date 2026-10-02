@@ -1,7 +1,7 @@
 /**
  * POST /api/attendance/cancel — Cancels a scheduled Time-Bomb job
  */
-const { cancelQStashTimebomb } = require('../../backend/src/services/qstashService');
+const { cancelQStashTimebomb } = require('../_lib/qstashService');
 const { getAppContext } = require('../_lib/context');
 
 module.exports = async (req, res) => {

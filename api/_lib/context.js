@@ -1,7 +1,7 @@
 /**
  * context.js — Serverless Runtime Context (QStash Client & Firestore)
  */
-const { getFirestoreDb } = require('../../backend/src/config/firebase');
+const { getFirestoreDb } = require('./firebase');
 
 /**
  * Creates lightweight QStash client using native fetch (zero-dependency).

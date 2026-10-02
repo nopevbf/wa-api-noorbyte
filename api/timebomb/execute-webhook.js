@@ -1,7 +1,7 @@
 /**
  * POST /api/timebomb/execute-webhook — Invoked by Upstash QStash at target time
  */
-const { executePresenceWebhook } = require('../../backend/src/services/webhookExecutor');
+const { executePresenceWebhook } = require('../_lib/webhookExecutor');
 const { getAppContext } = require('../_lib/context');
 
 module.exports = async (req, res) => {

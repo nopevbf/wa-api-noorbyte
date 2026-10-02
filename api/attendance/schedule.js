@@ -1,7 +1,7 @@
 /**
  * POST /api/attendance/schedule — Schedules a Time-Bomb via QStash & Firestore
  */
-const { scheduleQStashTimebomb } = require('../../backend/src/services/qstashService');
+const { scheduleQStashTimebomb } = require('../_lib/qstashService');
 const { getAppContext } = require('../_lib/context');
 
 module.exports = async (req, res) => {
