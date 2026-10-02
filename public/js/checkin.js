@@ -712,9 +712,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             setTimeout(() => { progressBar.style.width = '60%'; }, 500);
             processLog.innerText = `[WAIT] VERIFYING CREDENTIALS ON TARGET NODE...`;
 
-            // Bersihkan slash (/) di akhir base URL jika ada, lalu tambahkan /login
-            const baseUrl = dpUrl.replace(/\/$/, '');
-            const targetEndpoint = `${baseUrl}/login`;
+            let normalizedUrl = (dpUrl || defaultDparagonApiUrl || "https://api.dparagon.com/v2").trim().replace(/\/+$/, '');
+            normalizedUrl = normalizedUrl.replace('management.', 'api.');
+            if (!normalizedUrl.endsWith('/v2')) {
+                normalizedUrl = `${normalizedUrl}/v2`;
+            }
+            const targetEndpoint = `${normalizedUrl}/login`;
 
             // TEMBAK LANGSUNG KE TARGET ENDPOINT
             const response = await fetch(targetEndpoint, {
@@ -729,7 +732,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 })
             });
 
-            const result = await response.json();
+            let result = {};
+            const contentType = response.headers.get("content-type") || "";
+            if (contentType.includes("application/json")) {
+                result = await response.json();
+            } else {
+                throw new Error(response.ok ? "Format respons tidak valid." : `Gagal menghubungi target node (${response.status})`);
+            }
 
             // Pengecekan sukses lebih fleksibel (pakai response.ok)
             if (response.ok && result.message === "Login success") {

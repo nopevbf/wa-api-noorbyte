@@ -10,7 +10,10 @@ module.exports = (req, res) => {
   }
 
   const env = process.env.NODE_ENV || 'production';
-  const dparagonApiUrl = process.env.DPARAGON_URL || 'https://api.dparagon.com';
+  const isProd = env === 'production';
+  const dparagonApiUrl = isProd
+    ? (process.env.DPARAGON_API_URL_PROD || 'https://api.dparagon.com/v2')
+    : (process.env.DPARAGON_API_URL_DEV || 'https://api.dparagon6.persona-it.com/v2');
 
   res.status(200).json({
     status: true,

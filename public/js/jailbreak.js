@@ -97,8 +97,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         setTimeout(() => { progressBar.style.width = '60%'; }, 500);
         processLog.innerText = `[WAIT] VERIFYING CREDENTIALS ON TARGET NODE...`;
 
-        const baseUrl = dpUrl.replace(/\/$/, '');
-        const targetEndpoint = `${baseUrl}/login`;
+        let normalizedUrl = (dpUrl || defaultDparagonApiUrl || "https://api.dparagon.com/v2").trim().replace(/\/+$/, '');
+        normalizedUrl = normalizedUrl.replace('management.', 'api.');
+        if (!normalizedUrl.endsWith('/v2')) {
+          normalizedUrl = `${normalizedUrl}/v2`;
+        }
+        const targetEndpoint = `${normalizedUrl}/login`;
 
         const response = await fetch(targetEndpoint, {
           method: 'POST',
@@ -109,7 +113,13 @@ document.addEventListener("DOMContentLoaded", async () => {
           body: JSON.stringify({ email, password })
         });
 
-        const result = await response.json();
+        let result = {};
+        const contentType = response.headers.get("content-type") || "";
+        if (contentType.includes("application/json")) {
+          result = await response.json();
+        } else {
+          throw new Error(response.ok ? "Format respons tidak valid." : `Gagal menghubungi target node (${response.status})`);
+        }
 
         if (response.ok && result.message === "Login success") {
           if (typeof updateJailbreakActivity === 'function') updateJailbreakActivity(true);

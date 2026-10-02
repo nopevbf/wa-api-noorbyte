@@ -25,13 +25,13 @@ async function createAgent() {
 
 function normalizeDpApiUrl(rawUrl) {
   const input = String(rawUrl || "").trim();
-  if (!input) throw new Error("Base API URL DParagon kosong.");
+  if (!input) return "https://api.dparagon.com/v2";
 
   let parsed;
   try {
     parsed = new URL(input);
   } catch {
-    throw new Error(`Format Base API URL tidak valid: ${input}`);
+    return "https://api.dparagon.com/v2";
   }
 
   if (parsed.hostname === "management.dparagon.com") {
@@ -590,6 +590,7 @@ async function fetchDparagonReport(dpApiUrl, dpEmail, dpPassword, logger = null,
 }
 
 module.exports = {
+  normalizeDpApiUrl,
   executeStep1And2,
   executeStep3To5,
   runDailyReportViaBrowser,
