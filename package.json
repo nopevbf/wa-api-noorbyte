@@ -7,6 +7,7 @@
     "test": "cd backend && npm test"
   },
   "dependencies": {
+    "firebase-admin": "^14.5.0",
     "luxon": "^3.7.2"
   }
 }
