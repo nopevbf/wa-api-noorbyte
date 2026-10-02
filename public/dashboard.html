@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>WhatsApp API Dashboard | NoorByteAPI</title>
+
+    <link rel="stylesheet" href="/css/style.css" />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+      rel="stylesheet"
+    />
+
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#6366f1",
+              "background-light": "#f5f3ff",
+              "background-dark": "#0f172a",
+              surface: "#ffffff",
+              outline: "#e2e8f0",
+            },
+            fontFamily: { 
+              display: ["Plus Jakarta Sans", "Inter", "sans-serif"],
+              body: ["Plus Jakarta Sans", "Inter", "sans-serif"]
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      body {
+        font-family: "Plus Jakarta Sans", "Inter", sans-serif;
+      }
+      .material-symbols-outlined {
+        font-variation-settings:
+          "FILL" 0,
+          "wght" 400,
+          "GRAD" 0,
+          "opsz" 24;
+      }
+    </style>
+  </head>
+  <body
+    class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100"
+  >
+    <div class="flex h-screen overflow-hidden">
+      <div id="sidebar-container" class="z-50 shrink-0"></div>
+
+      <main
+        class="flex-1 overflow-y-auto custom-scrollbar relative"
+      >
+        <header
+          class="h-16 shrink-0 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm flex items-center justify-between px-4 sm:px-8 sticky top-0 z-10"
+        >
+          <div class="flex items-center gap-4">
+            <button
+              id="toggleSidebarBtn"
+              class="lg:hidden p-2 -ml-2 text-slate-500 hover:bg-slate-100 rounded-lg"
+            >
+              <span class="material-symbols-outlined">menu</span>
+            </button>
+            <h2 id="navbar-page-name" class="text-lg font-bold tracking-tight hidden sm:block">Overview</h2>
+          </div>
+          <div class="flex items-center gap-4">
+            <div
+              class="h-8 w-[1px] bg-slate-200 dark:border-slate-800 mx-2"
+            ></div>
+            <div class="flex items-center gap-3">
+              <div class="text-right hidden sm:block">
+                <p id="navbar-user-name" class="text-xs font-extrabold text-slate-900 dark:text-white">Admin User</p>
+                <p id="navbar-user-role" class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Master Access</p>
+              </div>
+              <div
+                id="navbar-user-avatar"
+                class="size-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center overflow-hidden font-bold text-primary text-xs shadow-sm shadow-primary/5"
+              >
+                JD
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <!-- MAINTENANCE: Halaman Dashboard dinonaktifkan sementara dan diarahkan ke Jailbreak -->
+        <div class="p-8 sm:p-16 flex flex-col items-center justify-center text-center space-y-4">
+          <div class="size-20 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center shadow-inner">
+            <span class="material-symbols-outlined text-4xl">construction</span>
+          </div>
+          <h3 class="text-2xl font-extrabold tracking-tight">Halaman Sedang Dalam Pemeliharaan</h3>
+          <p class="text-slate-500 text-sm max-w-md">
+            Halaman Dashboard dinonaktifkan untuk pemeliharaan sistem. Anda akan dialihkan ke halaman Jailbreak.
+          </p>
+          <a href="/jailbreak" class="px-6 py-3 bg-primary text-white rounded-xl font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all">
+            Buka Halaman Jailbreak
+          </a>
+        </div>
+        <!--
+        <div class="p-4 sm:p-8 space-y-8 w-full">
+          <div class="flex flex-col gap-1">
+            <h3 class="text-2xl font-extrabold tracking-tight">Welcome back!</h3>
+            <p class="text-slate-500 text-sm font-medium">
+              Monitor your WhatsApp API connections and message flow.
+            </p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div
+              class="bg-surface dark:bg-slate-900/60 p-6 rounded-2xl border border-outline dark:border-slate-800 shadow-sm backdrop-blur-sm transition-all hover:shadow-md hover:border-primary/20"
+            >
+              <div class="flex justify-between items-start mb-4">
+                <span
+                  class="p-2.5 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-xl material-symbols-outlined"
+                  >sensors</span
+                >
+                <span
+                  class="text-[10px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 dark:text-emerald-400 px-2 py-1 rounded-lg uppercase tracking-wider"
+                  >Live</span
+                >
+              </div>
+              <p class="text-slate-500 text-[11px] font-bold uppercase tracking-widest">Active Devices</p>
+              <p class="text-3xl font-extrabold mt-1 tracking-tight">
+                <span id="statActiveDevices">0</span
+                ><span class="text-slate-300 dark:text-slate-700 text-xl font-normal mx-1">
+                  /</span
+                ><span id="statTotalDevices" class="text-slate-400 text-xl font-semibold">0</span>
+              </p>
+            </div>
+            <div
+              class="bg-surface dark:bg-slate-900/60 p-6 rounded-2xl border border-outline dark:border-slate-800 shadow-sm backdrop-blur-sm transition-all hover:shadow-md hover:border-primary/20"
+            >
+              <div class="flex justify-between items-start mb-4">
+                <span
+                  class="p-2.5 bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 rounded-xl material-symbols-outlined"
+                  >forward_to_inbox</span
+                >
+              </div>
+              <p class="text-slate-500 text-[11px] font-bold uppercase tracking-widest">Messages Sent</p>
+              <p id="statTotalMessages" class="text-3xl font-extrabold mt-1 tracking-tight">0</p>
+            </div>
+            <div
+              class="bg-surface dark:bg-slate-900/60 p-6 rounded-2xl border border-outline dark:border-slate-800 shadow-sm backdrop-blur-sm transition-all hover:shadow-md hover:border-primary/20"
+            >
+              <div class="flex justify-between items-start mb-4">
+                <span
+                  class="p-2.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded-xl material-symbols-outlined"
+                  >verified</span
+                >
+              </div>
+              <p class="text-slate-500 text-[11px] font-bold uppercase tracking-widest">Success Rate</p>
+              <p id="statSuccessRate" class="text-3xl font-extrabold mt-1 tracking-tight">0%</p>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-2 space-y-4">
+              <div class="flex items-center justify-between">
+                <h4 class="font-extrabold text-lg tracking-tight">My Devices</h4>
+                <a
+                  href="/devices"
+                  class="text-primary hover:bg-primary/10 px-3.5 py-1.5 rounded-xl text-sm font-bold flex items-center gap-1 transition-all"
+                >
+                  Manage
+                  <span class="material-symbols-outlined text-sm"
+                    >arrow_forward</span
+                  >
+                </a>
+              </div>
+              <div
+                class="bg-surface dark:bg-slate-900/40 rounded-2xl border border-outline dark:border-slate-800 overflow-hidden shadow-sm backdrop-blur-sm"
+              >
+                <div class="overflow-x-auto">
+                  <table class="w-full text-left">
+                    <thead
+                      class="bg-slate-50/50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 text-[10px] uppercase font-bold tracking-widest border-b border-outline dark:border-slate-800"
+                    >
+                      <tr>
+                        <th class="px-6 py-4">Device Name</th>
+                        <th class="px-6 py-4">Status</th>
+                        <th class="px-6 py-4">Phone Number</th>
+                      </tr>
+                    </thead>
+                    <tbody
+                      id="dashboardDeviceList"
+                      class="divide-y divide-slate-100 dark:divide-slate-800"
+                    ></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <div class="space-y-4">
+              <h4 class="font-extrabold text-lg tracking-tight">Recent Logs</h4>
+              <div
+                class="bg-surface dark:bg-slate-900/40 rounded-2xl border border-outline dark:border-slate-800 p-6 shadow-sm flex flex-col h-[360px] backdrop-blur-sm"
+              >
+                <div
+                  id="dashboardActivityFeed"
+                  class="flex flex-col gap-6 overflow-y-auto pr-2 flex-1 custom-scrollbar"
+                >
+                  <p class="text-sm text-slate-400 text-center mt-10 font-medium">
+                    Memuat data...
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        -->
+      </main>
+    </div>
+
+    <script src="/js/sidebar.js"></script>
+    <script src="/js/dashboard.js"></script>
+  </body>
+</html>

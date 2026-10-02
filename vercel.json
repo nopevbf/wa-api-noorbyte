@@ -2,15 +2,11 @@
   "version": 2,
   "cleanUrls": true,
   "rewrites": [
-    { "source": "/", "destination": "/frontend/public/jailbreak.html" },
-    { "source": "/jailbreak", "destination": "/frontend/public/jailbreak.html" },
-    { "source": "/jailbreak/checkin", "destination": "/frontend/public/checkin.html" },
-    { "source": "/css/:match*", "destination": "/frontend/public/css/:match*" },
-    { "source": "/js/:match*", "destination": "/frontend/public/js/:match*" },
-    { "source": "/components/:match*", "destination": "/frontend/public/components/:match*" },
+    { "source": "/", "destination": "/jailbreak.html" },
+    { "source": "/jailbreak", "destination": "/jailbreak.html" },
+    { "source": "/jailbreak/checkin", "destination": "/checkin.html" },
     { "source": "/api/attendance/schedule-timebomb", "destination": "/api/attendance/schedule" },
-    { "source": "/api/attendance/cancel-timebomb", "destination": "/api/attendance/cancel" },
-    { "source": "/api/:match*", "destination": "/api/:match*" }
+    { "source": "/api/attendance/cancel-timebomb", "destination": "/api/attendance/cancel" }
   ],
   "headers": [
     {
