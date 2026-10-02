@@ -177,7 +177,14 @@ document.addEventListener("DOMContentLoaded", () => {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ password: pwd }),
         });
-        const result = await response.json();
+
+        let result = {};
+        const contentType = response.headers.get("content-type") || "";
+        if (contentType.includes("application/json")) {
+          result = await response.json();
+        } else {
+          throw new Error(response.ok ? "Format respons tidak valid." : `Gagal menghubungi server otentikasi (${response.status})`);
+        }
 
         if (response.ok && result.status) {
           // Password Benar -> Efek Sukses & Redirect
