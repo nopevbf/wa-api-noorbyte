@@ -139,7 +139,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Silently ignore polling errors
         }
     }, 5000);
-    }
 
     // ===================================
     // 0. CEK SESSION (STRICT GUARD)

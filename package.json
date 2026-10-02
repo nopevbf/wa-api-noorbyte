@@ -1,0 +1,12 @@
+{
+  "name": "wa-api-noorbyte-serverless",
+  "version": "2.1.0",
+  "private": true,
+  "description": "Serverless attendance & jailbreak deployment for Vercel",
+  "scripts": {
+    "test": "cd backend && npm test"
+  },
+  "dependencies": {
+    "luxon": "^3.7.2"
+  }
+}
