@@ -27,6 +27,21 @@ function isLateReasonRequired(response, resData) {
 }
 
 /**
+ * Menentukan apakah respons dari server DParagon menandakan presensi berhasil.
+ * 
+ * @param {Response} response - Objek HTTP Response
+ * @param {Object} resData - JSON payload respons
+ * @returns {boolean}
+ */
+function isPresenceSuccess(response, resData) {
+  if (!response?.ok) return false;
+  if (resData?.status === false) return false;
+  if (resData?.status === true || resData?.status === 'success') return true;
+  if (resData?.message && /berhasil|success|retrieved/i.test(resData.message)) return true;
+  return !resData?.error;
+}
+
+/**
  * Executes attendance presence submission triggered by QStash webhook.
  * Automatically resolves late_reason if required by DParagon.
  * Updates Firestore job status.
@@ -77,7 +92,7 @@ async function executePresenceWebhook(jobData, { httpClient, firestoreDb }) {
       resData = await response.json();
     }
 
-    const isSuccess = response.ok && (resData?.status === true || resData?.message?.toLowerCase().includes('berhasil'));
+    const isSuccess = isPresenceSuccess(response, resData);
     const finalStatus = isSuccess ? 'SUCCESS' : 'FAILED';
     const finalMessage = resData?.message || (isSuccess ? 'Presensi berhasil.' : 'Presensi gagal.');
 

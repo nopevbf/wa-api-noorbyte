@@ -128,4 +128,74 @@ describe('Webhook Executor Service', () => {
     expect(result.status).toBe(false);
     expect(result.message).toMatch(/data job tidak lengkap/i);
   });
+
+  // 5. Regression (BUG-TB-001): DParagon returns 200 with "data successfully retrieved" and no boolean status
+  it('should treat DParagon HTTP 200 with "data successfully retrieved" as SUCCESS (BUG-TB-001)', async () => {
+    mockHttpClient.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        message: 'data successfully retrieved'
+      })
+    });
+
+    const result = await executePresenceWebhook(validJobData, {
+      httpClient: mockHttpClient,
+      firestoreDb: mockFirestoreDb
+    });
+
+    expect(result.status).toBe(true);
+    expect(result.message).toBe('data successfully retrieved');
+    expect(mockFirestoreDb.collection().doc().update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: 'SUCCESS',
+        responseMessage: 'data successfully retrieved'
+      })
+    );
+  });
+
+  // 6. Edge Case: DParagon returns 200 with string status: 'success'
+  it('should treat DParagon HTTP 200 with string status "success" as SUCCESS', async () => {
+    mockHttpClient.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        status: 'success',
+        message: 'Presence recorded'
+      })
+    });
+
+    const result = await executePresenceWebhook(validJobData, {
+      httpClient: mockHttpClient,
+      firestoreDb: mockFirestoreDb
+    });
+
+    expect(result.status).toBe(true);
+    expect(mockFirestoreDb.collection().doc().update).toHaveBeenCalledWith(
+      expect.objectContaining({ status: 'SUCCESS' })
+    );
+  });
+
+  // 7. Error Case: DParagon returns 200 but explicit status: false (rejected by business logic)
+  it('should treat DParagon response with explicit status: false as FAILED even if HTTP is 200', async () => {
+    mockHttpClient.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        status: false,
+        message: 'Wajah tidak cocok dengan database.'
+      })
+    });
+
+    const result = await executePresenceWebhook(validJobData, {
+      httpClient: mockHttpClient,
+      firestoreDb: mockFirestoreDb
+    });
+
+    expect(result.status).toBe(false);
+    expect(result.message).toBe('Wajah tidak cocok dengan database.');
+    expect(mockFirestoreDb.collection().doc().update).toHaveBeenCalledWith(
+      expect.objectContaining({ status: 'FAILED' })
+    );
+  });
 });
